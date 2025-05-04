@@ -1,15 +1,18 @@
-export default () => ({
-    database: {
-        host: process.env.DB_HOST,
-        port: Number(process.env.DB_PORT),
-        username: process.env.DB_USERNAME,
-        password: process.env.DB_PASSWORD,
-        name: process.env.DB_NAME,
-    },
-    app: {
-        port: Number(process.env.APP_PORT),
-    },
-    security: {
-        jwt_secret: process.env.JWT_SECRET,
-    },
-});
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import * as dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
+
+export const databaseConfig: TypeOrmModuleOptions = {
+    type: 'mysql',
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    username: process.env.DB_USERNAME || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'metricas_vcc',
+    entities: [__dirname + '/../**/*.entity.{ts,js}'],
+    synchronize: process.env.DB_SYNCHRONIZE === 'true',
+
+};
