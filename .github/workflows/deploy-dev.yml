@@ -1,0 +1,35 @@
+name: 🚀 Deploy to Dev (PM2)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    name: Deploy NestJS to Dev Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no user@YOUR.SERVER.IP << 'EOF'
+            cd /home/user/app
+            git pull origin dev
+            npm install
+            npm run build
+            pm2 reload ecosystem.config.js --only nombre_app
+          EOF
