@@ -26,7 +26,7 @@ export class Usuario {
     @Column({ type: 'varchar', length: 50, nullable: true })
     rol: string;
 
-    @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    @CreateDateColumn({ type: 'datetime' })
     fecha_creacion: Date;
 
     @Column({ type: 'boolean', default: true })

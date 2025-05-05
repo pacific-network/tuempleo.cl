@@ -1,24 +1,18 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql_dev
-    restart: always
+  mariadb:
+    image: mariadb:10.6
+    container_name: mariadb_container
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: tuempleo_dev
+      MYSQL_DATABASE: web_2025
       MYSQL_USER: root
       MYSQL_PASSWORD: root
-    ports:
-      - '3306:3306'
     volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - dev_network
+      - mariadb_data:/var/lib/mysql
 
 volumes:
-  mysql_data:
-
-networks:
-  dev_network:
+  mariadb_data:
