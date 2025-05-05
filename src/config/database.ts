@@ -13,7 +13,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'tuempleo.cl',
-    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    entities: [Registro, Usuario],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };
