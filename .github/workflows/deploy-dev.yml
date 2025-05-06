@@ -1,4 +1,4 @@
-name: Deploy to Dev Server
+name: 🚀 Deploy to Dev (PM2)
 
 on:
   push:
@@ -20,26 +20,13 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@172.25.100.201 << 'EOF'
             set -x  # Esto muestra los comandos ejecutados y sus salidas
-
-            # Verificando versiones de node y pm2
-            echo "🚀 Verificando la versión de Node.js"
-            node -v
-            echo "🚀 Verificando la versión de PM2"
-            pm2 -v
-
             echo "📁 Entrando al servidor"
-            cd /var/www/html/tuempleo.cl || { echo "Fallo al entrar al directorio"; exit 1; }
-
-            echo "📥 Haciendo pull"
-            git pull origin dev || { echo "Fallo al hacer git pull"; exit 1; }
-
+            cd /var/www/html/tuempleo.cl
+            # Omite el git pull
             echo "📦 Instalando dependencias"
-            npm install || { echo "Fallo al instalar dependencias"; exit 1; }
-
+            npm install
             echo "🏗️ Compilando"
-            npm run build || { echo "Fallo al compilar"; exit 1; }
-
+            npm run build
             echo "🚀 Reiniciando con PM2"
-            pm2 reload ecosystem.config.js --only tuempleobackend || { echo "Fallo al reiniciar PM2"; exit 1; }
+            pm2 reload ecosystem.config.js --only tuempleobackend
           EOF
-  
