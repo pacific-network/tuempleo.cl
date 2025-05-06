@@ -31,5 +31,5 @@ jobs:
             git pull origin dev
             npm install
             npm run build
-            pm2 reload ecosystem.config.js --only nombre_app
+            pm2 reload ecosystem.config.js --only tuempleobackend
           EOF
