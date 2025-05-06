@@ -26,10 +26,22 @@ jobs:
 
       - name: Deploy via SSH
         run: |
-          ssh -o StrictHostKeyChecking=no root@172.25.100.201 << 'EOF'
-            cd /home/user/app
-            git pull origin dev
-            npm install
-            npm run build
-            pm2 reload ecosystem.config.js --only tuempleobackend
+          echo "🔐 Iniciando la conexión SSH..."
+          ssh -o StrictHostKeyChecking=no user@172.25.100.201 << 'EOF'
+            echo "📁 Cambiando al directorio de la app..."
+            cd /home/user/app || { echo "❌ No se pudo acceder al directorio /home/user/app"; exit 1; }
+
+            echo "📥 Haciendo git pull para actualizar el código..."
+            git pull origin dev || { echo "❌ git pull falló"; exit 1; }
+
+            echo "📦 Instalando dependencias..."
+            npm install || { echo "❌ npm install falló"; exit 1; }
+
+            echo "🔨 Ejecutando build..."
+            npm run build || { echo "❌ npm run build falló"; exit 1; }
+
+            echo "🚀 Reiniciando PM2..."
+            pm2 reload ecosystem.config.js --only tuempleobackend || { echo "❌ PM2 falló"; exit 1; }
+
+            echo "✅ Despliegue completado exitosamente"
           EOF
