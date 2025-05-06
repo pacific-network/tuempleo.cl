@@ -30,6 +30,9 @@ jobs:
             echo "📁 Entrando al servidor"
             cd /var/www/html/tuempleo.cl || { echo "Fallo al entrar al directorio"; exit 1; }
 
+            echo "Haciendo pull del repositorio"
+            git pull origin dev || { echo "Fallo al hacer pull del repositorio"; exit 1; }pm2 
+
             echo "📦 Instalando dependencias"
             npm install || { echo "Fallo al instalar dependencias"; exit 1; }
 
