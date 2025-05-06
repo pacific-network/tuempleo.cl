@@ -19,6 +19,7 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -o StrictHostKeyChecking=no root@172.25.100.201 << 'EOF'
+            set -x  # Esto muestra los comandos ejecutados y sus salidas
             echo "📁 Entrando al servidor"
             cd /var/www/html/tuempleo.cl
             echo "📥 Haciendo pull"
