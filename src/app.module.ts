@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
 import { join } from 'path';
+import { RoleModule } from './modules/role/role.module';
 
 
 
@@ -16,7 +17,6 @@ import { join } from 'path';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(__dirname, '..', '..', '.env'), // <- ruta absoluta correcta
     }),
 
     TypeOrmModule.forRoot(databaseConfig),
@@ -34,6 +34,7 @@ import { join } from 'path';
     EncryptModule,
     AuthModule,
     UserModule,
+    RoleModule,
 
   ],
 })
