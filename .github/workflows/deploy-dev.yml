@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     name: Deploy NestJS to Dev Server
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
