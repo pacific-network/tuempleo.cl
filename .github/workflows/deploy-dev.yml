@@ -42,3 +42,4 @@ jobs:
             echo "🚀 Reiniciando con PM2"
             pm2 reload ecosystem.config.js --only tuempleobackend || { echo "Fallo al reiniciar PM2"; exit 1; }
           EOF
+  
