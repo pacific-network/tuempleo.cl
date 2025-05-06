@@ -19,9 +19,14 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -o StrictHostKeyChecking=no root@172.25.100.201 << 'EOF'
+            echo "📁 Entrando al servidor"
             cd /var/www/html/tuempleo.cl
+            echo "📥 Haciendo pull"
             git pull origin dev
+            echo "📦 Instalando dependencias"
             npm install
+            echo "🏗️ Compilando"
             npm run build
+            echo "🚀 Reiniciando con PM2"
             pm2 reload ecosystem.config.js --only tuempleobackend
           EOF
