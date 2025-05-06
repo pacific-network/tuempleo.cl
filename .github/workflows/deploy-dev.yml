@@ -19,27 +19,27 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -o StrictHostKeyChecking=no root@172.25.100.201 << 'EOF'
-            set -x  # Esto muestra los comandos ejecutados y sus salidas
+            set -x  # Muestra los comandos que se están ejecutando
 
-            # Verificando versiones de node y pm2
-            echo "🚀 Verificando la versión de Node.js"
+            echo "🚀 Verificando versión de Node.js y PM2"
             node -v
-            echo "🚀 Verificando la versión de PM2"
             pm2 -v
 
-            echo "📁 Entrando al servidor"
-            cd /var/www/html/tuempleo.cl || { echo "Fallo al entrar al directorio"; exit 1; }
+            echo "📁 Accediendo al directorio del proyecto"
+            cd /var/www/html/tuempleo.cl || { echo "❌ Fallo al entrar al directorio"; exit 1; }
 
-            echo "Haciendo pull del repositorio"
-            git pull origin dev || { echo "Fallo al hacer pull del repositorio"; exit 1; }pm2 
+            echo "📦 Haciendo pull del repositorio"
+            git pull origin dev || { echo "❌ Fallo al hacer pull del repositorio"; exit 1; }
+
+            echo "🧹 Limpiando build anterior"
+            rm -rf dist || echo "⚠️ No se encontró 'dist', continuando..."
 
             echo "📦 Instalando dependencias"
-            npm install || { echo "Fallo al instalar dependencias"; exit 1; }
+            npm install || { echo "❌ Fallo al instalar dependencias"; exit 1; }
 
-            echo "🏗️ Compilando"
-            npm run build || { echo "Fallo al compilar"; exit 1; }
+            echo "🏗️ Compilando el proyecto"
+            npm run build || { echo "❌ Fallo al compilar"; exit 1; }
 
-            echo "🚀 Reiniciando con PM2"
-            pm2 restart tuempleo.cl  || { echo "Fallo al reiniciar PM2"; exit 1; }
+            echo "🚀 Reiniciando aplicación con PM2"
+            pm2 restart tuempleo.cl || { echo "❌ Fallo al reiniciar PM2"; exit 1; }
           EOF
-  
