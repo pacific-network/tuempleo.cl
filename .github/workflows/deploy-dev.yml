@@ -31,6 +31,11 @@ jobs:
             echo "✅ Añadiendo repositorio como seguro para Git"
             git config --global --add safe.directory /var/www/html/tuempleo.cl
 
+            # Descartando cambios locales no comiteados
+            echo "🧽 Descartando cambios locales no comiteados"
+            git reset --hard HEAD || { echo "❌ Fallo al hacer reset"; exit 1; }
+            git clean -fd || echo "⚠️ No se encontraron archivos sin seguimiento"
+
             echo "📦 Realizando git pull"
             git pull origin dev || { echo "❌ Fallo al hacer git pull"; exit 1; }
 
