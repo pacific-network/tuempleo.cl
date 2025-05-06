@@ -1,4 +1,4 @@
-name: 🚀 Deploy to Dev (PM2)
+name: Deploy to Dev Server
 
 on:
   push:
