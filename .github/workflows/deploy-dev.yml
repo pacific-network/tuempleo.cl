@@ -1,12 +1,14 @@
 name: Deploy to Dev Server
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - dev
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     name: Deploy NestJS to Dev Server
     runs-on: self-hosted
 
@@ -31,7 +33,6 @@ jobs:
             echo "✅ Añadiendo repositorio como seguro para Git"
             git config --global --add safe.directory /var/www/html/tuempleo.cl
 
-            # Descartando cambios locales no comiteados
             echo "🧽 Descartando cambios locales no comiteados"
             git reset --hard HEAD || { echo "❌ Fallo al hacer reset"; exit 1; }
             git clean -fd || echo "⚠️ No se encontraron archivos sin seguimiento"
