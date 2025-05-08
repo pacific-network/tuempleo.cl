@@ -2,11 +2,12 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Registro } from '../../repository/register/register.entity'; // Asumiendo que tienes esta entidad
-import { Usuario } from '../../repository/user/user.entity';  // Entidad de usuario base
-import { RegistrarUsuarioDto } from './dto/register'; // DTO para el registro
+import { Registro } from '../../repository/register/register.entity';
+import { Usuario } from '../../repository/user/user.entity';
+import { Rol } from '../../repository/role/role.entity';
+import { RegistrarUsuarioDto } from './dto/register';
 import { IniciarSesionDto } from './dto/login';
-import { EncryptService } from 'src/shared/encrypt/encrypt.service'; // Servicio de encriptación
+import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 
 @Injectable()
 export class AuthService {
@@ -15,75 +16,67 @@ export class AuthService {
         private readonly registroRepository: Repository<Registro>,
         @InjectRepository(Usuario)
         private readonly usuarioRepository: Repository<Usuario>,
+        @InjectRepository(Rol)
+        private readonly rolRepository: Repository<Rol>,
         private readonly jwtService: JwtService,
-        private readonly encryptService: EncryptService // Inyectamos el servicio de encriptación
+        private readonly encryptService: EncryptService
     ) { }
 
     // Registro del usuario
     async register(userData: RegistrarUsuarioDto): Promise<any> {
         const { email, password, nombre_completo } = userData;
 
-        // Verificar si el email ya está registrado
         const existingRegistro = await this.registroRepository.findOne({ where: { email } });
         if (existingRegistro) {
             throw new UnauthorizedException('Email ya registrado');
         }
 
-        // Encriptamos la contraseña antes de guardarla
-        const passwordhash = await this.encryptService.encrypt(password);
+        const passwordHash = await this.encryptService.encrypt(password);
 
-        // Crear un nuevo registro con es_activo en false
         const newRegistro = this.registroRepository.create({
             email,
-            password: passwordhash,
+            password: passwordHash,
             nombre_completo,
-            es_activo: false,  // El usuario estará inactivo inicialmente
+            es_activo: false,
         });
 
-        // Guardamos el registro
         await this.registroRepository.save(newRegistro);
         return { message: 'Registro exitoso. Espera la activación.' };
     }
 
     // Login del usuario
     async login(loginData: IniciarSesionDto): Promise<any> {
-        const { email, password } = loginData;
+        const { email, password, rolId } = loginData;
 
-        // Buscar el registro del usuario
         const registro = await this.registroRepository.findOne({ where: { email } });
-        if (!registro) {
-            throw new UnauthorizedException('Usuario no encontrado');
-        }
+        if (!registro) throw new UnauthorizedException('Usuario no encontrado');
 
-        // Verificar si la contraseña es correcta
         const passwordMatch = await this.encryptService.decrypt(registro.password);
-        if (!passwordMatch) {
-            throw new UnauthorizedException('Contraseña incorrecta');
-        }
+        if (!passwordMatch) throw new UnauthorizedException('Contraseña incorrecta');
 
-        // Activar al usuario: actualizar es_activo a true
+        // Activar el registro
         registro.es_activo = true;
         await this.registroRepository.save(registro);
 
-        // Crear el registro en la entidad Usuario
-        const [nombres, apellidos] = registro.nombre_completo.split(' ', 2); // Separar el nombre completo en 2 partes
+        // Verificar el rol
+        const rol = await this.rolRepository.findOne({ where: { id: rolId } });
+        if (!rol) throw new UnauthorizedException('Rol no encontrado');
 
+        // Crear el usuario con el rol
         const newUser = this.usuarioRepository.create({
-            nombres,  // Asignar la primera parte como 'nombres'
-            apellidos: apellidos || '',  // Asignar la segunda parte (si existe) como 'apellidos'
-            password: registro.password,  // Usamos el mismo password, ya encriptado
+            nombres: registro.nombre_completo.split(' ')[0],
+            apellidos: registro.nombre_completo.split(' ').slice(1).join(' '),
+            password: registro.password,
             email: registro.email,
-            rol: 'usuario', // Puedes asignar un rol por defecto, o dejarlo vacío si es necesario
-            is_activo: true, // El usuario ya está activo
+            rol: rol,
         });
 
         await this.usuarioRepository.save(newUser);
 
-        // Generar el token JWT
-        const payload = { email: registro.email, sub: newUser.id };
+        // Payload del JWT
+        const payload = { email: registro.email, sub: newUser.id, rolId: rol.id };
         const token = this.jwtService.sign(payload);
 
-        // Retornar el token junto con cualquier otra información necesaria
         return {
             message: 'Login exitoso',
             token,
