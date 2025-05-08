@@ -1,3 +1,4 @@
+//src/config/database.ts
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { Registro } from 'src/repository/register/register.entity';
