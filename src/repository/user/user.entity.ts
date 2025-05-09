@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Rol } from 'src/repository/role/role.entity';
 
 @Entity('usuario')
 export class Usuario {
@@ -17,12 +18,14 @@ export class Usuario {
     @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
     email: string;
 
-    @Column({ type: 'varchar', length: 50, nullable: true })
-    rol: string;
-
     @CreateDateColumn({ type: 'timestamp' })
     fecha_creacion: Date;
 
     @Column({ type: 'boolean', default: true })
     is_activo: boolean;
+
+    // Relación ManyToOne con la entidad Rol
+    @ManyToOne(() => Rol, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'rol_id' })  // Especifica el nombre de la columna
+    rol: Rol;
 }

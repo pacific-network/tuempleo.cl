@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
 import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Registro } from 'src/repository/register/register.entity';
+import { Usuario } from 'src/repository/user/user.entity';
+import { Rol } from 'src/repository/role/role.entity';
 
 @Module({
     imports: [
+        TypeOrmModule.forFeature([Registro, Usuario, Rol]), // Registro y Usuario se importan aquí
         UserModule,
         EncryptModule,
         ConfigModule,
