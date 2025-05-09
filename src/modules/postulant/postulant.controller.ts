@@ -22,7 +22,7 @@ export class PostulanteController {
     }
   }
 
-  // Obtener postulante
+  @UseGuards(AuthGuard)
   @Get(':userId')
   async obtenerPostulante(@Param('userId') userId: number) {
     try {

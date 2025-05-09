@@ -6,6 +6,9 @@ export class Usuario {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Column({ type: 'varchar', length: 255, unique: true, nullable: false, default: '' })
+    rut: string; // RUT del usuario
+
     @Column({ type: 'varchar', length: 255, nullable: false })
     nombres: string;
 
@@ -24,8 +27,10 @@ export class Usuario {
     @Column({ type: 'boolean', default: true })
     is_activo: boolean;
 
-    // Relación ManyToOne con la entidad Rol
     @ManyToOne(() => Rol, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'rol_id' })  
+    @JoinColumn({ name: 'rol_id' })
     rol: Rol;
+
+    @Column({ type: 'varchar', length: 500, nullable: true })
+    perfil_foto: string; // URL de la foto de perfil
 }

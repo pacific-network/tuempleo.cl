@@ -9,8 +9,12 @@ export class UserService {
         private readonly registroRepository: Repository<Registro>,
     ) { }
     getUserById(id: number) {
-        // Lógica para obtener un usuario por ID
-        return { id, message: 'Usuario encontrado' };
+        const user = this.registroRepository.findOne({
+            where: { id },
+        });
+        return this.registroRepository.findOne({
+            where: { id },
+        });
     }
 
     createUser(userData: any) {

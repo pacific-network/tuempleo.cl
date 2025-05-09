@@ -15,17 +15,27 @@ export class PostulanteService {
 
     async crearPostulante(userId: number, rut: string, data: Record<string, any>): Promise<Postulante> {
         const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
-
+    
         if (!usuario) {
             throw new NotFoundException('Usuario no encontrado');
         }
-
+    
+        // Verificar si el RUT ya existe en otro usuario
+        const rutExistente = await this.usuarioRepository.findOne({ where: { rut } });
+        if (rutExistente) {
+            throw new NotFoundException('El RUT ya está asociado a otro usuario');
+        }
+    
+        // Actualizar el RUT del usuario
+        usuario.rut = rut;
+        await this.usuarioRepository.save(usuario);
+    
+        // Crear el postulante asociado
         const nuevoPostulante = this.postulanteRepository.create({
             usuario,
-            rut,
             data,
         });
-
+    
         return this.postulanteRepository.save(nuevoPostulante);
     }
 
