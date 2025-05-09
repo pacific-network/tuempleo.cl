@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Rol } from 'src/repository/role/role.entity';
+import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 
 @Entity('usuario')
 export class Usuario {
@@ -33,4 +34,8 @@ export class Usuario {
 
     @Column({ type: 'varchar', length: 500, nullable: true })
     perfil_foto: string; // URL de la foto de perfil
+
+    // Relación con Curriculum
+    @OneToMany(() => Curriculum, (curriculum) => curriculum.usuario)
+    curriculums: Curriculum[];
 }

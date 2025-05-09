@@ -1,6 +1,7 @@
 //src/config/database.ts
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
+import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 import { Postulante } from 'src/repository/postulant/potulant.entity';
 import { Registro } from 'src/repository/register/register.entity';
 import { Rol } from 'src/repository/role/role.entity';
@@ -16,7 +17,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
     username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'tuempleo.cl',
-    entities: [Registro, Rol, Usuario, Postulante],
+    entities: [Registro, Rol, Usuario, Postulante, Curriculum],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };
+ 
