@@ -26,6 +26,6 @@ export class Usuario {
 
     // Relación ManyToOne con la entidad Rol
     @ManyToOne(() => Rol, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'rol_id' })  // Especifica el nombre de la columna
+    @JoinColumn({ name: 'rol_id' })  
     rol: Rol;
 }

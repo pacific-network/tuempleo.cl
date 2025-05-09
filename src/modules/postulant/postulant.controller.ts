@@ -1,11 +1,13 @@
-import { Controller, Post, Body, Param, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { PostulanteService } from '../postulant/postulant.service';
+import { AuthGuard } from '../auth/guards/auth.guards';
 
 @Controller('v1/postulante')
 export class PostulanteController {
-  constructor(private readonly postulanteService: PostulanteService) {}
+  constructor(private readonly postulanteService: PostulanteService) { }
 
   // Crear postulante
+  @UseGuards(AuthGuard)
   @Post(':userId')
   async crearPostulante(
     @Param('userId') userId: number,
