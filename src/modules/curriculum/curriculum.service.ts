@@ -1,13 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CurriculumController } from '../curriculum/curriculum.controller';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 import { Postulante } from '../../repository/postulant/potulant.entity';
 import { Usuario } from '../../repository/user/user.entity';
+import * as path from 'path';
 
 @Injectable()
 export class CurriculumService {
+  private readonly uploadDir = path.join(__dirname, '..', '..', 'Documents/UploadsCv.Tuempleo');
+
   constructor(
     @InjectRepository(Curriculum)
     private readonly curriculumRepository: Repository<Curriculum>,
@@ -50,6 +52,29 @@ export class CurriculumService {
       throw new NotFoundException('Usuario no encontrado.');
     }
 
-    return await this.curriculumRepository.find({ where: { usuario } });
+    return this.curriculumRepository.find({ where: { usuario } });
+  }
+
+  async updateCvPath(rut: string, cvPath: string): Promise<Curriculum> {
+    const usuario = await this.usuarioRepository.findOne({ where: { rut } });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    const curriculum = await this.curriculumRepository.findOne({
+      where: { usuario: { id: usuario.id } },
+    });
+
+    if (!curriculum) {
+      throw new NotFoundException('Curriculum no encontrado. Debe ser creado antes de subir un CV.');
+    }
+
+    if (!cvPath) {
+      throw new BadRequestException('El path del archivo no puede estar vacío.');
+    }
+
+    curriculum.cv_path = cvPath;
+    return this.curriculumRepository.save(curriculum);
   }
 }

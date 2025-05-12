@@ -47,4 +47,6 @@ export class PostulanteController {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
   }
+
+  
 }

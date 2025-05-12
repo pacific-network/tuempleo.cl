@@ -15,6 +15,9 @@ export class Curriculum {
   @Column({ type: 'varchar', length: 255, nullable: false })
   cv_file: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  cv_path: string;
+
   @CreateDateColumn({ name: 'creado_en' })
   creado_en: Date;
 
