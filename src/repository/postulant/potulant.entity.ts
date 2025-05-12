@@ -12,4 +12,12 @@ export class Postulante {
 
     @Column({ type: 'json', nullable: false })
     data: Record<string, any>;
+
+    @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+    fecha_update: Date;
+
+    @Column({ type: 'int', nullable: true })
+    modificado_por: number;;
+
+
 }

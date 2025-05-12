@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Param, Get, HttpException, HttpStatus, UseGuards, Patch } from '@nestjs/common';
 import { PostulanteService } from '../postulant/postulant.service';
 import { AuthGuard } from '../auth/guards/auth.guards';
+import { UpdatePostulantDto } from './dto/update-postulant.dto';
 
 @Controller('v1/postulante')
 export class PostulanteController {
@@ -37,10 +38,10 @@ export class PostulanteController {
   @Patch('update/:userId')
   async updatePostulante(
     @Param('userId') userId: number,
-    @Body('data') data: Partial<any>  // Cambia 'any' por el tipo correcto de tu entidad
+    @Body() payload: UpdatePostulantDto
   ) {
     try {
-      const postulante = await this.postulanteService.updatePostulante(userId, data);
+      const postulante = await this.postulanteService.updatePostulant(payload, userId);
       return { message: 'Postulante actualizado exitosamente', postulante };
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);

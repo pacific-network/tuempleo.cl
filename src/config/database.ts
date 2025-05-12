@@ -16,9 +16,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
     port: parseInt(process.env.DB_PORT || '3306', 10),
     username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'tuempleo.cl',
+    database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante, Curriculum],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };
- 
