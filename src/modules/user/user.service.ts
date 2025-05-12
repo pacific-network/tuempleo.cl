@@ -8,16 +8,20 @@ export class UserService {
         @InjectRepository(Registro)
         private readonly registroRepository: Repository<Registro>,
     ) { }
-    getUserById(id: number) {
+    
+    async getUserById(id: number) {
         const user = this.registroRepository.findOne({
-            where: { id },
+            where: { id }
         });
+        if (!user) {
+            throw new Error('Usuario no encontrado');
+        }
         return this.registroRepository.findOne({
             where: { id },
         });
     }
 
-    createUser(userData: any) {
+    async createUser(userData: any) {
         // Lógica para crear un nuevo usuario
         return { ...userData, message: 'Usuario creado' };
     }
@@ -33,4 +37,9 @@ export class UserService {
         });
         return usuario || null;
     }
+
+
+    
+
+
 }

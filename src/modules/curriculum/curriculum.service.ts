@@ -1,45 +1,55 @@
-// import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import { Repository } from 'typeorm';
-// import { Curriculum } from '../../repository/curriculum/curriculum.entity';
-// import { Usuario } from '../../repository/user/user.entity';
-// import * as fs from 'fs';
-// import * as path from 'path';
-// import { File as MulterFile } from 'multer';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CurriculumController } from '../curriculum/curriculum.controller';
+import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
+import { Postulante } from '../../repository/postulant/potulant.entity';
+import { Usuario } from '../../repository/user/user.entity';
 
-// @Injectable()
-// export class CurriculumService {
-//   constructor(
-//     @InjectRepository(Curriculum)
-//     private curriculumRepository: Repository<Curriculum>,
+@Injectable()
+export class CurriculumService {
+  constructor(
+    @InjectRepository(Curriculum)
+    private readonly curriculumRepository: Repository<Curriculum>,
 
-//     @InjectRepository(Usuario)
-//     private userRepository: Repository<Usuario>,
-//   ) {}
+    @InjectRepository(Postulante)
+    private readonly postulanteRepository: Repository<Postulante>,
 
-//   async processAndSave(file: MulterFile, userId: number) {
-//     const user = await this.userRepository.findOne({ where: { id: userId } });
+    @InjectRepository(Usuario)
+    private readonly usuarioRepository: Repository<Usuario>,
+  ) { }
 
-//     if (!user) {
-//       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-//     }
+  async createCurriculum(rut: string, data: any, cvFile: string): Promise<Curriculum> {
+    const usuario = await this.usuarioRepository.findOne({ where: { rut } });
 
-//     const filePath = path.join('uploads/cv', file.filename);
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
 
-//     const newCV = this.curriculumRepository.create({
-//       cv_file: filePath,
-//     });
+    const postulante = await this.postulanteRepository.findOne({
+      where: { usuario: { id: usuario.id } },
+    });
 
-//     return await this.curriculumRepository.save(newCV);
-//   }
+    if (!postulante) {
+      throw new NotFoundException('El postulante no existe. Debe ser creado antes de agregar un CV.');
+    }
 
-//   async getUserCurriculums(userId: number) {
-//     const user = await this.userRepository.findOne({ where: { id: userId } });
+    const curriculum = this.curriculumRepository.create({
+      usuario,
+      data,
+      cv_file: cvFile,
+    });
 
-//     if (!user) {
-//       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-//     }
+    return await this.curriculumRepository.save(curriculum);
+  }
 
-//     return await this.curriculumRepository.find({ where: { rut: user.rut } });
-//   }
-// }
+  async getCurriculumsByRut(rut: string): Promise<Curriculum[]> {
+    const usuario = await this.usuarioRepository.findOne({ where: { rut } });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    return await this.curriculumRepository.find({ where: { usuario } });
+  }
+}

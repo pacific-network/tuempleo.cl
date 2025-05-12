@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, HttpException, HttpStatus, UseGuards, Patch } from '@nestjs/common';
 import { PostulanteService } from '../postulant/postulant.service';
 import { AuthGuard } from '../auth/guards/auth.guards';
 
@@ -30,6 +30,20 @@ export class PostulanteController {
       return postulante;
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('update/:userId')
+  async updatePostulante(
+    @Param('userId') userId: number,
+    @Body('data') data: Partial<any>  // Cambia 'any' por el tipo correcto de tu entidad
+  ) {
+    try {
+      const postulante = await this.postulanteService.updatePostulante(userId, data);
+      return { message: 'Postulante actualizado exitosamente', postulante };
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
   }
 }

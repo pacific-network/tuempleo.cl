@@ -51,4 +51,18 @@ export class PostulanteService {
 
         return postulante;
     }
+
+
+    async updatePostulante(userId: number, data: Partial<Postulante>): Promise<Postulante> {
+        const postulante = await this.postulanteRepository.findOne({
+            where: { usuario: { id: userId } },
+        });
+
+        if (!postulante) {
+            throw new NotFoundException('Postulante no encontrado');
+        }
+
+        Object.assign(postulante, data);
+        return this.postulanteRepository.save(postulante);
+    }
 }
