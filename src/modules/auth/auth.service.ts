@@ -44,7 +44,6 @@ export class AuthService {
         return { message: 'Registro exitoso. Espera la activación.' };
     }
 
-    // Login del usuario
     async login(loginData: IniciarSesionDto): Promise<any> {
         const { email, password, rolId } = loginData;
 
@@ -58,23 +57,30 @@ export class AuthService {
         registro.es_activo = true;
         await this.registroRepository.save(registro);
 
-        // Verificar el rol
-        const rol = await this.rolRepository.findOne({ where: { id: rolId } });
-        if (!rol) throw new UnauthorizedException('Rol no encontrado');
-
-        // Crear el usuario con el rol
-        const newUser = this.usuarioRepository.create({
-            nombres: registro.nombre_completo.split(' ')[0],
-            apellidos: registro.nombre_completo.split(' ').slice(1).join(' '),
-            password: registro.password,
-            email: registro.email,
-            rol: rol,
+        // Verificar si el usuario ya existe
+        let user = await this.usuarioRepository.findOne({
+            where: { email },
+            relations: ['rol'],  // Incluir el rol en la búsqueda
         });
 
-        await this.usuarioRepository.save(newUser);
+        // Si no existe, lo creamos
+        if (!user) {
+            const rol = await this.rolRepository.findOne({ where: { id: rolId } });
+            if (!rol) throw new UnauthorizedException('Rol no encontrado');
+
+            user = this.usuarioRepository.create({
+                nombres: registro.nombre_completo.split(' ')[0],
+                apellidos: registro.nombre_completo.split(' ').slice(1).join(' '),
+                password: registro.password,
+                email: registro.email,
+                rol: rol,
+            });
+
+            await this.usuarioRepository.save(user);
+        }
 
         // Payload del JWT
-        const payload = { email: registro.email, sub: newUser.id, rolId: rol.id };
+        const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
         const token = this.jwtService.sign(payload);
 
         return {
@@ -82,4 +88,5 @@ export class AuthService {
             token,
         };
     }
-}
+
+}    

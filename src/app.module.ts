@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { join } from 'path';
 import { RoleModule } from './modules/role/role.module';
 import { PostulanteModule } from './modules/postulant/postulant.module';
+import { CurriculumModule } from './modules/curriculum/curriculum.module';
 
 
 
@@ -36,7 +37,9 @@ import { PostulanteModule } from './modules/postulant/postulant.module';
     AuthModule,
     UserModule,
     RoleModule,
-    PostulanteModule
+    PostulanteModule,
+    CurriculumModule,
+
 
   ],
 })
