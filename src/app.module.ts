@@ -11,6 +11,7 @@ import { join } from 'path';
 import { RoleModule } from './modules/role/role.module';
 import { PostulanteModule } from './modules/postulant/postulant.module';
 import { CurriculumModule } from './modules/curriculum/curriculum.module';
+import { PlansModule } from './modules/plans/plans.module';
 
 
 
@@ -39,6 +40,7 @@ import { CurriculumModule } from './modules/curriculum/curriculum.module';
     RoleModule,
     PostulanteModule,
     CurriculumModule,
+    PlansModule
 
 
   ],
