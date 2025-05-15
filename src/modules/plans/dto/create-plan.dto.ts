@@ -1,20 +1,43 @@
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
+
+
 export class PlanDataDto {
+    @IsNotEmpty()
+    @IsNumber()
+    cantidad_avisos: number;
 
     @IsNotEmpty()
-    descripcion: {
-        cantidad_avisos: number;
-        duracion_avisos: number;
-        cantidad_curriculums: number;
-        duracion_curriculums: number;
-        cantidad_postulantes: number;
-        duracion_postulantes: number;
-        cantidad_postulaciones: number;
-        duracion_postulaciones: number;
-    }
+    @IsNumber()
+    duracion_avisos: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    cantidad_curriculums: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    duracion_curriculums: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    cantidad_postulantes: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    duracion_postulantes: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    cantidad_postulaciones: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    duracion_postulaciones: number;
+
 }
+
 
 export class CreatePlansDto {
     @IsNotEmpty()

@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Param, Body, BadRequestException } from "@nestjs/common";
+import { Controller, Post, Get, Param, Body, BadRequestException, Patch } from "@nestjs/common";
 import { PlansService } from "./plans.service";
 import { Planes } from "../../repository/plans/plans.entity";
 import { CreatePlansDto } from "./dto/create-plan.dto";
+import { UpdatePlansDto } from "./dto/update-plan.dto";
 @Controller('v1/plans')
 export class PlansController {
     constructor(private readonly plansService: PlansService) { }
@@ -19,12 +20,21 @@ export class PlansController {
         }
         return plan;
     }
-    
+
     @Post()
     public async createPlan(@Body() createPlansDto: CreatePlansDto): Promise<Planes> {
         const plan = await this.plansService.createPlan(createPlansDto);
         if (!plan) {
             throw new BadRequestException('Error al crear el plan');
+        }
+        return plan;
+    }
+
+    @Patch(':id')
+    public async updatePlan(@Param('id') id: number, @Body() updatePlansDto: UpdatePlansDto): Promise<Planes> {
+        const plan = await this.plansService.updatePlan(id, updatePlansDto);
+        if (!plan) {
+            throw new BadRequestException('Error al actualizar el plan');
         }
         return plan;
     }

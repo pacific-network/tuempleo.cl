@@ -1,8 +1,9 @@
-import { IsNotEmpty, IsNumber, IsOptional, ValidateNested } from 'class-validator';
+import { IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreatePlansDto, PlanDataDto } from './create-plan.dto';
 import { Type } from 'class-transformer';
-import { PlanDataDto } from './create-plan.dto';
 
-export class UpdatePlansDto {
+export class UpdatePlansDto extends PartialType(CreatePlansDto) {
   @IsOptional()
   @ValidateNested()
   @Type(() => PlanDataDto)
@@ -11,4 +12,6 @@ export class UpdatePlansDto {
   @IsOptional()
   @IsNumber()
   precio?: number;
+
+
 }

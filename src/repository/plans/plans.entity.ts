@@ -1,4 +1,5 @@
-import { PrimaryGeneratedColumn, Column, Entity, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { PrimaryGeneratedColumn, Column, Entity, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Empresa } from "../business/business.entity";
 
 @Entity('planes')
 export class Planes {
@@ -13,6 +14,9 @@ export class Planes {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
     precio: number;
+
+    @OneToMany(() => Empresa, (empresa) => empresa.plan)
+    empresa: Empresa[];
 
     @CreateDateColumn({ type: 'datetime', nullable: false })
     fecha_creacion: Date;
