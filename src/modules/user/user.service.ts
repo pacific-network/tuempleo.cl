@@ -8,7 +8,11 @@ export class UserService {
         @InjectRepository(Registro)
         private readonly registroRepository: Repository<Registro>,
     ) { }
-    
+
+    async getAllUsers(): Promise<Registro[]> {
+        return this.registroRepository.find();
+    }
+
     async getUserById(id: number) {
         const user = this.registroRepository.findOne({
             where: { id }
@@ -39,7 +43,7 @@ export class UserService {
     }
 
 
-    
+
 
 
 }
