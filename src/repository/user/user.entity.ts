@@ -32,6 +32,9 @@ export class Usuario {
     @JoinColumn({ name: 'rol_id' })
     rol: Rol;
 
+    @Column({type: 'int', nullable: true})
+    id_empresa: number;
+
     @Column({ type: 'varchar', length: 500, nullable: true })
     perfil_foto: string; // URL de la foto de perfil
 
