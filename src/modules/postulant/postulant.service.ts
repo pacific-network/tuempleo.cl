@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Postulante } from '../../repository/postulant/potulant.entity';
+import { Postulante } from '../../repository/postulant/postulant.entity';
 import { Usuario } from '../../repository/user/user.entity';
 import { UpdatePostulantDto } from './dto/update-postulant.dto';
 
@@ -165,7 +165,7 @@ export class PostulanteService {
         };
     }
 
-   
+
 
 
 }

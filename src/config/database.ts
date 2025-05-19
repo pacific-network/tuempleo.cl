@@ -4,7 +4,7 @@ import * as dotenv from 'dotenv';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 import { Planes } from 'src/repository/plans/plans.entity';
-import { Postulante } from 'src/repository/postulant/potulant.entity';
+import { Postulante } from 'src/repository/postulant/postulant.entity';
 import { Registro } from 'src/repository/register/register.entity';
 import { Rol } from 'src/repository/role/role.entity';
 import { Usuario } from 'src/repository/user/user.entity';
