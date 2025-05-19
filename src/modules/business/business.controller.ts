@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Param, Body, BadRequestException, Patch, UseInterceptors, UploadedFile } from "@nestjs/common";
-import { BusinessService } from "./business.service";
+import { EmpresaService } from "./business.service";
 import { Empresa } from "../../repository/business/business.entity";
 import { CreateBusinessDto } from "./dto/create-business.dto";
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -7,8 +7,8 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 
 @Controller('v1/business')
-export class BusinessController {
-    constructor(private readonly businessService: BusinessService) { }
+export class EmpresaController {
+    constructor(private readonly businessService: EmpresaService) { }
 
     @Get()
     public async getAllBusinesses(): Promise<Empresa[]> {

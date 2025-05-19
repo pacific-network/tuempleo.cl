@@ -20,9 +20,8 @@ export class PostulantDataDto {
         institucion: string;
         tipo_estudio: string;
         estado: string;
-        // anno_inicio: string;
-        // anno_termino?: string;
-        // nivel_estudio: string;
+        anno_inicio: string;
+        anno_termino?: string;
     }[];
 
     @IsOptional()
