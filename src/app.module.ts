@@ -13,6 +13,7 @@ import { PostulanteModule } from './modules/postulant/postulant.module';
 import { CurriculumModule } from './modules/curriculum/curriculum.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { BusinessModule } from './modules/business/business.module';
+import { WebpayModule } from './modules/webpay+/webpay.module';
 
 
 
@@ -42,7 +43,8 @@ import { BusinessModule } from './modules/business/business.module';
     PostulanteModule,
     CurriculumModule,
     PlansModule,
-    BusinessModule
+    BusinessModule,
+    WebpayModule
 
 
   ],

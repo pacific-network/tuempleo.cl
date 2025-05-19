@@ -1,3 +1,4 @@
+//src/config/config.ts
 export default () => ({
     database: {
         host: process.env.DB_HOST,
@@ -13,3 +14,5 @@ export default () => ({
         jwt_secret: process.env.JWT_SECRET,
     },
 });
+
+
