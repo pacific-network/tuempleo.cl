@@ -7,8 +7,8 @@ export class Usuario {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ type: 'varchar', length: 255, unique: true, nullable: false, default: '' })
-    rut: string; // RUT del usuario
+    @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
+    rut: string | null;
 
     @Column({ type: 'varchar', length: 255, nullable: false })
     nombres: string;
@@ -32,7 +32,7 @@ export class Usuario {
     @JoinColumn({ name: 'rol_id' })
     rol: Rol;
 
-    @Column({type: 'int', nullable: true})
+    @Column({ type: 'int', nullable: true })
     id_empresa: number;
 
     @Column({ type: 'varchar', length: 500, nullable: true })
