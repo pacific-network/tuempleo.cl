@@ -19,9 +19,14 @@ export class Empresa {
     @Column({ type: 'json', nullable: false })
     data: Record<string, any>;
 
+    @Column({ type: 'int', nullable: true })
+    ofertas: number;
+
     @ManyToOne(() => Planes, (plan) => plan.empresa, { nullable: true, onDelete: 'SET NULL' })
     @JoinColumn({ name: 'plan_id' })
     plan: Planes;
+
+
 
     @Column({ type: 'varchar', length: 1000, nullable: true })
     logo_url: string;  // Campo para el logo
