@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 @Injectable()
-export class BusinessService {
+export class EmpresaService {
     constructor(
         @InjectRepository(Empresa)
         private readonly businessRepository: Repository<Empresa>,
@@ -30,12 +30,14 @@ export class BusinessService {
 
     public createBusiness(createBusinessDto: CreateBusinessDto): Promise<Empresa> {
         const planId = createBusinessDto.plan_id ?? 1;
-
+    
+        // Aquí creamos la entidad Empresa con plan como objeto { id: planId }
         const business = this.businessRepository.create({
             ...createBusinessDto,
-            plan: { id: planId },
+            plan: { id: planId },   // esto es clave para relacionar ManyToOne
+            data: createBusinessDto.data,  // data es JSON y viene en DTO
         });
-
+    
         return this.businessRepository.save(business);
     }
 

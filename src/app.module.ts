@@ -14,6 +14,9 @@ import { CurriculumModule } from './modules/curriculum/curriculum.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { BusinessModule } from './modules/business/business.module';
 import { WebpayModule } from './modules/webpay+/webpay.module';
+import { FormsModule } from './modules/forms/forms.module';
+import { OfertaModule } from './modules/oferta/oferta.module';
+import { ApplicationModule } from './modules/applications/application.module';
 
 
 
@@ -44,7 +47,11 @@ import { WebpayModule } from './modules/webpay+/webpay.module';
     CurriculumModule,
     PlansModule,
     BusinessModule,
-    WebpayModule
+    WebpayModule,
+    FormsModule,
+    OfertaModule,
+    ApplicationModule
+
 
 
   ],
