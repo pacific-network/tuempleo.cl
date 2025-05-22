@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -24,24 +24,32 @@ export class AuthService {
 
     // Registro del usuario
     async register(userData: RegistrarUsuarioDto): Promise<any> {
-        const { email, password, nombre_completo } = userData;
+        try {
+            const { email, password, nombre_completo } = userData;
 
-        const existingRegistro = await this.registroRepository.findOne({ where: { email } });
-        if (existingRegistro) {
-            throw new UnauthorizedException('Email ya registrado');
+            const existingRegistro = await this.registroRepository.findOne({ where: { email } });
+            if (existingRegistro) {
+                throw new UnauthorizedException('Email ya registrado');
+            }
+
+            const passwordHash = await this.encryptService.encrypt(password);
+
+            const newRegistro = this.registroRepository.create({
+                email,
+                password: passwordHash,
+                nombre_completo,
+                es_activo: false,
+            });
+
+            await this.registroRepository.save(newRegistro);
+            return { message: 'Registro exitoso. Espera la activación.' };
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw new UnauthorizedException(error.message);
+            } else {
+                throw new InternalServerErrorException('Error al registrar el usuario');
+            }
         }
-
-        const passwordHash = await this.encryptService.encrypt(password);
-
-        const newRegistro = this.registroRepository.create({
-            email,
-            password: passwordHash,
-            nombre_completo,
-            es_activo: false,
-        });
-
-        await this.registroRepository.save(newRegistro);
-        return { message: 'Registro exitoso. Espera la activación.' };
     }
 
     async login(loginData: IniciarSesionDto): Promise<any> {
