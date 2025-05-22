@@ -46,5 +46,14 @@ export class EncryptService {
         return decrypted.toString('utf-8');
     }
 
+    public compare(plainPassword: string, encryptedPassword: string): boolean {
+        try {
+            const decryptedPassword = this.decrypt(encryptedPassword);
+            return plainPassword === decryptedPassword;
+        } catch (error) {
+            return false; // Si falla la desencriptación
+        }
+    }
+
 }
 

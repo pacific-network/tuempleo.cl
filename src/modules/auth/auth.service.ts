@@ -54,28 +54,29 @@ export class AuthService {
 
     async login(loginData: IniciarSesionDto): Promise<any> {
         const { email, password, rolId } = loginData;
-
+    
         const registro = await this.registroRepository.findOne({ where: { email } });
         if (!registro) throw new UnauthorizedException('Usuario no encontrado');
-
-        const passwordMatch = await this.encryptService.decrypt(registro.password);
+    
+        // Comparar contraseña ingresada vs almacenada
+        const passwordMatch = this.encryptService.compare(password, registro.password);
         if (!passwordMatch) throw new UnauthorizedException('Contraseña incorrecta');
-
+    
         // Activar el registro
         registro.es_activo = true;
         await this.registroRepository.save(registro);
-
+    
         // Verificar si el usuario ya existe
         let user = await this.usuarioRepository.findOne({
             where: { email },
-            relations: ['rol'],  // Incluir el rol en la búsqueda
+            relations: ['rol'], // Incluir el rol
         });
-
+    
         // Si no existe, lo creamos
         if (!user) {
             const rol = await this.rolRepository.findOne({ where: { id: rolId } });
             if (!rol) throw new UnauthorizedException('Rol no encontrado');
-
+    
             user = this.usuarioRepository.create({
                 nombres: registro.nombre_completo.split(' ')[0],
                 apellidos: registro.nombre_completo.split(' ').slice(1).join(' '),
@@ -83,14 +84,14 @@ export class AuthService {
                 email: registro.email,
                 rol: rol,
             });
-
+    
             await this.usuarioRepository.save(user);
         }
-
+    
         // Payload del JWT
         const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
         const token = this.jwtService.sign(payload);
-
+    
         return {
             message: 'Login exitoso',
             token,
