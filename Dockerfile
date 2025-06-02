@@ -1,34 +1,33 @@
 # Etapa 1: Build
-FROM node:18-alpine AS build
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copiar package.json y package-lock.json (o yarn.lock)
+# Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Instalar TODAS las dependencias (incluidas devDependencies)
+# Instalar TODAS las dependencias (incluyendo dev)
 RUN npm install
 
-# Copiar todo el código fuente
+# Copiar el resto del código
 COPY . .
 
-# Construir el proyecto (esto genera /app/dist)
+# Ejecutar build
 RUN npm run build
 
-# Etapa 2: Producción
+# Etapa 2: Imagen final para producción
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar solo las dependencias de producción
+# Copiar solo package.json y package-lock.json para instalar solo producción
 COPY package*.json ./
+
 RUN npm install --production
 
-# Copiar solo la carpeta dist desde la etapa de build
-COPY --from=build /app/dist ./dist
+# Copiar solo el build generado en la etapa anterior
+COPY --from=builder /app/dist ./dist
 
-# Exponer puerto
 EXPOSE 3000
 
-# Ejecutar la app compilada
 CMD ["node", "dist/main"]
