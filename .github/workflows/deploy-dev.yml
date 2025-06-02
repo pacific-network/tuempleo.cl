@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     if: github.event.pull_request.merged == true
-    name: Deploy NestJS to Dev Server
+    name: Deploy NestJS with Docker to Dev Server
     runs-on: self-hosted
 
     steps:
@@ -21,34 +21,30 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -o StrictHostKeyChecking=no root@172.25.100.201 << 'EOF'
-            set -x  # Mostrar comandos ejecutados
+            set -x
 
-            echo "🚀 Verificando versiones"
-            node -v || { echo "❌ Node.js no está instalado"; exit 1; }
-            pm2 -v || { echo "❌ PM2 no está instalado"; exit 1; }
-
-            echo "📁 Entrando al directorio del proyecto"
+            echo "🚀 Entrando al directorio del proyecto"
             cd /var/www/html/tuempleo.cl || { echo "❌ No se pudo acceder al directorio"; exit 1; }
 
             echo "✅ Añadiendo repositorio como seguro para Git"
             git config --global --add safe.directory /var/www/html/tuempleo.cl
 
             echo "🧽 Descartando cambios locales no comiteados"
-            git reset --hard HEAD || { echo "❌ Fallo al hacer reset"; exit 1; }
-            git clean -fd || echo "⚠️ No se encontraron archivos sin seguimiento"
+            git reset --hard HEAD
+            git clean -fd
 
-            echo "📦 Realizando git pull"
+            echo "📦 Haciendo pull de los últimos cambios"
             git pull origin dev || { echo "❌ Fallo al hacer git pull"; exit 1; }
 
-            echo "🧹 Limpiando build anterior"
-            rm -rf dist || echo "⚠️ No se encontró 'dist', continuando..."
+            echo "🐳 Eliminando contenedor anterior si existe"
+            docker stop backend-nest || echo "⚠️ No estaba corriendo"
+            docker rm backend-nest || echo "⚠️ No existía"
 
-            echo "📦 Instalando dependencias"
-            npm install || { echo "❌ Fallo al instalar dependencias"; exit 1; }
+            echo "🛠️ Construyendo nueva imagen Docker"
+            docker build -t backend-nest . || { echo "❌ Fallo al construir la imagen"; exit 1; }
 
-            echo "🏗️ Compilando proyecto"
-            npm run build || { echo "❌ Fallo al compilar"; exit 1; }
+            echo "🚀 Ejecutando nuevo contenedor"
+            docker run -d --name backend-nest -p 3000:3000 backend-nest || { echo "❌ Fallo al ejecutar el contenedor"; exit 1; }
 
-            echo "🚀 Reiniciando con PM2"
-            pm2 restart tuempleo.cl || { echo "❌ Fallo al reiniciar con PM2"; exit 1; }
+            echo "✅ Despliegue exitoso 🎉"
           EOF
