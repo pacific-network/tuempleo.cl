@@ -43,8 +43,13 @@ jobs:
             echo "🛠️ Construyendo nueva imagen Docker"
             docker build -t backend-nest . || { echo "❌ Fallo al construir la imagen"; exit 1; }
 
-            echo "🚀 Ejecutando nuevo contenedor"
-            docker run -d --name backend-nest -p 3000:3000 backend-nest || { echo "❌ Fallo al ejecutar el contenedor"; exit 1; }
+            echo "🚀 Ejecutando nuevo contenedor con variables de entorno"
+            docker run -d \
+              --name backend-nest \
+              -p 3000:3000 \
+              --env-file .env \
+              --restart unless-stopped \
+              backend-nest || { echo "❌ Fallo al ejecutar el contenedor"; exit 1; }
 
             echo "✅ Despliegue exitoso 🎉"
           EOF
