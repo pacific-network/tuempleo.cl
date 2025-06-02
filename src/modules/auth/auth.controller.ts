@@ -14,7 +14,7 @@ import { RegistrarUsuarioDto } from './dto/register';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 
-@Controller('v1/auth')
+@Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
@@ -52,7 +52,7 @@ export class AuthController {
         // No hace falta lógica aquí, el guard redirige a LinkedIn
     }
 
-    @Get('auth/linkedin/callback')
+    @Get('linkedin/callback')
     @UseGuards(AuthGuard('linkedin'))
     async linkedinAuthRedirect(@Req() req: Request, @Res() res: Response) {
         const user = req.user;

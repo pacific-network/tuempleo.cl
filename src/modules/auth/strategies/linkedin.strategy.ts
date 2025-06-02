@@ -1,28 +1,39 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
-import { Strategy, StrategyOption } from 'passport-linkedin-oauth2';
+import { Strategy as LinkedInStrategyBase, StrategyOption } from 'passport-linkedin-oauth2';
+import { Profile } from 'passport';
 
 @Injectable()
-export class LinkedInStrategy extends PassportStrategy(Strategy, 'linkedin') {
+export class LinkedInStrategy extends PassportStrategy(LinkedInStrategyBase, 'linkedin') {
     constructor() {
-        super({
-            clientID: process.env.LINKEDIN_CLIENT_ID,
-            clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-            callbackURL: 'https://localhost:3000/auth/linkedin/callback',
+        const options: StrategyOption = {
+            clientID: process.env.LINKEDIN_CLIENT_ID || '',
+            clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+            callbackURL: process.env.LINKEDIN_CALLBACK_URL || '',
             scope: ['r_emailaddress', 'r_liteprofile'],
-        } as StrategyOption); // 👈 Asegura que uses el tipo correcto
-    }
-
-    async validate(accessToken: string, refreshToken: string, profile: any, done: Function) {
-        const { id, emails, name, photos } = profile;
-        const user = {
-            id,
-            email: emails?.[0]?.value,
-            name: `${name.givenName} ${name.familyName}`,
-            photo: photos?.[0]?.value,
-            provider: 'linkedin',
+            // NO passReqToCallback aquí
         };
 
-        done(null, user);
+        super(options);
     }
+
+    async validate(accessToken: string, refreshToken: string, profile: Profile, done: Function) {
+        try {
+          const { id, emails, name, photos } = profile;
+      
+          const user = {
+            id,
+            email: emails?.[0]?.value,
+            name: `${name?.givenName ?? ''} ${name?.familyName ?? ''}`,
+            photo: photos?.[0]?.value,
+            provider: 'linkedin',
+          };
+      
+          done(null, user);
+        } catch (error) {
+          console.error('Error en LinkedIn validate:', error);
+          done(error, false);
+        }
+      }
+      
 }
