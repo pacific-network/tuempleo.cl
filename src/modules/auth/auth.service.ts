@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+//src.modules/auth/auth.service.ts
+import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -24,24 +25,32 @@ export class AuthService {
 
     // Registro del usuario
     async register(userData: RegistrarUsuarioDto): Promise<any> {
-        const { email, password, nombre_completo } = userData;
+        try {
+            const { email, password, nombre_completo } = userData;
 
-        const existingRegistro = await this.registroRepository.findOne({ where: { email } });
-        if (existingRegistro) {
-            throw new UnauthorizedException('Email ya registrado');
+            const existingRegistro = await this.registroRepository.findOne({ where: { email } });
+            if (existingRegistro) {
+                throw new UnauthorizedException('Email ya registrado');
+            }
+
+            const passwordHash = await this.encryptService.encrypt(password);
+
+            const newRegistro = this.registroRepository.create({
+                email,
+                password: passwordHash,
+                nombre_completo,
+                es_activo: false,
+            });
+
+            await this.registroRepository.save(newRegistro);
+            return { message: 'Registro exitoso. Espera la activación.' };
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw new UnauthorizedException(error.message);
+            } else {
+                throw new InternalServerErrorException('Error al registrar el usuario');
+            }
         }
-
-        const passwordHash = await this.encryptService.encrypt(password);
-
-        const newRegistro = this.registroRepository.create({
-            email,
-            password: passwordHash,
-            nombre_completo,
-            es_activo: false,
-        });
-
-        await this.registroRepository.save(newRegistro);
-        return { message: 'Registro exitoso. Espera la activación.' };
     }
 
     async login(loginData: IniciarSesionDto): Promise<any> {
@@ -50,7 +59,8 @@ export class AuthService {
         const registro = await this.registroRepository.findOne({ where: { email } });
         if (!registro) throw new UnauthorizedException('Usuario no encontrado');
 
-        const passwordMatch = await this.encryptService.decrypt(registro.password);
+        // Comparar contraseña ingresada vs almacenada
+        const passwordMatch = this.encryptService.compare(password, registro.password);
         if (!passwordMatch) throw new UnauthorizedException('Contraseña incorrecta');
 
         // Activar el registro
@@ -60,7 +70,7 @@ export class AuthService {
         // Verificar si el usuario ya existe
         let user = await this.usuarioRepository.findOne({
             where: { email },
-            relations: ['rol'],  // Incluir el rol en la búsqueda
+            relations: ['rol'], // Incluir el rol
         });
 
         // Si no existe, lo creamos
@@ -87,6 +97,12 @@ export class AuthService {
             message: 'Login exitoso',
             token,
         };
+    }
+
+    async createTokenFromOAuth(user: any): Promise<string> {
+        // Aquí puedes generar un JWT o crear una sesión según tu lógica
+        const payload = { email: user.email, sub: user.id };
+        return this.jwtService.sign(payload);
     }
 
 }    
