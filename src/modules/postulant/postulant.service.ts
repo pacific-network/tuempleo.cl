@@ -122,30 +122,24 @@ export class PostulanteService {
         // Realizamos la actualización de los datos
         if (payload.data) {
             postulant.data = {
-                ...postulant.data,
                 ...payload.data,
                 datos_personales: {
                     ...postulant.data.datos_personales,
                     ...payload.data?.datos_personales,
                 },
                 educacion: [
-                    ...(postulant.data.educacion || []),
                     ...(payload.data?.educacion || [])
                 ],
                 experiencias: [
-                    ...(postulant.data.experiencias || []),
                     ...(payload.data?.experiencias || [])
                 ],
                 idiomas: [
-                    ...(postulant.data.idiomas || []),
                     ...(payload.data?.idiomas || [])
                 ],
                 preferencias: {
-                    ...postulant.data.preferencias,
                     ...(payload.data?.preferencias || {}),
                 },
                 redes_sociales: [
-                    ...(postulant.data.redes_sociales || []),
                     ...(payload.data?.redes_sociales || [])
                 ],
             };
