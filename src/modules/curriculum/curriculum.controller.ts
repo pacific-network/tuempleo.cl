@@ -61,6 +61,26 @@ export class CurriculumController {
             },
         }),
     )
+    // async uploadFile(
+    //     @Param('rut') rut: string,
+    //     @UploadedFile() file: Express.Multer.File,
+    // ): Promise<{ message: string; cv_path: string }> {
+    //     if (!file) {
+    //         throw new BadRequestException('No se ha subido ningún archivo.');
+    //     }
+
+    //     // Definir la ruta completa del archivo
+    //     const cvPath = join(__dirname, '../../upload', file.filename);
+
+    //     // Actualizar la base de datos con el path del archivo subido
+    //     const curriculum = await this.curriculumService.updateCvPath(rut, cvPath);
+
+    //     // Retornar la respuesta
+    //     return {
+    //         message: 'Archivo subido y path actualizado correctamente.',
+    //         cv_path: curriculum.cv_path,
+    //     };
+    // }
     async uploadFile(
         @Param('rut') rut: string,
         @UploadedFile() file: Express.Multer.File,
@@ -69,13 +89,10 @@ export class CurriculumController {
             throw new BadRequestException('No se ha subido ningún archivo.');
         }
 
-        // Definir la ruta completa del archivo
-        const cvPath = join(__dirname, '../../upload', file.filename);
+        const cvPath = `/var/www/html/uploads/${file.filename}`; // Ruta correcta
 
-        // Actualizar la base de datos con el path del archivo subido
         const curriculum = await this.curriculumService.updateCvPath(rut, cvPath);
 
-        // Retornar la respuesta
         return {
             message: 'Archivo subido y path actualizado correctamente.',
             cv_path: curriculum.cv_path,
