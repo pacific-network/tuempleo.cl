@@ -8,33 +8,33 @@ require('dotenv').config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // app.enableCors({
-
-  //   origin: 'http://127.0.0.1:5500', // Ajusta la URL del frontend si es necesario
-  //   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
-  //   allowedHeaders: ['Content-Type', 'Authorization'],
-  //   credentials: true,
-  // });
-
-  //tuempleo.cl
   app.enableCors({
-    origin: (origin, callback) => {
-      const allowedOrigins = ['https://tuempleo.cl', 'https://186.64.119.40'];
 
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error('CORS not allowed'), false);
-    },
+    origin: 'http://127.0.0.1:5500', // Ajusta la URL del frontend si es necesario
     methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
-  app.use(passport.initialize());
 
+  //tuempleo.cl
+  // app.enableCors({
+  //   origin: (origin, callback) => {
+  //     const allowedOrigins = ['https://tuempleo.cl', 'https://186.64.119.40'];
+
+  //     if (!origin || allowedOrigins.includes(origin)) {
+  //       return callback(null, true);
+  //     }
+
+  //     return callback(new Error('CORS not allowed'), false);
+  //   },
+  //   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
+  //   allowedHeaders: ['Content-Type', 'Authorization'],
+  //   credentials: true,
+  // });
+  // app.use(passport.initialize());
+
+  
   //Dev Server
-
   // app.enableCors({
   //   origin: (origin, callback) => {
   //     if (!origin) return callback(null, true); // Postman, curl, etc.

@@ -14,7 +14,7 @@ import { RegistrarUsuarioDto } from './dto/register';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 
-@Controller('auth')
+@Controller('v1/auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
