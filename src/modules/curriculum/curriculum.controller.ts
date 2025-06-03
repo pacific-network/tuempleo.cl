@@ -42,7 +42,7 @@ export class CurriculumController {
                 // Aquí definimos la carpeta donde se guardarán los archivos
                 destination: (req, file, cb) => {
                     // const uploadPath = '/Users/pauloramirezciani/Documents/Workspace/tuempleo.cl/upload';
-                    const uploadPath = '/var/www/html/uploads';
+                    const uploadPath = '/var/www/html/uploads/';
                     cb(null, uploadPath);  // El archivo se sube a la carpeta upload
                 },
                 filename: (req, file, cb) => {
