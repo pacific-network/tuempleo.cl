@@ -19,7 +19,7 @@ async function bootstrap() {
   //tuempleo.cl
   app.enableCors({
     origin: (origin, callback) => {
-      const allowedOrigins = ['http://tuempleo.cl', 'http://186.64.119.40'];
+      const allowedOrigins = ['https://tuempleo.cl', 'https://186.64.119.40'];
 
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
