@@ -48,6 +48,7 @@ jobs:
               --name backend-nest \
               -p 3000:3000 \
               --env-file .env \
+              -v /var/www/html/uploads:/var/www/html/uploads \
               --restart unless-stopped \
               backend-nest || { echo "❌ Fallo al ejecutar el contenedor"; exit 1; }
 
