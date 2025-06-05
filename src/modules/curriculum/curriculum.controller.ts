@@ -81,66 +81,16 @@ export class CurriculumController {
   //         cv_path: curriculum.cv_path,
   //     };
   // }
-  // @Post('upload/:rut')
-  // @UseInterceptors(
-  //   FileInterceptor('file', {
-  //     storage: diskStorage({
-  //       destination: (req, file, cb) => {
-  //         const uploadPath = '/var/www/html/uploads/';
-  //         cb(null, uploadPath);
-  //       },
-  //       filename: (req, file, cb) => {
-  //         const fileName = `${Date.now()}-${file.originalname}`;
-  //         cb(null, fileName);
-  //       },
-  //     }),
-  //     fileFilter: (req, file, cb) => {
-  //       const allowedExtensions = ['.pdf', '.doc', '.docx'];
-  //       const ext = extname(file.originalname).toLowerCase();
-  //       if (!allowedExtensions.includes(ext)) {
-  //         return cb(
-  //           new BadRequestException(
-  //             'Tipo de archivo no permitido. Solo se permiten .pdf, .doc, .docx',
-  //           ),
-  //           false,
-  //         );
-  //       }
-  //       cb(null, true);
-  //     },
-  //   }),
-  // )
-  // async uploadFile(
-  //   @Param('rut') rut: string,
-  //   @UploadedFile() file: Express.Multer.File,
-  // ): Promise<{ message: string; cv_path: string }> {
-  //   if (!file) {
-  //     throw new BadRequestException('No se ha subido ningún archivo.');
-  //   }
-
-  //   // Guarda la ruta absoluta correcta donde se almacenó el archivo
-  //   const cvPath = `/var/www/html/uploads/${file.filename}`;
-
-  //   // Actualiza la base de datos con esta ruta correcta
-  //   const curriculum = await this.curriculumService.updateCvPath(rut, cvPath);
-
-  //   return {
-  //     message: 'Archivo subido y path actualizado correctamente.',
-  //     cv_path: curriculum.cv_path,
-  //   };
-  // }
-
   @Post('upload/:rut')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const uploadPath = '/var/www/html/uploads';
-          console.log('📂 Guardando en:', uploadPath);
+          const uploadPath = '/var/www/html/uploads/';
           cb(null, uploadPath);
         },
         filename: (req, file, cb) => {
           const fileName = `${Date.now()}-${file.originalname}`;
-          console.log('📄 Nombre archivo generado:', fileName);
           cb(null, fileName);
         },
       }),
@@ -149,7 +99,9 @@ export class CurriculumController {
         const ext = extname(file.originalname).toLowerCase();
         if (!allowedExtensions.includes(ext)) {
           return cb(
-            new BadRequestException('Tipo de archivo no permitido. Solo .pdf, .doc, .docx'),
+            new BadRequestException(
+              'Tipo de archivo no permitido. Solo se permiten .pdf, .doc, .docx',
+            ),
             false,
           );
         }
@@ -165,9 +117,10 @@ export class CurriculumController {
       throw new BadRequestException('No se ha subido ningún archivo.');
     }
 
+    // Guarda la ruta absoluta correcta donde se almacenó el archivo
     const cvPath = `/var/www/html/uploads/${file.filename}`;
-    console.log('✅ Archivo subido exitosamente:', cvPath);
 
+    // Actualiza la base de datos con esta ruta correcta
     const curriculum = await this.curriculumService.updateCvPath(rut, cvPath);
 
     return {
@@ -175,4 +128,6 @@ export class CurriculumController {
       cv_path: curriculum.cv_path,
     };
   }
+
+
 }
