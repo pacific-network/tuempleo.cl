@@ -32,7 +32,8 @@ export class CurriculumController {
 
   @Get(':rut')
   async getCurriculumsByRut(@Param('rut') rut: string): Promise<Curriculum[]> {
-    return this.curriculumService.getCurriculumsByRut(rut);
+    const curriculum = await this.curriculumService.getCurriculumsByRut(rut);
+    return Array.isArray(curriculum) ? curriculum : [curriculum];
   }
 
   // @Post('upload/:rut')

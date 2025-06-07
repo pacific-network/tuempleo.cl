@@ -45,14 +45,22 @@ export class CurriculumService {
     return await this.curriculumRepository.save(curriculum);
   }
 
-  async getCurriculumsByRut(rut: string): Promise<Curriculum[]> {
+  async getCurriculumsByRut(rut: string): Promise<Curriculum> {
     const usuario = await this.usuarioRepository.findOne({ where: { rut } });
 
     if (!usuario) {
       throw new NotFoundException('Usuario no encontrado.');
     }
 
-    return this.curriculumRepository.find({ where: { usuario } });
+    const curriculum = await this.curriculumRepository.findOne({
+      where: { usuario: { id: usuario.id } },
+      relations: ['usuario'],
+    })
+
+    if (!curriculum) {
+      throw new NotFoundException('Curriculum no encontrado.');
+    }
+    return curriculum;
   }
 
   async updateCvPath(rut: string, cvPath: string): Promise<Curriculum> {
