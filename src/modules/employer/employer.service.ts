@@ -45,4 +45,11 @@ export class EmpleadorService {
 
         return this.empleadorRepository.save(empleador);
     }
+
+    async findEmployerByUserId(userId: number): Promise<Empleador | null> {
+        return this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa', 'usuario'],
+        });
+    }
 }

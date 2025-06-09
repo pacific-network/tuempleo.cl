@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
 import { RegistrarUsuarioDto } from './dto/register';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
+import { IniciarSesionDto } from './dto/login';
 
 @Controller('v1/auth')
 export class AuthController {
@@ -23,10 +24,24 @@ export class AuthController {
         return this.authService.register(userData);
     }
 
-    @Post('login')
+    // @Post('login')
+    // @HttpCode(HttpStatus.OK)
+    // async login(@Body() loginData: any) {
+    //     return this.authService.login(loginData);
+    // }
+
+    @Post('login-postulante')
     @HttpCode(HttpStatus.OK)
-    async login(@Body() loginData: any) {
-        return this.authService.login(loginData);
+    async loginPostulante(@Body() loginData: IniciarSesionDto) {
+        const rolPostulante = 1;
+        return this.authService.login(loginData, rolPostulante);
+    }
+
+    @Post('login-empleador')
+    @HttpCode(HttpStatus.OK)
+    async loginEmpleador(@Body() loginData: IniciarSesionDto) {
+        const rolEmpleador = 2;
+        return this.authService.login(loginData, rolEmpleador);
     }
 
     // GOOGLE OAUTH
