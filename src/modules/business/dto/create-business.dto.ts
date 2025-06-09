@@ -72,17 +72,17 @@ export class CreateBusinessDto {
     rut: string;
 
     @ApiProperty({ example: 'Tecnologías ACME SpA' })
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
     razon_social: string;
 
     @ApiProperty({ example: 'ACME Tech' })
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
     nombre_fantasia: string;
 
     @ApiProperty({ example: 1 })
-    @IsNotEmpty()
+
     @IsNumber()
     plan_id: number;
 
