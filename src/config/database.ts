@@ -17,10 +17,10 @@ dotenv.config();
 
 export const databaseConfig: TypeOrmModuleOptions = {
     type: 'mysql',
-    host: process.env.DB_HOST || 'tuempleo.cl',
+    host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
-    username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || '',
+    username: process.env.DB_USERNAME || 'root',
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante, Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',

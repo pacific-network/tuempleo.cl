@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Registro } from 'src/repository/register/register.entity';
+import { Usuario } from 'src/repository/user/user.entity';
 import { Repository } from 'typeorm';
 @Injectable()
 export class UserService {
     constructor(
         @InjectRepository(Registro)
         private readonly registroRepository: Repository<Registro>,
+        @InjectRepository(Usuario)
+        private readonly userRepository: Repository<Usuario>,
     ) { }
 
     async getAllUsers(): Promise<Registro[]> {
@@ -14,15 +17,15 @@ export class UserService {
     }
 
     async getUserById(id: number) {
-        const user = this.registroRepository.findOne({
-            where: { id }
+        const user = await this.registroRepository.findOne({
+            where: { id },
         });
+
         if (!user) {
             throw new Error('Usuario no encontrado');
         }
-        return this.registroRepository.findOne({
-            where: { id },
-        });
+
+        return user;
     }
 
     async createUser(userData: any) {
@@ -40,6 +43,18 @@ export class UserService {
             where: { email },
         });
         return usuario || null;
+    }
+
+
+    // Método para obtener un usuario por su ID en base a tabla usuario
+    async getUsuarioByIdFromUsers(id: number): Promise<Usuario> {
+        const user = await this.userRepository.findOne({ where: { id } });
+
+        if (!user) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        return user;
     }
 
 

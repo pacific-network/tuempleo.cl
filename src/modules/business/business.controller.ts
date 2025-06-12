@@ -6,7 +6,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
-@Controller('v1/business')
+@Controller('v1/empresas')
 export class EmpresaController {
     constructor(private readonly businessService: EmpresaService) { }
 
