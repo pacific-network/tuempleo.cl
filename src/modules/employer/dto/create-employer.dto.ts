@@ -4,6 +4,19 @@ import { Type } from 'class-transformer';
 import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class EmployerDataDto {
+
+    @IsNotEmpty()
+    @IsString()
+    pais: string;
+
+    @IsNotEmpty()
+    @IsString()
+    ciudad: string;
+
+    @IsNotEmpty()
+    @IsString()
+    direccion: string;
+
     @IsNotEmpty()
     @IsString()
     cargo: string;
@@ -27,6 +40,8 @@ export class EmployerDataDto {
     @IsOptional()
     @IsString()
     twitter?: string;
+
+    
 }
 
 export class CreateEmployerDto {
