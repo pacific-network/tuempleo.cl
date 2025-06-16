@@ -11,7 +11,11 @@ export class EmployerDataDto {
 
     @IsNotEmpty()
     @IsString()
-    ciudad: string;
+    region: string;
+
+    @IsNotEmpty()
+    @IsString()
+    comuna: string;
 
     @IsNotEmpty()
     @IsString()
@@ -41,7 +45,7 @@ export class EmployerDataDto {
     @IsString()
     twitter?: string;
 
-    
+
 }
 
 export class CreateEmployerDto {
