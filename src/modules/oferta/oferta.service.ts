@@ -5,6 +5,9 @@ import { Oferta } from "../../repository/job_offer/job-offer.entity";
 import { Empleador } from "../../repository/employer/employer.entity";
 import { Empresa } from "../../repository/business/business.entity";
 import { CreateOfertaDto } from "./dto/create-oferta.dto";
+import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
+import { PageDto } from "src/shared/pagination/page.dto";
+import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 
 @Injectable()
 export class OfertaService {
@@ -47,4 +50,38 @@ export class OfertaService {
         }
         return oferta;
     }
+
+
+    // async obtenerOfertasPorEmpleador(empleadorId: number): Promise<Oferta[]> {
+    //     const empleador = await this.empleadorRepository.findOne({ where: { id: empleadorId } });
+    //     if (!empleador) {
+    //         throw new NotFoundException(`Empleador con ID ${empleadorId} no encontrado`);
+    //     }
+    //     return this.ofertaRepository.find({
+    //         where: { empleador: { id: empleadorId } },
+    //         relations: ['empresa', 'empleador'],
+    //     });
+    // }
+
+    async obtenerOfertasPorEmpleador(
+        empleadorId: number,
+        pageOptions: PageOptionsDto
+    ): Promise<PageDto<Oferta>> {
+        const queryBuilder = this.ofertaRepository.createQueryBuilder('oferta')
+            .leftJoinAndSelect('oferta.empresa', 'empresa')
+            .leftJoinAndSelect('oferta.empleador', 'empleador')
+            .where('empleador.id = :empleadorId', { empleadorId })
+            .skip(pageOptions.skip)
+            .take(pageOptions.take);
+
+        const [entities, itemCount] = await queryBuilder.getManyAndCount();
+
+        const meta = new PageMetaDto({
+            pageOptionsDto: pageOptions,
+            itemCount,
+        });
+
+        return new PageDto(entities, meta);
+    }
+
 }
