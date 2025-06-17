@@ -3,7 +3,7 @@ import { PlansService } from "./plans.service";
 import { Planes } from "../../repository/plans/plans.entity";
 import { CreatePlansDto } from "./dto/create-plan.dto";
 import { UpdatePlansDto } from "./dto/update-plan.dto";
-@Controller('v1/plans')
+@Controller('v1/planes')
 export class PlansController {
     constructor(private readonly plansService: PlansService) { }
 

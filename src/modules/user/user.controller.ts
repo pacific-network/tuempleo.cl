@@ -10,7 +10,7 @@ export class UserController {
         return this.userService.getAllUsers();
     }
 
-    @Get(':id')
+    @Get('registro/:id')
     getUserById(@Param('id') id: number) {
         return this.userService.getUserById(id);
     }
@@ -18,6 +18,11 @@ export class UserController {
     @Post()
     createUser(@Body() userData: any) {
         return this.userService.createUser(userData);
+    }
+
+    @Get('/:id')
+    getUsarioById(@Param('id') id: number) {
+        return this.userService.getUsuarioByIdFromUsers(id);
     }
 
 
