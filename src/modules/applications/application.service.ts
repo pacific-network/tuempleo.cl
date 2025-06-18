@@ -41,8 +41,45 @@ export class PostulacionService {
         const postulacion = this.postulacionRepository.create({
             postulante,
             oferta,
+            estado: "enviada",
         });
 
         return this.postulacionRepository.save(postulacion);
     }
+
+    async obtenerPostulacionesPorPostulante(postulanteId: number): Promise<Postulacion[]> {
+        const postulante = await this.postulanteRepository.findOne({ where: { id: postulanteId } });
+        if (!postulante) {
+            throw new NotFoundException(`Postulante con ID ${postulanteId} no encontrado`);
+        }
+
+        return this.postulacionRepository.find({
+            where: {
+                postulante: {
+                    id: postulanteId,
+                },
+            },
+            relations: ['oferta'],
+            order: { fechaPostulacion: 'DESC' },
+        });
+
+    }
+
+    async obtenerPostulacionesPorOferta(ofertaId: number): Promise<Postulacion[]> {
+        const oferta = await this.ofertaRepository.findOne({ where: { id: ofertaId } });
+        if (!oferta) {
+            throw new NotFoundException(`Oferta con ID ${ofertaId} no encontrada`);
+        }
+
+        return this.postulacionRepository.find({
+            where: {
+                oferta: {
+                    id: ofertaId,
+                },
+            },
+            relations: ['postulante'],
+            order: { fechaPostulacion: 'DESC' },
+        });
+    }
+
 }
