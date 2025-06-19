@@ -84,4 +84,30 @@ export class OfertaService {
         return new PageDto(entities, meta);
     }
 
+    async eliminarOferta(id: number, usuarioId: number): Promise<{ message: string }> {
+        const oferta = await this.ofertaRepository.findOne({
+            where: { id },
+            relations: ['empleador', 'empresa'],
+        });
+        if (!oferta) {
+            throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
+        }
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['usuario'],
+        });
+
+        if (!empleador) {
+            throw new NotFoundException(`Empleador con usuario ID ${usuarioId} no encontrado`);
+        }
+        oferta.eliminada_por = empleador;
+        await this.ofertaRepository.save(oferta);
+
+        await this.ofertaRepository.softDelete(id);
+        return { message: `Oferta con ID ${id} eliminada correctamente` };
+    }
+
+
+
+
 }

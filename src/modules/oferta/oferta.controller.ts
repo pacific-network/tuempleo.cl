@@ -1,9 +1,11 @@
-import { Controller, Post, Body, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards } from '@nestjs/common';
 import { OfertaService } from './oferta.service';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { PageDto } from 'src/shared/pagination/page.dto';
+import { AuthGuard } from '../auth/guards/auth.guards';
+import { User } from 'src/shared/decorators/user.decorator';
 
 @Controller('v1/ofertas')
 export class OfertaController {
@@ -36,4 +38,15 @@ export class OfertaController {
     ): Promise<PageDto<Oferta>> {
         return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto);
     }
+
+    @UseGuards(AuthGuard)
+    @Delete(':id')
+    async eliminarOferta(
+        @Param('id') id: number,
+        @User() user: any
+    ): Promise<{ message: string }> {
+        return this.ofertaService.eliminarOferta(id, user.sub);
+    }
+
+
 }
