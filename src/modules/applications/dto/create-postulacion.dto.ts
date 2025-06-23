@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsObject } from 'class-validator';
+import { IsInt, IsOptional, IsObject, IsString, IsIn } from 'class-validator';
 
 export class CreatePostulacionDto {
   @IsInt()
@@ -9,5 +9,6 @@ export class CreatePostulacionDto {
 
   @IsOptional()
   @IsObject()
-  data?: Record<string, any>; // opcionalmente se pueden enviar respuestas/preguntas
+  data?: Record<string, any>;
+
 }

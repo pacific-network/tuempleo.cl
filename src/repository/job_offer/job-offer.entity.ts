@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn, ManyToOne, DeleteDateColumn } from "typeorm";
 import { Empresa } from "../business/business.entity";
 import { Empleador } from "../employer/employer.entity";
 
@@ -37,6 +37,15 @@ export class Oferta {
 
     @Column({ type: 'text' })
     data: string;
+
+    @DeleteDateColumn()
+    fecha_eliminacion: Date; // para saber si fue eliminado o no, no se elimina fisicamente, solo se marca como eliminado
+
+    @ManyToOne(() => Empleador, { nullable: true })
+    @JoinColumn({ name: 'eliminada_por' })
+    eliminada_por: Empleador;
+
+
 
 
 }
