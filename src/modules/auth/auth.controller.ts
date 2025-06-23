@@ -73,6 +73,7 @@ export class AuthController {
         const user = req.user;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        return res.redirect(`http://localhost:3000/auth/linkedin/callback?token=${token}`);
+        return res.redirect(`https://tuempleo.cl/auth?token=${token}`);
+
     }
 }
