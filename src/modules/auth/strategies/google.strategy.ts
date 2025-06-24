@@ -1,3 +1,4 @@
+//src/modules/auth/strategies/google.strategy.ts
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, StrategyOptions, VerifyCallback } from 'passport-google-oauth20';

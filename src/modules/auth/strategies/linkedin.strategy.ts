@@ -1,3 +1,4 @@
+//src/modules/auth/strategies/linkedin.strategy.ts
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { Strategy as LinkedInStrategyBase, StrategyOption } from 'passport-linkedin-oauth2';
