@@ -18,7 +18,8 @@ import { FormsModule } from './modules/forms/forms.module';
 import { OfertaModule } from './modules/oferta/oferta.module';
 import { ApplicationModule } from './modules/applications/application.module';
 import { SimpleApiModule } from './modules/simpleApi/get-rut.module';
-
+import { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { BlockBrowserMiddleware } from './middleware/block-browser.middleware';
 
 
 
@@ -58,4 +59,8 @@ import { SimpleApiModule } from './modules/simpleApi/get-rut.module';
 
   ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(BlockBrowserMiddleware).forRoutes('*');
+  }
+}
