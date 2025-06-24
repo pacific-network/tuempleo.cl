@@ -33,10 +33,10 @@ export class Usuario {
     rol: Rol;
 
     @Column({ type: 'int', nullable: true })
-    id_empresa: number;
+    id_empresa: number | null; // ID de la empresa asociada, si aplica
 
     @Column({ type: 'varchar', length: 500, nullable: true })
-    perfil_foto: string; // URL de la foto de perfil
+    perfil_foto: string | null; // URL de la foto de perfil
 
     // Relación con Curriculum
     @OneToMany(() => Curriculum, (curriculum) => curriculum.usuario)

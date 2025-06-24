@@ -9,6 +9,9 @@ import { Rol } from '../../repository/role/role.entity';
 import { RegistrarUsuarioDto } from './dto/register';
 import { IniciarSesionDto } from './dto/login';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
+import { User } from 'src/shared/decorators/user.decorator';
+
+
 
 @Injectable()
 export class AuthService {
@@ -52,52 +55,6 @@ export class AuthService {
             }
         }
     }
-
-    // async login(loginData: IniciarSesionDto): Promise<any> {
-    //     const { email, password, rolId } = loginData;
-
-    //     const registro = await this.registroRepository.findOne({ where: { email } });
-    //     if (!registro) throw new UnauthorizedException('Usuario no encontrado');
-
-    //     // Comparar contraseña ingresada vs almacenada
-    //     const passwordMatch = this.encryptService.compare(password, registro.password);
-    //     if (!passwordMatch) throw new UnauthorizedException('Contraseña incorrecta');
-
-    //     // Activar el registro
-    //     registro.es_activo = true;
-    //     await this.registroRepository.save(registro);
-
-    //     // Verificar si el usuario ya existe
-    //     let user = await this.usuarioRepository.findOne({
-    //         where: { email },
-    //         relations: ['rol'], // Incluir el rol
-    //     });
-
-    //     // Si no existe, lo creamos
-    //     if (!user) {
-    //         const rol = await this.rolRepository.findOne({ where: { id: rolId } });
-    //         if (!rol) throw new UnauthorizedException('Rol no encontrado');
-
-    //         user = this.usuarioRepository.create({
-    //             nombres: registro.nombre_completo.split(' ')[0],
-    //             apellidos: registro.nombre_completo.split(' ').slice(1).join(' '),
-    //             password: registro.password,
-    //             email: registro.email,
-    //             rol: rol,
-    //         });
-
-    //         await this.usuarioRepository.save(user);
-    //     }
-
-    //     // Payload del JWT
-    //     const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
-    //     const token = this.jwtService.sign(payload);
-
-    //     return {
-    //         message: 'Login exitoso',
-    //         token,
-    //     };
-    //}
 
     async login(loginData: IniciarSesionDto, rolId: number): Promise<any> {
         const { email, password } = loginData;
@@ -159,6 +116,58 @@ export class AuthService {
         const payload = { email: user.email, sub: user.id };
         return this.jwtService.sign(payload);
     }
+
+    //funcion para crear el usuario con oauth 
+    async validateOAuthUser(oauthPayload: {
+        email: string;
+        name: string;
+        picture: string | null;
+        provider: 'google' | 'linkedin';
+        oauthId: string;
+    }): Promise<Usuario> {
+        const { email, name, picture } = oauthPayload;
+
+        // Paso 1: Verificar si ya existe un usuario en la tabla `usuario`
+        let usuario = await this.usuarioRepository.findOne({
+            where: { email },
+            relations: ['rol'],
+        });
+        if (usuario) return usuario;
+
+        // Paso 2: Si no existe, registrarlo como nuevo (estado inactivo)
+        const nombre = name.split(' ')[0];
+        const apellido = name.split(' ').slice(1).join(' ') || '';
+
+        // Crear entrada en tabla `registro` si no existe
+        let registro = await this.registroRepository.findOne({ where: { email } });
+        if (!registro) {
+            registro = this.registroRepository.create({
+                email,
+                nombre_completo: name,
+                es_activo: false,
+            });
+            await this.registroRepository.save(registro);
+        }
+
+        // Buscar rol por defecto (ej: rol_id = 3 => "pendiente")
+        const rol = await this.rolRepository.findOne({ where: { id: 3 } });
+        if (!rol) throw new Error('Rol predeterminado no encontrado');
+
+        usuario = new Usuario();
+        usuario.email = email;
+        usuario.nombres = nombre;
+        usuario.apellidos = apellido;
+        usuario.password = '';
+        usuario.rol = rol;
+        usuario.perfil_foto = picture || null;
+        usuario.id_empresa = null;
+
+        return await this.usuarioRepository.save(usuario);
+    }
+
+
+
+
 
 
 

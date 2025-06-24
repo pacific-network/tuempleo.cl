@@ -14,10 +14,12 @@ import { RegistrarUsuarioDto } from './dto/register';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { IniciarSesionDto } from './dto/login';
+import { Usuario } from 'src/repository/user/user.entity';
 
 @Controller('v1/auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
+
 
     @Post('register')
     async register(@Body() userData: RegistrarUsuarioDto) {
@@ -46,19 +48,21 @@ export class AuthController {
     @Get('google')
     @UseGuards(AuthGuard('google'))
     async googleAuth(@Req() req: Request) {
-      // Passport redirige automáticamente a Google
+        // Passport redirige automáticamente a Google
     }
-  
+
     // Callback que recibe Google después de la autenticación
     @Get('google/callback')
     @UseGuards(AuthGuard('google'))
     async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
-      const user = req.user;
-  
-      const token = await this.authService.createTokenFromOAuth(user);
-  
-      // Redirige al frontend con el token (ajusta si usas otro path)
-      return res.redirect(`https://tuempleo.cl/auth?token=${token}`);
+        const user = req.user as Usuario;
+        const token = await this.authService.createTokenFromOAuth(user);
+
+        const redireccion = user.id_empresa
+            ? 'https://tuempleo.cl/empresas/employer-dashboard.html'
+            : 'https://tuempleo.cl/empresas/employer-form-register.html';
+
+        return res.redirect(`${redireccion}?token=${token}`);
     }
 
     // LINKEDIN OAUTH
@@ -69,12 +73,15 @@ export class AuthController {
     }
 
     @Get('linkedin/callback')
-    @UseGuards(AuthGuard ('linkedin'))
+    @UseGuards(AuthGuard('linkedin'))
     async linkedinAuthRedirect(@Req() req: Request, @Res() res: Response) {
-        const user = req.user;
+        const user = req.user as Usuario;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        return res.redirect(`https://tuempleo.cl/auth?token=${token}`);
+        const redireccion = user.id_empresa
+            ? 'https://tuempleo.cl/empresas/employer-dashboard.html'
+            : 'https://tuempleo.cl/empresas/employer-form-register.html';
 
+        return res.redirect(`${redireccion}?token=${token}`);
     }
 }
