@@ -10,8 +10,7 @@ export class LinkedInStrategy extends PassportStrategy(LinkedInStrategyBase, 'li
       clientID: process.env.LINKEDIN_CLIENT_ID || '',
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
       callbackURL: process.env.LINKEDIN_CALLBACK_URL || '',
-      scope: ['r_emailaddress', 'r_liteprofile'],
-      // NO passReqToCallback aquí
+      scope: ['r_liteprofile', 'r_emailaddress'], // orden sugerido por LinkedIn
     };
 
     super(options);
@@ -21,27 +20,28 @@ export class LinkedInStrategy extends PassportStrategy(LinkedInStrategyBase, 'li
     accessToken: string,
     refreshToken: string,
     profile: Profile,
-    done: Function,
+    done: (error: any, user?: any) => void,
   ) {
     try {
-      const email = profile.emails?.[0]?.value;
-      const photo = profile.photos?.[0]?.value;
-      const name = profile.name?.givenName || 'SinNombre';
+      const email = profile.emails?.[0]?.value ?? null;
+      const photo = profile.photos?.[0]?.value ?? null;
+      const givenName = profile.name?.givenName ?? '';
+      const familyName = profile.name?.familyName ?? '';
+      const name = `${givenName} ${familyName}`.trim();
 
       const user = {
         id: profile.id,
         email,
-        name: `${profile.name?.givenName ?? ''} ${profile.name?.familyName ?? ''}`.trim(),
+        name,
         photo,
         provider: 'linkedin',
+        accessToken, // opcional: puede ser útil para acceder a la API de LinkedIn después
       };
 
       done(null, user);
     } catch (error) {
-      console.error('Error en LinkedIn validate:', error);
+      console.error('[LinkedInStrategy] Error en validate:', error);
       done(error, false);
     }
   }
-
-
 }

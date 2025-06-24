@@ -12,6 +12,7 @@ import { Usuario } from 'src/repository/user/user.entity';
 import { Rol } from 'src/repository/role/role.entity';
 import { PassportModule } from '@nestjs/passport';
 import { LinkedInStrategy } from '../auth/strategies/linkedin.strategy'; // Ajusta la ruta según corresponda
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
     imports: [
@@ -29,7 +30,7 @@ import { LinkedInStrategy } from '../auth/strategies/linkedin.strategy'; // Ajus
             inject: [ConfigService],
         }),
     ],
-    providers: [AuthService, LinkedInStrategy], // Registrar la estrategia aquí
+    providers: [AuthService, LinkedInStrategy, GoogleStrategy], // Registrar la estrategia aquí
     controllers: [AuthController],
     exports: [AuthService],
 })

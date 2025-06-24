@@ -43,21 +43,22 @@ export class AuthController {
         const rolEmpleador = 2;
         return this.authService.login(loginData, rolEmpleador);
     }
-
-    // GOOGLE OAUTH
     @Get('google')
     @UseGuards(AuthGuard('google'))
     async googleAuth(@Req() req: Request) {
-        // Redirige automáticamente a Google
+      // Passport redirige automáticamente a Google
     }
-
+  
+    // Callback que recibe Google después de la autenticación
     @Get('google/callback')
     @UseGuards(AuthGuard('google'))
     async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
-        const user = req.user;
-        // Aquí puedes crear un JWT o redirigir
-        const token = await this.authService.createTokenFromOAuth(user);
-        res.redirect(`https://tu-frontend.com/auth?token=${token}`);
+      const user = req.user;
+  
+      const token = await this.authService.createTokenFromOAuth(user);
+  
+      // Redirige al frontend con el token (ajusta si usas otro path)
+      return res.redirect(`https://tuempleo.cl/auth?token=${token}`);
     }
 
     // LINKEDIN OAUTH
@@ -68,7 +69,7 @@ export class AuthController {
     }
 
     @Get('linkedin/callback')
-    @UseGuards(AuthGuard('linkedin'))
+    @UseGuards(AuthGuard ('linkedin'))
     async linkedinAuthRedirect(@Req() req: Request, @Res() res: Response) {
         const user = req.user;
         const token = await this.authService.createTokenFromOAuth(user);
