@@ -69,7 +69,7 @@ export class AuthController {
     }
 
     @Get('linkedin/callback')
-    @UseGuards(AuthGuard('linkedin'))
+    @UseGuards(AuthGuard ('linkedin'))
     async linkedinAuthRedirect(@Req() req: Request, @Res() res: Response) {
         const user = req.user;
         const token = await this.authService.createTokenFromOAuth(user);
