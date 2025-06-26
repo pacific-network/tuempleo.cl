@@ -165,10 +165,11 @@ export class AuthService {
         return await this.usuarioRepository.save(usuario);
     }
 
-
-
-
-
-
-
+    async findUserFullById(id: number) {
+        const user = await this.usuarioRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new UnauthorizedException('Usuario no encontrado');
+        }
+        return user;
+    }
 }    

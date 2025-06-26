@@ -7,6 +7,27 @@ export class BlockBrowserMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const isHtmlRequest = req.headers['accept']?.includes('text/html');
 
+    // Rutas que deben permitirse (OAuth y sus callbacks)
+    const exemptedRoutes = [
+      '/api/v1/auth/google',
+      '/api/v1/auth/google/callback',
+      '/api/v1/auth/linkedin',
+      '/api/v1/auth/linkedin/callback',
+      '/v1/auth/google',
+      '/v1/auth/google/callback',
+      '/v1/auth/linkedin',
+      '/v1/auth/linkedin/callback',
+    ];
+
+    // Verifica si la URL coincide con alguna ruta exenta
+    const isExempted = exemptedRoutes.some((route) =>
+      req.originalUrl.startsWith(route)
+    );
+
+    if (isExempted) {
+      return next(); // no bloquear si está permitido
+    }
+
     const isBrowserRequest =
       req.method === 'GET' &&
       isHtmlRequest &&

@@ -8,6 +8,7 @@ import {
     HttpCode,
     HttpStatus,
     UseGuards,
+    UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegistrarUsuarioDto } from './dto/register';
@@ -15,22 +16,26 @@ import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { IniciarSesionDto } from './dto/login';
 import { Usuario } from 'src/repository/user/user.entity';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('v1/auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
-
+    constructor(
+        private readonly authService: AuthService,
+        private readonly jwtService: JwtService // Inyectar JwtService para decodificar el token
+    ) { }
 
     @Post('register')
     async register(@Body() userData: RegistrarUsuarioDto) {
         return this.authService.register(userData);
     }
 
-    // @Post('login')
-    // @HttpCode(HttpStatus.OK)
-    // async login(@Body() loginData: any) {
-    //     return this.authService.login(loginData);
-    // }
+    @UseGuards(AuthGuard('jwt'))
+    @Get('me')
+    async getMe(@Req() req) {
+        const userId = req.user.userId;
+        return this.authService.findUserFullById(userId);
+    }
 
     @Post('login-postulante')
     @HttpCode(HttpStatus.OK)

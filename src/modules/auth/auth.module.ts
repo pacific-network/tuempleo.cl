@@ -13,6 +13,7 @@ import { Rol } from 'src/repository/role/role.entity';
 import { PassportModule } from '@nestjs/passport';
 import { LinkedInStrategy } from '../auth/strategies/linkedin.strategy'; // Ajusta la ruta según corresponda
 import { GoogleStrategy } from './strategies/google.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
     imports: [
@@ -30,7 +31,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
             inject: [ConfigService],
         }),
     ],
-    providers: [AuthService, LinkedInStrategy, GoogleStrategy], // Registrar la estrategia aquí
+    providers: [AuthService, LinkedInStrategy, GoogleStrategy, JwtStrategy], // Registrar la estrategia aquí
     controllers: [AuthController],
     exports: [AuthService],
 })
