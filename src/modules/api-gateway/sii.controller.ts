@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { SiiService } from './sii.service';
 
-@Controller('sii')
+@Controller('v1/sii')
 export class SiiController {
     constructor(private readonly siiService: SiiService) { }
 
