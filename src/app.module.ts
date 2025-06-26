@@ -17,9 +17,9 @@ import { WebpayModule } from './modules/webpay+/webpay.module';
 import { FormsModule } from './modules/forms/forms.module';
 import { OfertaModule } from './modules/oferta/oferta.module';
 import { ApplicationModule } from './modules/applications/application.module';
-import { SimpleApiModule } from './modules/simpleApi/get-rut.module';
 import { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { BlockBrowserMiddleware } from './middleware/block-browser.middleware';
+import { SiiModule } from './modules/api-gateway/sii.module';
 
 
 
@@ -53,7 +53,8 @@ import { BlockBrowserMiddleware } from './middleware/block-browser.middleware';
     FormsModule,
     OfertaModule,
     ApplicationModule,
-    SimpleApiModule
+    SiiModule
+    
 
 
 
