@@ -8,6 +8,7 @@ import { CreateOfertaDto } from "./dto/create-oferta.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
+import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 
 @Injectable()
 export class OfertaService {
@@ -105,6 +106,19 @@ export class OfertaService {
 
         await this.ofertaRepository.softDelete(id);
         return { message: `Oferta con ID ${id} eliminada correctamente` };
+    }
+
+    async actualizarOferta(id: number, data: UpdateOfertaDto) {
+        const oferta = await this.ofertaRepository.findOne({ where: { id } });
+        if (!oferta) {
+            throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
+        }
+
+        // Actualizar los campos de la oferta
+        Object.assign(oferta, data);
+
+        // Guardar la oferta actualizada
+        return this.ofertaRepository.save(oferta);
     }
 
 

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards, Patch } from '@nestjs/common';
 import { OfertaService } from './oferta.service';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
@@ -48,7 +48,15 @@ export class OfertaController {
         return this.ofertaService.eliminarOferta(id, user.sub);
     }
 
-    
+    @UseGuards(AuthGuard)
+    @Patch(':id')
+    async actualizarOferta(
+        @Param('id') id: number,
+        @User() user: any,
+        @Body() updateOfertaDto: CreateOfertaDto
+    ): Promise<Oferta> {
+        return this.ofertaService.actualizarOferta(id, updateOfertaDto);
+    }
 
 
 }
