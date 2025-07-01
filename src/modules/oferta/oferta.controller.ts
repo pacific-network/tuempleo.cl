@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards, Patch } from '@nestjs/common';
 import { OfertaService } from './oferta.service';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
@@ -6,6 +6,8 @@ import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { PageDto } from 'src/shared/pagination/page.dto';
 import { AuthGuard } from '../auth/guards/auth.guards';
 import { User } from 'src/shared/decorators/user.decorator';
+import { UpdateOfertaDto } from './dto/updadte-oferta.dto';
+import { Empleador } from 'src/repository/employer/employer.entity';
 
 @Controller('v1/ofertas')
 export class OfertaController {
@@ -48,7 +50,18 @@ export class OfertaController {
         return this.ofertaService.eliminarOferta(id, user.sub);
     }
 
-    
+    @UseGuards(AuthGuard)
+    @Patch(':id')
+    async actualizarOferta(
+        @Param('id') id: number,
+        @User() user: any,
+        @Body() updateOfertaDto: UpdateOfertaDto
+    ): Promise<Oferta> {
+        return this.ofertaService.actualizarOferta(+id, {
+            ...updateOfertaDto,
+            modificada_por: user.sub, // ← aquí se asigna correctamente el usuario autenticado
+        });
+    }
 
 
 }

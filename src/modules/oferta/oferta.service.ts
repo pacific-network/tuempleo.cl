@@ -8,6 +8,7 @@ import { CreateOfertaDto } from "./dto/create-oferta.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
+import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 
 @Injectable()
 export class OfertaService {
@@ -106,6 +107,42 @@ export class OfertaService {
         await this.ofertaRepository.softDelete(id);
         return { message: `Oferta con ID ${id} eliminada correctamente` };
     }
+
+    async actualizarOferta(id: number, data: UpdateOfertaDto): Promise<Oferta> {
+        // Buscar la oferta junto con el empleador relacionado
+        const oferta = await this.ofertaRepository.findOne({
+            where: { id },
+            relations: ['empleador'], // Necesario para validar el dueño
+        });
+
+        if (!oferta) {
+            throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
+        }
+
+        // Buscar el empleador autenticado usando usuario_id
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: data.modificada_por } },
+        });
+
+        if (!empleador) {
+            throw new NotFoundException(`Empleador con usuario_id ${data.modificada_por} no encontrado`);
+        }
+
+        // Validar que el empleador autenticado es el dueño de la oferta
+        if (oferta.empleador.id !== empleador.id) {
+            throw new NotFoundException(`No tienes permisos para modificar esta oferta`);
+        }
+
+        // Asignar empleador como modificador
+        oferta.modificada_por = empleador;
+
+        // Asignar el resto de campos (sin sobreescribir modificada_por directamente)
+        const { modificada_por, ...resto } = data;
+        Object.assign(oferta, resto);
+
+        return this.ofertaRepository.save(oferta);
+    }
+
 
 
 

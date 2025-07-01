@@ -45,6 +45,10 @@ export class Oferta {
     @JoinColumn({ name: 'eliminada_por' })
     eliminada_por: Empleador;
 
+    @ManyToOne(() => Empleador, { nullable: true })
+    @JoinColumn({ name: 'modificada_por' })
+    modificada_por: Empleador;
+
 
 
 
