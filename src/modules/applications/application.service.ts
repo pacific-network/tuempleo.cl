@@ -73,11 +73,9 @@ export class PostulacionService {
 
         return this.postulacionRepository.find({
             where: {
-                oferta: {
-                    id: ofertaId,
-                },
+                oferta: { id: ofertaId },
             },
-            relations: ['postulante'],
+            relations: ['postulante', 'postulante.usuario'], // incluye usuario dentro de postulante
             order: { fechaPostulacion: 'DESC' },
         });
     }
