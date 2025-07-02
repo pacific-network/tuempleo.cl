@@ -56,18 +56,19 @@ export class EmpleadorService {
 
     async findBasicInfo(userId: number): Promise<EmpleadorBasicInfoDto> {
         const empleador = await this.empleadorRepository.findOne({
-          where: { usuario: { id: userId } },
-          relations: ['empresa'],
-          select: ['id'],
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+            // ¡NO pongas select si quieres acceder a relaciones!
         });
-      
+
         if (!empleador) {
-          throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
+            throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
         }
-      
+
         return {
-          empleador_id: empleador.id,
-          empresa_id: empleador.empresa?.id || null,
+            empleador_id: empleador.id,
+            empresa_id: empleador.empresa?.id || null,
         };
-      }
+    }
+
 }
