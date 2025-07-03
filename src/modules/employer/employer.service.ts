@@ -71,4 +71,20 @@ export class EmpleadorService {
         };
     }
 
+    async BusinessEmployer(userId: number): Promise<Empresa | null> {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+        });
+
+        if (!empleador) {
+            return null;
+        }
+
+        return empleador.empresa;
+    }
+
+
+
+
 }
