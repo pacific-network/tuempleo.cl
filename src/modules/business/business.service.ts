@@ -73,13 +73,16 @@ export class EmpresaService {
         return this.businessRepository.save(business);
     }
 
-    deleteBusinessById(rut: string): Promise<void> {
+    public async deleteBusinessById(rut: string): Promise<void> {
         return this.businessRepository.delete({ rut }).then(() => {
             // Si la empresa fue eliminada correctamente, no hacemos nada más
         }).catch((error) => {
             throw new NotFoundException('Empresa no encontrada o no se pudo eliminar');
         });
     }
+
+  
+      
 
 
 }
