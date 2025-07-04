@@ -6,6 +6,7 @@ import { Usuario } from "src/repository/user/user.entity";
 import { Empleador } from "src/repository/employer/employer.entity";
 import { CreateEmployerDto } from "../employer/dto/create-employer.dto";
 import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
+import { UpdateBusinessDto } from "../business/dto/update-business.dto";
 
 @Injectable()
 export class EmpleadorService {
@@ -83,6 +84,46 @@ export class EmpleadorService {
 
         return empleador.empresa;
     }
+
+    //update empresa by userId 
+    async updateEmployerBusiness(userId: number, dto: UpdateBusinessDto): Promise<Empresa> {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+        });
+
+        if (!empleador || !empleador.empresa) {
+            throw new NotFoundException('Empresa asociada al usuario no encontrada');
+        }
+
+        const empresa = empleador.empresa;
+
+        // Solo actualizamos los campos que vinieron en el DTO
+        const camposEditables = [
+            'nombre_fantasia',
+            'telefono',
+            'domicilios',
+            'descripcion',
+            'web_factuacion',
+            'logo_url',
+        ];
+
+        for (const campo of camposEditables) {
+            if (dto[campo] !== undefined) {
+                if (campo in empresa.data) {
+                    empresa.data[campo] = dto[campo]; // campo dentro de empresa.data
+                } else {
+                    empresa[campo] = dto[campo]; // campo directamente en empresa
+                }
+            }
+        }
+
+        empresa.fecha_update = new Date();
+
+        return await this.empresaRepository.save(empresa);
+    }
+
+
 
 
 
