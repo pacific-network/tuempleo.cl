@@ -83,10 +83,15 @@ export class AuthController {
         const user = req.user as Usuario;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        const redireccion = user.id_empresa
-            ? 'https://tuempleo.cl/empresas/employer-dashboard.html'
-            : 'https://tuempleo.cl/empresas/employer-form-register.html';
-
-        return res.redirect(`${redireccion}?token=${token}`);
+        return res.json({
+            access_token: token,
+            user: {
+                id: user.id,
+                email: user.email,
+                nombres: user.nombres,
+                apellidos: user.apellidos,
+                id_empresa: user.id_empresa,
+            },
+        });
     }
 }
