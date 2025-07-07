@@ -7,9 +7,11 @@ import { Empleador } from "src/repository/employer/employer.entity";
 import { CreateEmployerDto } from "../employer/dto/create-employer.dto";
 import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
 import { UpdateBusinessDto } from "../business/dto/update-business.dto";
+import { UpdateEmployerDto } from "./dto/update-employer.dto";
 
 @Injectable()
 export class EmpleadorService {
+    empleadorRepo: any;
     constructor(
         @InjectRepository(Empleador)
         private readonly empleadorRepository: Repository<Empleador>,
@@ -122,6 +124,27 @@ export class EmpleadorService {
 
         return await this.empresaRepository.save(empresa);
     }
+
+    async updateEmployerData(userId: number, dto: UpdateEmployerDto): Promise<Empleador> {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+        });
+
+        if (!empleador) {
+            throw new NotFoundException('Empleador no encontrado');
+        }
+
+        if (dto.data) {
+            empleador.data = { ...empleador.data, ...dto.data }; // puedes reemplazar si prefieres
+        }
+
+        empleador.modificado_por = userId;
+        empleador.fecha_update = new Date();
+
+        return this.empleadorRepository.save(empleador);
+    }
+
+
 
 
 

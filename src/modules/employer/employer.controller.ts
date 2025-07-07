@@ -6,6 +6,7 @@ import { EmpleadorBasicInfoDto } from './dto/basic-info.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Empresa } from 'src/repository/business/business.entity';
 import { UpdateBusinessDto } from '../business/dto/update-business.dto';
+import { UpdateEmployerDto } from './dto/update-employer.dto';
 
 
 @Controller('v1/empleador')
@@ -52,6 +53,15 @@ export class EmpleadorController {
     return this.empleadorService.updateEmployerBusiness(userId, dto);
   }
 
+  @Patch('data')
+  @UseGuards(AuthGuard('jwt'))
+  async updateEmployerData(
+    @Body() dto: UpdateEmployerDto,
+    @Req() req: any,
+  ): Promise<Empleador> {
+    const userId = req.user.userId;
+    return this.empleadorService.updateEmployerData(userId, dto);
+  }
 
 
 }
