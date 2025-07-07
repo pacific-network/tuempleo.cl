@@ -127,12 +127,19 @@ export class AuthService {
     }): Promise<Usuario> {
         const { email, name, picture } = oauthPayload;
 
-        // Paso 1: Verificar si ya existe un usuario en la tabla `usuario`
         let usuario = await this.usuarioRepository.findOne({
             where: { email },
             relations: ['rol'],
         });
-        if (usuario) return usuario;
+
+        if (usuario) {
+            // ✅ Marcar como activo si no lo está
+            if (!usuario.is_activo) {
+                usuario.is_activo = true;
+                usuario = await this.usuarioRepository.save(usuario);
+            }
+            return usuario;
+        }
 
         // Paso 2: Si no existe, registrarlo como nuevo (estado inactivo)
         const nombre = name.split(' ')[0];
@@ -161,6 +168,7 @@ export class AuthService {
         usuario.rol = rol;
         usuario.perfil_foto = picture || null;
         usuario.id_empresa = null;
+        usuario.is_activo = true; // ✅ Nuevo usuario creado también debe estar activo
 
         return await this.usuarioRepository.save(usuario);
     }
