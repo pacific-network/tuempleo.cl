@@ -63,12 +63,9 @@ export class AuthController {
         const user = req.user as Usuario;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        const redireccion = user.id_empresa
-            ? 'https://tuempleo.cl/empresas/employer-dashboard.html'
-            : 'https://tuempleo.cl/empresas/employer-form-register.html';
-
-        return res.redirect(`${redireccion}?token=${token}`);
+        return res.redirect(`https://tuempleo.cl/login-employer.html?token=${token}`);
     }
+
 
     // LINKEDIN OAUTH
     @Get('linkedin')
