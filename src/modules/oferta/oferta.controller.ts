@@ -57,10 +57,7 @@ export class OfertaController {
         @User() user: any,
         @Body() updateOfertaDto: UpdateOfertaDto
     ): Promise<Oferta> {
-        return this.ofertaService.actualizarOferta(+id, {
-            ...updateOfertaDto,
-            modificada_por: user.sub, // ← aquí se asigna correctamente el usuario autenticado
-        });
+        return this.ofertaService.actualizarOferta(+id, updateOfertaDto, user.sub);
     }
 
 

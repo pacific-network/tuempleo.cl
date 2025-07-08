@@ -9,6 +9,7 @@ import {
     HttpStatus,
     UseGuards,
     UnauthorizedException,
+    Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegistrarUsuarioDto } from './dto/register';
@@ -17,6 +18,7 @@ import { Request, Response } from 'express';
 import { IniciarSesionDto } from './dto/login';
 import { Usuario } from 'src/repository/user/user.entity';
 import { JwtService } from '@nestjs/jwt';
+import { UpdateMeDto } from './dto/update-me';
 
 @Controller('v1/auth')
 export class AuthController {
@@ -90,5 +92,12 @@ export class AuthController {
                 id_empresa: user.id_empresa,
             },
         });
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Patch('me')
+    async updateMe(@Req() req, @Body() dto: UpdateMeDto) {
+        const userId = req.user.userId;
+        return this.authService.updateMe(userId, dto);
     }
 }

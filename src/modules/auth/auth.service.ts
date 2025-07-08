@@ -1,5 +1,5 @@
 //src.modules/auth/auth.service.ts
-import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,6 +10,7 @@ import { RegistrarUsuarioDto } from './dto/register';
 import { IniciarSesionDto } from './dto/login';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { User } from 'src/shared/decorators/user.decorator';
+import { UpdateMeDto } from './dto/update-me';
 
 
 
@@ -180,4 +181,23 @@ export class AuthService {
         }
         return user;
     }
-}    
+
+    async updateMe(userId: number, dto: UpdateMeDto): Promise<Usuario> {
+        const user = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+
+        // Encriptar la nueva contraseña si viene
+        if (dto.password) {
+            dto.password = this.encryptService.encrypt(dto.password);
+        }
+
+        // Actualizar solo los campos presentes
+        Object.assign(user, dto);
+
+        return this.usuarioRepository.save(user);
+    }
+
+}
+

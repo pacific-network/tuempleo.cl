@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Oferta } from "../../repository/job_offer/job-offer.entity";
@@ -108,40 +108,48 @@ export class OfertaService {
         return { message: `Oferta con ID ${id} eliminada correctamente` };
     }
 
-    async actualizarOferta(id: number, data: UpdateOfertaDto): Promise<Oferta> {
-        // Buscar la oferta junto con el empleador relacionado
+    async actualizarOferta(id: number, data: UpdateOfertaDto, userId: number): Promise<Oferta> {
+        // 1. Buscar la oferta con su empleador
         const oferta = await this.ofertaRepository.findOne({
             where: { id },
-            relations: ['empleador'], // Necesario para validar el dueño
+            relations: ['empleador'],
         });
 
         if (!oferta) {
             throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
         }
 
-        // Buscar el empleador autenticado usando usuario_id
+        // 2. Buscar el empleador autenticado según el ID de usuario (del token)
         const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: data.modificada_por } },
+            where: { usuario: { id: userId } },
+            relations: ['usuario'],
         });
 
         if (!empleador) {
-            throw new NotFoundException(`Empleador con usuario_id ${data.modificada_por} no encontrado`);
+            throw new NotFoundException(`Empleador con usuario_id ${userId} no encontrado`);
         }
 
-        // Validar que el empleador autenticado es el dueño de la oferta
+        // 3. Validar que es dueño de la oferta
         if (oferta.empleador.id !== empleador.id) {
-            throw new NotFoundException(`No tienes permisos para modificar esta oferta`);
+            throw new ForbiddenException(`No tienes permisos para modificar esta oferta`);
         }
 
-        // Asignar empleador como modificador
-        oferta.modificada_por = empleador;
+        // 4. Solo modificar los campos permitidos
+        if (data.titulo !== undefined) {
+            oferta.titulo = data.titulo;
+        }
 
-        // Asignar el resto de campos (sin sobreescribir modificada_por directamente)
-        const { modificada_por, ...resto } = data;
-        Object.assign(oferta, resto);
+        if (data.data !== undefined) {
+            oferta.data = typeof data.data === 'object' ? JSON.stringify(data.data) : data.data;
+        }
+
+        // 5. Registrar quién modificó
+        oferta.modificada_por = empleador;
 
         return this.ofertaRepository.save(oferta);
     }
+
+
 
 
 

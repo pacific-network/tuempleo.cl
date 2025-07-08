@@ -53,15 +53,16 @@ export class EmpleadorController {
     return this.empleadorService.updateEmployerBusiness(userId, dto);
   }
 
-  @Patch('data')
+  @Patch('/data')
   @UseGuards(AuthGuard('jwt'))
-  async updateEmployerData(
+  async updateEmployer(
     @Body() dto: UpdateEmployerDto,
     @Req() req: any,
   ): Promise<Empleador> {
     const userId = req.user.userId;
     return this.empleadorService.updateEmployerData(userId, dto);
   }
+
 
 
 }
