@@ -1,10 +1,11 @@
-import { PartialType } from '@nestjs/mapped-types'; // o '@nestjs/swagger' si estás generando Swagger docs
-import { CreateOfertaDto } from './create-oferta.dto';
-import { IsInt, IsOptional } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
-export class UpdateOfertaDto extends PartialType(CreateOfertaDto) {
+export class UpdateOfertaDto {
     @IsOptional()
-    @IsInt()
-    modificada_por?: number;
-}
+    @IsString()
+    titulo?: string;
 
+    @IsOptional()
+    @IsString()
+    data?: string;
+}

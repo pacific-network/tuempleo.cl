@@ -9,6 +9,7 @@ import {
     HttpStatus,
     UseGuards,
     UnauthorizedException,
+    Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegistrarUsuarioDto } from './dto/register';
@@ -17,6 +18,7 @@ import { Request, Response } from 'express';
 import { IniciarSesionDto } from './dto/login';
 import { Usuario } from 'src/repository/user/user.entity';
 import { JwtService } from '@nestjs/jwt';
+import { UpdateMeDto } from './dto/update-me';
 
 @Controller('v1/auth')
 export class AuthController {
@@ -63,12 +65,9 @@ export class AuthController {
         const user = req.user as Usuario;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        const redireccion = user.id_empresa
-            ? 'https://tuempleo.cl/empresas/employer-dashboard.html'
-            : 'https://tuempleo.cl/empresas/employer-form-register.html';
-
-        return res.redirect(`${redireccion}?token=${token}`);
+        return res.redirect(`https://tuempleo.cl/login-employer.html?token=${token}`);
     }
+
 
     // LINKEDIN OAUTH
     @Get('linkedin')
@@ -83,10 +82,22 @@ export class AuthController {
         const user = req.user as Usuario;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        const redireccion = user.id_empresa
-            ? 'https://tuempleo.cl/empresas/employer-dashboard.html'
-            : 'https://tuempleo.cl/empresas/employer-form-register.html';
+        return res.json({
+            access_token: token,
+            user: {
+                id: user.id,
+                email: user.email,
+                nombres: user.nombres,
+                apellidos: user.apellidos,
+                id_empresa: user.id_empresa,
+            },
+        });
+    }
 
-        return res.redirect(`${redireccion}?token=${token}`);
+    @UseGuards(AuthGuard('jwt'))
+    @Patch('me')
+    async updateMe(@Req() req, @Body() dto: UpdateMeDto) {
+        const userId = req.user.userId;
+        return this.authService.updateMe(userId, dto);
     }
 }

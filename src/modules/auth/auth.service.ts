@@ -1,5 +1,5 @@
 //src.modules/auth/auth.service.ts
-import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,6 +10,7 @@ import { RegistrarUsuarioDto } from './dto/register';
 import { IniciarSesionDto } from './dto/login';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { User } from 'src/shared/decorators/user.decorator';
+import { UpdateMeDto } from './dto/update-me';
 
 
 
@@ -127,12 +128,19 @@ export class AuthService {
     }): Promise<Usuario> {
         const { email, name, picture } = oauthPayload;
 
-        // Paso 1: Verificar si ya existe un usuario en la tabla `usuario`
         let usuario = await this.usuarioRepository.findOne({
             where: { email },
             relations: ['rol'],
         });
-        if (usuario) return usuario;
+
+        if (usuario) {
+            // ✅ Marcar como activo si no lo está
+            if (!usuario.is_activo) {
+                usuario.is_activo = true;
+                usuario = await this.usuarioRepository.save(usuario);
+            }
+            return usuario;
+        }
 
         // Paso 2: Si no existe, registrarlo como nuevo (estado inactivo)
         const nombre = name.split(' ')[0];
@@ -161,6 +169,7 @@ export class AuthService {
         usuario.rol = rol;
         usuario.perfil_foto = picture || null;
         usuario.id_empresa = null;
+        usuario.is_activo = true; // ✅ Nuevo usuario creado también debe estar activo
 
         return await this.usuarioRepository.save(usuario);
     }
@@ -172,4 +181,23 @@ export class AuthService {
         }
         return user;
     }
-}    
+
+    async updateMe(userId: number, dto: UpdateMeDto): Promise<Usuario> {
+        const user = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+
+        // Encriptar la nueva contraseña si viene
+        if (dto.password) {
+            dto.password = this.encryptService.encrypt(dto.password);
+        }
+
+        // Actualizar solo los campos presentes
+        Object.assign(user, dto);
+
+        return this.usuarioRepository.save(user);
+    }
+
+}
+

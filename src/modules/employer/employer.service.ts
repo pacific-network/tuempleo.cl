@@ -6,9 +6,12 @@ import { Usuario } from "src/repository/user/user.entity";
 import { Empleador } from "src/repository/employer/employer.entity";
 import { CreateEmployerDto } from "../employer/dto/create-employer.dto";
 import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
+import { UpdateBusinessDto } from "../business/dto/update-business.dto";
+import { UpdateEmployerDto } from "./dto/update-employer.dto";
 
 @Injectable()
 export class EmpleadorService {
+    empleadorRepo: any;
     constructor(
         @InjectRepository(Empleador)
         private readonly empleadorRepository: Repository<Empleador>,
@@ -83,6 +86,67 @@ export class EmpleadorService {
 
         return empleador.empresa;
     }
+
+    //update empresa by userId 
+    async updateEmployerBusiness(userId: number, dto: UpdateBusinessDto): Promise<Empresa> {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+        });
+
+        if (!empleador || !empleador.empresa) {
+            throw new NotFoundException('Empresa asociada al usuario no encontrada');
+        }
+
+        const empresa = empleador.empresa;
+
+        // Solo actualizamos los campos que vinieron en el DTO
+        const camposEditables = [
+            'nombre_fantasia',
+            'telefono',
+            'domicilios',
+            'descripcion',
+            'web_factuacion',
+            'logo_url',
+        ];
+
+        for (const campo of camposEditables) {
+            if (dto[campo] !== undefined) {
+                if (campo in empresa.data) {
+                    empresa.data[campo] = dto[campo]; // campo dentro de empresa.data
+                } else {
+                    empresa[campo] = dto[campo]; // campo directamente en empresa
+                }
+            }
+        }
+
+        empresa.fecha_update = new Date();
+
+        return await this.empresaRepository.save(empresa);
+    }
+
+    async updateEmployerData(userId: number, dto: UpdateEmployerDto): Promise<Empleador> {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+        });
+
+        if (!empleador) {
+            throw new NotFoundException('Empleador no encontrado');
+        }
+
+        if (dto.data) {
+            empleador.data = { ...empleador.data, ...dto.data }; // puedes reemplazar si prefieres
+        }
+
+        empleador.modificado_por = userId;
+        empleador.fecha_update = new Date();
+
+        return this.empleadorRepository.save(empleador);
+    }
+
+
+
+
 
 
 

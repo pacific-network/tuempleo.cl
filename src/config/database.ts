@@ -10,6 +10,8 @@ import { Planes } from 'src/repository/plans/plans.entity';
 import { Postulante } from 'src/repository/postulant/postulant.entity';
 import { Registro } from 'src/repository/register/register.entity';
 import { Rol } from 'src/repository/role/role.entity';
+import { ShoppingCart } from 'src/repository/shopping/shopping.entity';
+import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 
 // Cargar variables de entorno
@@ -22,7 +24,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     password: process.env.DB_PASSWORD || '',
     username: process.env.DB_USERNAME || 'root',
     database: process.env.DB_NAME || 'tuempleo',
-    entities: [Registro, Rol, Usuario, Postulante, Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion],
+    entities: [Registro, Rol, Usuario, Postulante, Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion, Transaction, ShoppingCart],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };
