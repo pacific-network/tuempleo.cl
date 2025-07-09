@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Param, Get, HttpException, HttpStatus, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, HttpException, HttpStatus, UseGuards, Patch, Query } from '@nestjs/common';
 import { PostulanteService } from '../postulant/postulant.service';
 import { AuthGuard } from '../auth/guards/auth.guards';
 import { UpdatePostulantDto } from './dto/update-postulant.dto';
+import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
+import { PageDto } from 'src/shared/pagination/page.dto';
+import { Postulante } from 'src/repository/postulant/postulant.entity';
 
 @Controller('v1/postulante')
 export class PostulanteController {
@@ -48,5 +51,11 @@ export class PostulanteController {
     }
   }
 
-  
+  @UseGuards(AuthGuard)
+  @Get()
+  async getAllPostulantes(@Query() PageOptionsDto: PageOptionsDto): Promise<PageDto<Postulante>> {
+    return this.postulanteService.findAllPostulants(PageOptionsDto);
+  }
+
+
 }

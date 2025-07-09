@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Postulante } from '../../repository/postulant/postulant.entity';
 import { Usuario } from '../../repository/user/user.entity';
 import { UpdatePostulantDto } from './dto/update-postulant.dto';
+import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
+import { PageDto } from 'src/shared/pagination/page.dto';
+import { PageMetaDto } from 'src/shared/pagination/page-meta.dto';
 
 @Injectable()
 export class PostulanteService {
@@ -158,6 +161,23 @@ export class PostulanteService {
             }
         };
     }
+
+    //get all postulant
+    async findAllPostulants(pageOptionsDto: PageOptionsDto): Promise<PageDto<Postulante>> {
+        const queryBuilder = this.postulanteRepository.createQueryBuilder('postulante');
+
+        queryBuilder
+            .leftJoinAndSelect('postulante.usuario', 'usuario')
+            .skip(pageOptionsDto.skip)
+            .take(pageOptionsDto.take);
+
+        const itemCount = await queryBuilder.getCount();
+        const { entities } = await queryBuilder.getRawAndEntities();
+
+        const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+        return new PageDto(entities, pageMetaDto);
+    }
+
 
 
 
