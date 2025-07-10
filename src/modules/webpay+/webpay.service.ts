@@ -21,14 +21,15 @@ export class WebpayService {
 
     /**
      * Crea una transacción Webpay
-     * @param amount Monto total de la transacción
-     * @param orderId ID del pedido/compra (único)
-     * @param sessionId ID de la sesión del cliente
-     * @returns Objeto con URL y token para redireccionar a Webpay
      */
     async createTransaction(amount: number, orderId: string, sessionId: string) {
+        console.log("[WebpayService] createTransaction called with:", { amount, orderId, sessionId });
+        console.log("[WebpayService] Using returnUrl:", returnUrl);
+
         try {
             const response = await webpay.create(orderId, sessionId, amount, returnUrl);
+
+            console.log("[WebpayService] Transbank response:", response);
 
             const transaction = this.transactionRepository.create({
                 orderId,
@@ -52,12 +53,14 @@ export class WebpayService {
 
     /**
      * Confirma una transacción luego del pago en Webpay
-     * @param token Token de la transacción (token_ws)
-     * @returns Respuesta de Webpay con el estado
      */
     async confirmTransaction(token: string) {
+        console.log("[WebpayService] confirmTransaction called with token:", token);
+
         try {
             const response = await webpay.commit(token);
+
+            console.log("[WebpayService] Commit response:", response);
 
             const transaction = await this.transactionRepository.findOne({
                 where: { token },
@@ -86,10 +89,9 @@ export class WebpayService {
 
     /**
      * Devuelve una transacción por token (usado por el HTML de resultado)
-     * @param token Token entregado por Webpay
-     * @returns Objeto con datos de la transacción
      */
     async findTransactionByToken(token: string) {
+        console.log("[WebpayService] findTransactionByToken called with token:", token);
         return await this.transactionRepository.findOne({ where: { token } });
     }
 }
