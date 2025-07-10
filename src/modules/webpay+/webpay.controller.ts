@@ -8,15 +8,15 @@ import {
     Res,
     BadRequestException,
     NotFoundException,
-  } from "@nestjs/common";
-  import { WebpayService } from "./webpay.service";
-  import { Request, Response } from "express";
-  import { WEBPAY_CONFIG } from "./config/webpay.config";
-  
-  @Controller("v1/webpay")
-  export class WebpayController {
-    constructor(private readonly webpayService: WebpayService) {}
-  
+} from "@nestjs/common";
+import { WebpayService } from "./webpay.service";
+import { Request, Response } from "express";
+import { WEBPAY_CONFIG } from "./config/webpay.config";
+
+@Controller("v1/webpay")
+export class WebpayController {
+    constructor(private readonly webpayService: WebpayService) { }
+
     /**
      * Endpoint para crear una transacción en Webpay
      * @param amount Monto de la transacción
@@ -25,59 +25,58 @@ import {
      */
     @Post("/create")
     async createTransaction(
-      @Body("amount") amount: number,
-      @Body("orderId") orderId: string,
-      @Body("sessionId") sessionId: string,
+        @Body("amount") amount: number,
+        @Body("orderId") orderId: string,
+        @Body("sessionId") sessionId: string,
     ) {
-      return this.webpayService.createTransaction(amount, orderId, sessionId);
+        return this.webpayService.createTransaction(amount, orderId, sessionId);
     }
-  
+
     /**
      * Endpoint para confirmar la transacción Webpay
      * Este endpoint lo llama Webpay al finalizar el pago
      */
     @Post("/return")
     async confirmTransaction(@Req() req: Request, @Res() res: Response) {
-      const token_ws = req.body.token_ws || req.query.token_ws;
-  
-      if (!token_ws) {
-        return res.status(400).json({ message: "token_ws es requerido" });
-      }
-  
-      try {
-        await this.webpayService.confirmTransaction(token_ws);
-  
-        // Redirige al HTML final del frontend
-        return res.redirect(`${WEBPAY_CONFIG.finalUrl}?token_ws=${token_ws}`);
-      } catch (error) {
-        console.error("Error en confirmación de transacción:", error.message);
-        return res.redirect(
-          `${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`,
-        );
-      }
+        const token_ws = req.body.token_ws || req.query.token_ws;
+
+        if (!token_ws) {
+            return res.status(400).json({ message: "token_ws es requerido" });
+        }
+
+        try {
+            await this.webpayService.confirmTransaction(token_ws);
+
+            // Redirige al HTML final del frontend
+            return res.redirect(`${WEBPAY_CONFIG.finalUrl}?token_ws=${token_ws}`);
+        } catch (error) {
+            console.error("Error en confirmación de transacción:", error.message);
+            return res.redirect(
+                `${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`,
+            );
+        }
     }
-  
+
     /**
      * Endpoint para obtener detalles de la transacción (consultado desde el HTML)
      */
     @Get("/detail")
     async getTransactionDetail(@Query("token_ws") token: string) {
-      if (!token) {
-        throw new BadRequestException("token_ws es requerido");
-      }
-  
-      const transaction = await this.webpayService.findTransactionByToken(token);
-  
-      if (!transaction) {
-        throw new NotFoundException("Transacción no encontrada");
-      }
-  
-      return {
-        orderId: transaction.orderId,
-        amount: transaction.amount,
-        status: transaction.status,
-        response_data: transaction.response_data,
-      };
+        if (!token) {
+            throw new BadRequestException("token_ws es requerido");
+        }
+
+        const transaction = await this.webpayService.findTransactionByToken(token);
+
+        if (!transaction) {
+            throw new NotFoundException("Transacción no encontrada");
+        }
+
+        return {
+            orderId: transaction.orderId,
+            amount: transaction.amount,
+            status: transaction.status,
+            response_data: transaction.response_data,
+        };
     }
-  }
-  
+}
