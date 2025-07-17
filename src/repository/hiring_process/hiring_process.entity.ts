@@ -17,10 +17,10 @@ export class ProcesoSeleccion {
 
     @Column({
         type: 'enum',
-        enum: ['preseleccionado', 'no_seleccionado', 'contratado', 'descartado'],
+        enum: ['preseleccionado', 'descartado', 'contratado'],
         default: 'preseleccionado',
     })
-    estado: 'preseleccionado' | 'no_seleccionado' | 'contratado' | 'descartado';
+    estado: 'preseleccionado' | 'descartado' | 'contratado';
 
     @Column({ type: 'text', nullable: true })
     observaciones: string;

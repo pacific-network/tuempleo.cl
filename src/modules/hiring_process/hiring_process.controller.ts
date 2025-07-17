@@ -1,34 +1,38 @@
-import { Body , Controller, Post, Param, ParseIntPipe, Req } from '@nestjs/common';
+import { Body, Controller, Post, Param, ParseIntPipe, Req, UseGuards, Patch } from '@nestjs/common';
 import { ProcesoSeleccionService } from './hiring_process.service';
+import { AuthGuard } from '@nestjs/passport'; // corregido: importar desde '@nestjs/passport'
 
-@Controller('seleccion')
+@Controller('v1/seleccion')
 export class ProcesoSeleccionController {
     constructor(private readonly seleccionService: ProcesoSeleccionService) { }
 
-    @Post(':postulacionId/preseleccionar')
+    @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/preseleccionar')
     preseleccionar(
         @Param('postulacionId', ParseIntPipe) postulacionId: number,
         @Req() req,
     ) {
-        const empleadorId = req.user.id; // Asumiendo JWT con user
+        const empleadorId = req.user.userId;  // cambio aquí: userId en vez de id
         return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'preseleccionado');
     }
 
-    @Post(':postulacionId/descartar')
+    @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/descartar')
     descartar(
         @Param('postulacionId', ParseIntPipe) postulacionId: number,
         @Req() req,
     ) {
-        const empleadorId = req.user.id;
+        const empleadorId = req.user.userId;
         return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'descartado');
     }
 
-    @Post(':postulacionId/contratar')
+    @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/contratar')
     contratar(
         @Param('postulacionId', ParseIntPipe) postulacionId: number,
         @Req() req,
     ) {
-        const empleadorId = req.user.id;
+        const empleadorId = req.user.userId;
         return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'contratado');
     }
 }
