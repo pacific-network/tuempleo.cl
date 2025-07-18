@@ -67,7 +67,7 @@ export class AuthController {
         const user = req.user as Usuario;
         const token = await this.authService.createTokenFromOAuth(user);
 
-        return res.redirect(`https://tuempleo.cl/empresa/login-employer.html?token=${token}`);
+        return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
     }
 
 
