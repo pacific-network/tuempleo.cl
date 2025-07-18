@@ -5,6 +5,7 @@ import { Postulacion } from 'src/repository/applications/applications.entity';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 import { Empleador } from 'src/repository/employer/employer.entity';
+import { ProcesoSeleccion } from 'src/repository/hiring_process/hiring_process.entity';
 import { Oferta } from 'src/repository/job_offer/job-offer.entity';
 import { Planes } from 'src/repository/plans/plans.entity';
 import { Postulante } from 'src/repository/postulant/postulant.entity';
@@ -24,7 +25,9 @@ export const databaseConfig: TypeOrmModuleOptions = {
     password: process.env.DB_PASSWORD || '',
     username: process.env.DB_USERNAME || 'root',
     database: process.env.DB_NAME || 'tuempleo',
-    entities: [Registro, Rol, Usuario, Postulante, Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion, Transaction, ShoppingCart],
+    entities: [Registro, Rol, Usuario, Postulante,
+        Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
+        Transaction, ShoppingCart, ProcesoSeleccion],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };

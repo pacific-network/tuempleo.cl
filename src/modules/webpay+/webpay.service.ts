@@ -1,13 +1,17 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { WebpayPlus, Options } from "transbank-sdk";
+import { WebpayPlus, Options, Environment } from "transbank-sdk"; // Importa Environment
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Transaction } from "../../repository/transaction/transaction.entity";
 import { WEBPAY_CONFIG } from "./config/webpay.config";
 
-const { commerceCode, apiKey, environment, returnUrl } = WEBPAY_CONFIG;
+const { commerceCode, apiKey, environment: envString, returnUrl } = WEBPAY_CONFIG;
 
-// Instancia del SDK de Transbank
+// Mapea el string del config al enum que usa la SDK
+const environment =
+    envString === "INTEGRACION" ? Environment.Integration : Environment.Production;
+
+// Instancia del SDK de Transbank con el environment correcto
 const webpay = new WebpayPlus.Transaction(
     new Options(commerceCode, apiKey, environment)
 );

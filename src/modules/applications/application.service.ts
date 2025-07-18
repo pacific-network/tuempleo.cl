@@ -47,23 +47,36 @@ export class PostulacionService {
         return this.postulacionRepository.save(postulacion);
     }
 
-    async obtenerPostulacionesPorPostulante(postulanteId: number): Promise<Postulacion[]> {
-        const postulante = await this.postulanteRepository.findOne({ where: { id: postulanteId } });
+    async obtenerPostulacionesPorUsuario(usuarioId: number): Promise<Postulacion[]> {
+        console.log('🔍 Buscando postulante con usuarioId:', usuarioId);
+
+        const postulante = await this.postulanteRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['usuario'],
+        });
+
         if (!postulante) {
-            throw new NotFoundException(`Postulante con ID ${postulanteId} no encontrado`);
+            console.log('❌ No se encontró postulante con usuarioId:', usuarioId);
+            throw new NotFoundException(`Postulante con usuario ID ${usuarioId} no encontrado`);
         }
 
-        return this.postulacionRepository.find({
-            where: {
-                postulante: {
-                    id: postulanteId,
-                },
-            },
+        console.log('✅ Postulante encontrado:', postulante.id);
+
+        const postulaciones = await this.postulacionRepository.find({
+            where: { postulante: { id: postulante.id } },
             relations: ['oferta'],
             order: { fechaPostulacion: 'DESC' },
         });
 
+        console.log('📄 Postulaciones encontradas:', postulaciones.length);
+        postulaciones.forEach((postulacion, index) => {
+            console.log(`   #${index + 1} →`, postulacion);
+        });
+
+        return postulaciones;
     }
+
+
 
     async obtenerPostulacionesPorOferta(ofertaId: number): Promise<Postulacion[]> {
         const oferta = await this.ofertaRepository.findOne({ where: { id: ofertaId } });
