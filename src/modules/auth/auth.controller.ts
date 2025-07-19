@@ -66,6 +66,7 @@ export class AuthController {
         const token = await this.authService.createTokenFromOAuth(user);
 
         return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
+
     }
 
     // @Get('google/callback')

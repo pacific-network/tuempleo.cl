@@ -113,11 +113,11 @@ export class AuthService {
 
 
     async createTokenFromOAuth(user: any): Promise<string> {
-        // Aquí puedes generar un JWT o crear una sesión según tu lógica
+        console.log('User en createTokenFromOAuth:', user);
         const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
-        return this.jwtService.sign(payload);
+        const token = this.jwtService.sign(payload);
+        return token;
     }
-
     //funcion para crear el usuario con oauth 
     async validateOAuthUser(oauthPayload: {
         email: string;
