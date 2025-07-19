@@ -52,6 +52,7 @@ export class AuthController {
         const rolEmpleador = 2;
         return this.authService.login(loginData, rolEmpleador);
     }
+
     @Get('google')
     @UseGuards(AuthGuard('google'))
     async googleAuth(@Req() req: Request) {
