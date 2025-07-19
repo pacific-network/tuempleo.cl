@@ -69,6 +69,26 @@ export class AuthController {
 
         return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
 
+    }
+
+
+    // @Get('google/callback')
+    // @UseGuards(AuthGuard('google'))
+    // async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
+    //     const user = req.user as Usuario;
+    //     const token = await this.authService.createTokenFromOAuth(user);
+
+    //     return res.json({
+    //         access_token: token,
+    //         user: {
+    //             id: user.id,
+    //             email: user.email,
+    //             nombres: user.nombres,
+    //             apellidos: user.apellidos,
+    //             id_empresa: user.id_empresa,
+    //         },
+    //     });
+    // }
 
 
     // LINKEDIN OAUTH
