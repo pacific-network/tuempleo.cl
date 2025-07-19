@@ -62,30 +62,22 @@ export class AuthController {
     @Get('google/callback')
     @UseGuards(AuthGuard('google'))
     async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
-        const user = req.user as Usuario;
-        const token = await this.authService.createTokenFromOAuth(user);
+        const user = req.user as any;
 
+        const usuarioRegistrado = await this.authService.validateOAuthUser({
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+            provider: 'google',
+            oauthId: user.accessToken,
+        });
+
+        const token = await this.authService.createTokenFromOAuth(usuarioRegistrado);
+
+        // Rediriges al frontend con el token en la URL
         return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
-
     }
 
-    // @Get('google/callback')
-    // @UseGuards(AuthGuard('google'))
-    // async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
-    //     const user = req.user as Usuario;
-    //     const token = await this.authService.createTokenFromOAuth(user);
-
-    //     return res.json({
-    //         access_token: token,
-    //         user: {
-    //             id: user.id,
-    //             email: user.email,
-    //             nombres: user.nombres,
-    //             apellidos: user.apellidos,
-    //             id_empresa: user.id_empresa,
-    //         },
-    //     });
-    // }
 
 
     // LINKEDIN OAUTH

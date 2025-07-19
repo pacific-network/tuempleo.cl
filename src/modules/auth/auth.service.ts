@@ -114,11 +114,18 @@ export class AuthService {
 
     async createTokenFromOAuth(user: any): Promise<string> {
         console.log('User en createTokenFromOAuth:', user);
+
+        if (!user || !user.id || !user.email) {
+            throw new Error('Usuario inválido para crear token');
+        }
+        if (!user.rol || !user.rol.id) {
+            throw new Error('El usuario no tiene rol asignado');
+        }
+
         const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
-        const token = this.jwtService.sign(payload);
-        return token;
+        return this.jwtService.sign(payload);
     }
-    //funcion para crear el usuario con oauth 
+
     async validateOAuthUser(oauthPayload: {
         email: string;
         name: string;
@@ -126,53 +133,91 @@ export class AuthService {
         provider: 'google' | 'linkedin';
         oauthId: string;
     }): Promise<Usuario> {
-        const { email, name, picture } = oauthPayload;
+        try {
+            const { email, name, picture } = oauthPayload;
 
-        let usuario = await this.usuarioRepository.findOne({
-            where: { email },
-            relations: ['rol'],
-        });
-
-        if (usuario) {
-            // ✅ Marcar como activo si no lo está
-            if (!usuario.is_activo) {
-                usuario.is_activo = true;
-                usuario = await this.usuarioRepository.save(usuario);
-            }
-            return usuario;
-        }
-
-        // Paso 2: Si no existe, registrarlo como nuevo (estado inactivo)
-        const nombre = name.split(' ')[0];
-        const apellido = name.split(' ').slice(1).join(' ') || '';
-
-        // Crear entrada en tabla `registro` si no existe
-        let registro = await this.registroRepository.findOne({ where: { email } });
-        if (!registro) {
-            registro = this.registroRepository.create({
-                email,
-                nombre_completo: name,
-                es_activo: false,
+            // Buscar usuario con rol
+            let usuario = await this.usuarioRepository.findOne({
+                where: { email },
+                relations: ['rol'],
             });
-            await this.registroRepository.save(registro);
+
+            if (usuario) {
+                if (!usuario.is_activo) {
+                    usuario.is_activo = true;
+                    usuario = await this.usuarioRepository.save(usuario);
+                }
+
+                // Asignar rol 2 si no tiene rol asignado
+                if (!usuario.rol) {
+                    const rolDefault = await this.rolRepository.findOne({ where: { id: 2 } });
+                    if (!rolDefault) {
+                        throw new Error('Rol predeterminado no encontrado');
+                    }
+                    usuario.rol = rolDefault;
+                    usuario = await this.usuarioRepository.save(usuario);
+                }
+
+                return usuario;
+            }
+
+            // Si no existe usuario, crear uno nuevo
+            const nombre = name.split(' ')[0];
+            const apellido = name.split(' ').slice(1).join(' ') || '';
+
+            // Crear registro si no existe
+            let registro = await this.registroRepository.findOne({ where: { email } });
+            if (!registro) {
+                registro = this.registroRepository.create({
+                    email,
+                    nombre_completo: name,
+                    es_activo: false,
+                });
+                await this.registroRepository.save(registro);
+            }
+
+            // Buscar rol predeterminado
+            const rol = await this.rolRepository.findOne({ where: { id: 2 } });
+            if (!rol) {
+                throw new Error('Rol predeterminado no encontrado');
+            }
+
+            usuario = new Usuario();
+            usuario.email = email;
+            usuario.nombres = nombre;
+            usuario.apellidos = apellido;
+            usuario.password = '';
+            usuario.rol = rol;
+            usuario.perfil_foto = picture || null;
+            usuario.id_empresa = null;
+            usuario.is_activo = true;
+
+            const nuevoUsuario = await this.usuarioRepository.save(usuario);
+
+            // Recargar usuario con rol para garantizar que esté bien cargado
+            const usuarioConRol = await this.usuarioRepository.findOne({
+                where: { id: nuevoUsuario.id },
+                relations: ['rol'],
+            });
+
+            if (!usuarioConRol) {
+                throw new Error('Usuario no encontrado después de crear el usuario');
+            }
+            if (!usuarioConRol.rol) {
+                throw new Error('Usuario creado sin rol asignado');
+            }
+
+            return usuarioConRol;
+        } catch (error) {
+            console.error('Error en validateOAuthUser:', error);
+            throw new Error('Error validando o creando usuario OAuth');
         }
-
-        // Buscar rol por defecto (ej: rol_id = 3 => "pendiente")
-        const rol = await this.rolRepository.findOne({ where: { id: 3 } });
-        if (!rol) throw new Error('Rol predeterminado no encontrado');
-
-        usuario = new Usuario();
-        usuario.email = email;
-        usuario.nombres = nombre;
-        usuario.apellidos = apellido;
-        usuario.password = '';
-        usuario.rol = rol;
-        usuario.perfil_foto = picture || null;
-        usuario.id_empresa = null;
-        usuario.is_activo = true; // ✅ Nuevo usuario creado también debe estar activo
-
-        return await this.usuarioRepository.save(usuario);
     }
+
+
+
+
+
 
     async findUserFullById(id: number) {
         const user = await this.usuarioRepository.findOne({ where: { id } });
