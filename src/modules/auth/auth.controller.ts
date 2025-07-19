@@ -77,7 +77,8 @@ export class AuthController {
         const token = await this.authService.createTokenFromOAuth(usuarioRegistrado);
 
         // Rediriges al frontend con el token en la URL
-        return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
+        // return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
+        return res.redirect(`http://http://127.0.0.1:5500/jobox/empresas/login-employer.html?token=${token}`);
     }
 
 
