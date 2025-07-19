@@ -19,6 +19,7 @@ import { IniciarSesionDto } from './dto/login';
 import { Usuario } from 'src/repository/user/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateMeDto } from './dto/update-me';
+import { RegistrarUsuarioOAuthDto } from './dto/register-oauth';
 
 @Controller('v1/auth')
 export class AuthController {
@@ -111,5 +112,10 @@ export class AuthController {
     async updateMe(@Req() req, @Body() dto: UpdateMeDto) {
         const userId = req.user.userId;
         return this.authService.updateMe(userId, dto);
+    }
+
+    @Post('register-oauth')
+    async registerOAuth(@Body() dto: RegistrarUsuarioOAuthDto) {
+        return this.authService.registerOAuth(dto);
     }
 }

@@ -11,6 +11,7 @@ import { IniciarSesionDto } from './dto/login';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { User } from 'src/shared/decorators/user.decorator';
 import { UpdateMeDto } from './dto/update-me';
+import { RegistrarUsuarioOAuthDto } from './dto/register-oauth';
 
 
 
@@ -243,6 +244,33 @@ export class AuthService {
 
         return this.usuarioRepository.save(user);
     }
+
+    async registerOAuth(userData: RegistrarUsuarioOAuthDto): Promise<any> {
+        try {
+            const { email, nombre_completo } = userData;
+    
+            const existingRegistro = await this.registroRepository.findOne({ where: { email } });
+            if (existingRegistro) {
+                throw new UnauthorizedException('Email ya registrado');
+            }
+    
+            const newRegistro = this.registroRepository.create({
+                email,
+                nombre_completo,
+                es_activo: false,
+            });
+    
+            await this.registroRepository.save(newRegistro);
+            return { message: 'Registro vía OAuth exitoso. Espera la activación.' };
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw new UnauthorizedException(error.message);
+            } else {
+                throw new InternalServerErrorException('Error al registrar el usuario vía OAuth');
+            }
+        }
+    }
+
 
 }
 
