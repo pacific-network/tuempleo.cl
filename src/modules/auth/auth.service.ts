@@ -126,7 +126,6 @@ export class AuthService {
         const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
         return this.jwtService.sign(payload);
     }
-
     async validateOAuthUser(oauthPayload: {
         email: string;
         name: string;
@@ -149,12 +148,10 @@ export class AuthService {
                     usuario = await this.usuarioRepository.save(usuario);
                 }
 
-                // Asignar rol 2 si no tiene rol asignado
                 if (!usuario.rol) {
                     const rolDefault = await this.rolRepository.findOne({ where: { id: 2 } });
-                    if (!rolDefault) {
-                        throw new Error('Rol predeterminado no encontrado');
-                    }
+                    if (!rolDefault) throw new Error('Rol predeterminado no encontrado');
+
                     usuario.rol = rolDefault;
                     usuario = await this.usuarioRepository.save(usuario);
                 }
@@ -166,12 +163,15 @@ export class AuthService {
             const nombre = name.split(' ')[0];
             const apellido = name.split(' ').slice(1).join(' ') || '';
 
+            const dummyPassword = await this.encryptService.encrypt('oauth_dummy_password');
+
             // Crear registro si no existe
             let registro = await this.registroRepository.findOne({ where: { email } });
             if (!registro) {
                 registro = this.registroRepository.create({
                     email,
                     nombre_completo: name,
+                    password: dummyPassword,
                     es_activo: false,
                 });
                 await this.registroRepository.save(registro);
@@ -179,41 +179,39 @@ export class AuthService {
 
             // Buscar rol predeterminado
             const rol = await this.rolRepository.findOne({ where: { id: 2 } });
-            if (!rol) {
-                throw new Error('Rol predeterminado no encontrado');
-            }
+            if (!rol) throw new Error('Rol predeterminado no encontrado');
 
-            usuario = new Usuario();
-            usuario.email = email;
-            usuario.nombres = nombre;
-            usuario.apellidos = apellido;
-            usuario.password = '';
-            usuario.rol = rol;
-            usuario.perfil_foto = picture || null;
-            usuario.id_empresa = null;
-            usuario.is_activo = true;
+            usuario = this.usuarioRepository.create({
+                email,
+                nombres: nombre,
+                apellidos: apellido,
+                password: dummyPassword,
+                rol,
+                perfil_foto: picture || null,
+                id_empresa: null,
+                is_activo: true,
+            });
 
             const nuevoUsuario = await this.usuarioRepository.save(usuario);
 
-            // Recargar usuario con rol para garantizar que esté bien cargado
+            // Recargar usuario con rol
             const usuarioConRol = await this.usuarioRepository.findOne({
                 where: { id: nuevoUsuario.id },
                 relations: ['rol'],
             });
 
-            if (!usuarioConRol) {
-                throw new Error('Usuario no encontrado después de crear el usuario');
-            }
-            if (!usuarioConRol.rol) {
-                throw new Error('Usuario creado sin rol asignado');
-            }
+            if (!usuarioConRol) throw new Error('Usuario no encontrado después de crear');
+            if (!usuarioConRol.rol) throw new Error('Usuario creado sin rol asignado');
 
             return usuarioConRol;
+
         } catch (error) {
             console.error('Error en validateOAuthUser:', error);
             throw new Error('Error validando o creando usuario OAuth');
         }
     }
+
+
 
 
 
@@ -248,18 +246,18 @@ export class AuthService {
     async registerOAuth(userData: RegistrarUsuarioOAuthDto): Promise<any> {
         try {
             const { email, nombre_completo } = userData;
-    
+
             const existingRegistro = await this.registroRepository.findOne({ where: { email } });
             if (existingRegistro) {
                 throw new UnauthorizedException('Email ya registrado');
             }
-    
+
             const newRegistro = this.registroRepository.create({
                 email,
                 nombre_completo,
                 es_activo: false,
             });
-    
+
             await this.registroRepository.save(newRegistro);
             return { message: 'Registro vía OAuth exitoso. Espera la activación.' };
         } catch (error) {
