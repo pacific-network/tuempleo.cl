@@ -189,7 +189,7 @@ export class AuthService {
                 rol,
                 perfil_foto: picture || null,
                 id_empresa: null,
-                is_activo: true,
+                is_activo: false,
             });
 
             const nuevoUsuario = await this.usuarioRepository.save(usuario);
@@ -210,13 +210,6 @@ export class AuthService {
             throw new Error('Error validando o creando usuario OAuth');
         }
     }
-
-
-
-
-
-
-
 
     async findUserFullById(id: number) {
         const user = await this.usuarioRepository.findOne({ where: { id } });
