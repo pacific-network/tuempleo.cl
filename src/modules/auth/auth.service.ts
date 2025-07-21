@@ -12,6 +12,7 @@ import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { User } from 'src/shared/decorators/user.decorator';
 import { UpdateMeDto } from './dto/update-me';
 import { RegistrarUsuarioOAuthDto } from './dto/register-oauth';
+import { OAuthLoginDto } from './dto/oauth-login';
 
 
 
@@ -261,6 +262,66 @@ export class AuthService {
             }
         }
     }
+
+    // async loginWithOAuth(oauthUser: OAuthLoginDto): Promise<{ token: string; message: string }> {
+    //     const user = await this.usuarioRepository.findOne({
+    //         where: { email: oauthUser.email },
+    //         relations: ['rol'],
+    //     });
+
+    //     if (!user) {
+    //         throw new UnauthorizedException('Usuario no registrado previamente');
+    //     }
+
+    //     if (!user.is_activo) {
+    //         user.is_activo = true;
+    //         await this.usuarioRepository.save(user);
+    //     }
+
+    //     const token = this.jwtService.sign({
+    //         email: user.email,
+    //         sub: user.id,
+    //         rolId: user.rol.id,
+    //     });
+
+    //     return { message: 'Inicio de sesión exitoso', token };
+    // }
+
+    async loginOAuth(oauthData: RegistrarUsuarioOAuthDto): Promise<{ token: string; message: string }> {
+        const { email } = oauthData;
+
+        const user = await this.usuarioRepository.findOne({
+            where: { email },
+            relations: ['rol'],
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Usuario no registrado previamente');
+        }
+
+        if (!user.is_activo) {
+            user.is_activo = true;
+            await this.usuarioRepository.save(user);
+        }
+
+        const token = this.jwtService.sign(
+            {
+                email: user.email,
+                sub: user.id,
+                rolId: user.rol.id,
+            },
+            {
+                expiresIn: '1h', // Opcional, tu tiempo de expiración deseado
+            }
+        );
+
+        return {
+            message: 'Inicio de sesión exitoso',
+            token,
+        };
+    }
+
+
 
 
 }

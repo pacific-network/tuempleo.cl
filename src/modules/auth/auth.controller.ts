@@ -54,6 +54,12 @@ export class AuthController {
         return this.authService.login(loginData, rolEmpleador);
     }
 
+    @Post('login-oauth')
+    @HttpCode(HttpStatus.OK)
+    async loginOAuth(@Body() oauthData: RegistrarUsuarioOAuthDto) {
+        return this.authService.loginOAuth(oauthData);
+    }
+
     @Get('google')
     @UseGuards(AuthGuard('google'))
     async googleAuth(@Req() req: Request) {
@@ -78,7 +84,7 @@ export class AuthController {
 
         // Rediriges al frontend con el token en la URL
         // return res.redirect(`https://tuempleo.cl/empresas/login-employer.html?token=${token}`);
-        return res.redirect(`http://http://127.0.0.1:5500/jobox/empresas/login-employer.html?token=${token}`);
+        return res.redirect(`http://127.0.0.1:5500/jobox/empresas/login-employer.html?token=${token}`);
     }
 
 
