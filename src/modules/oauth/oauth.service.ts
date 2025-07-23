@@ -151,37 +151,64 @@ export class OauthService {
     // }
 
 
-//     async loginOAuth(oauthData: RegistrarUsuarioOAuthDto): Promise<{ token: string; message: string }> {
-//         const { email } = oauthData;
+    //     async loginOAuth(oauthData: RegistrarUsuarioOAuthDto): Promise<{ token: string; message: string }> {
+    //         const { email } = oauthData;
 
-//         const user = await this.usuarioRepository.findOne({
-//             where: { email },
-//             relations: ['rol'],
-//         });
+    //         const user = await this.usuarioRepository.findOne({
+    //             where: { email },
+    //             relations: ['rol'],
+    //         });
 
-//         if (!user) {
-//             throw new UnauthorizedException('Usuario no registrado previamente');
-//         }
+    //         if (!user) {
+    //             throw new UnauthorizedException('Usuario no registrado previamente');
+    //         }
 
-//         if (!user.is_activo) {
-//             user.is_activo = true;
-//             await this.usuarioRepository.save(user);
-//         }
+    //         if (!user.is_activo) {
+    //             user.is_activo = true;
+    //             await this.usuarioRepository.save(user);
+    //         }
 
-//         const token = this.jwtService.sign(
-//             {
-//                 email: user.email,
-//                 sub: user.id,
-//                 rolId: user.rol.id,
-//             },
-//             {
-//                 expiresIn: '1h', // Opcional, tu tiempo de expiración deseado
-//             }
-//         );
+    //         const token = this.jwtService.sign(
+    //             {
+    //                 email: user.email,
+    //                 sub: user.id,
+    //                 rolId: user.rol.id,
+    //             },
+    //             {
+    //                 expiresIn: '1h', // Opcional, tu tiempo de expiración deseado
+    //             }
+    //         );
 
-//         return {
-//             message: 'Inicio de sesión exitoso',
-//             token,
-//         };
-//     }
+    //         return {
+    //             message: 'Inicio de sesión exitoso',
+    //             token,
+    //         };
+    //     }
+
+    async loginWithOAuth({
+        email,
+        name,
+        picture,
+    }: {
+        email: string;
+        name: string;
+        picture?: string;
+    }) {
+        let user = await this.usuarioRepository.findOne({ where: { email } });
+
+        user = this.usuarioRepository.create({
+            email,
+            nombres: name, // Cambiado de 'nombre'
+            apellidos: '', // Asigna algo válido si es obligatorio
+            password: await this.encryptService.encrypt('oauth_dummy_password'),
+            perfil_foto: picture || null,
+            is_activo: false,
+            fecha_creacion: new Date(), // Cambiado de 'created_at'
+        });
+
+        const payload = { sub: user.id, email: user.email };
+        const token = this.jwtService.sign(payload);
+
+        return { token };
+    }
 }

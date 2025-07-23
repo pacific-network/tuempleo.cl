@@ -965,6 +965,22 @@
     "@napi-rs/nice-win32-ia32-msvc" "1.0.1"
     "@napi-rs/nice-win32-x64-msvc" "1.0.1"
 
+"@nestjs-hybrid-auth/core@^1.0.0":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@nestjs-hybrid-auth/core/-/core-1.0.1.tgz#21918c3b1422c96064ce8944e33b6e47bd0bb735"
+  integrity sha512-xORk/Ubr8st0NvfL0Hw8wFJVrE2cWArjjosXrvYGWh4HePOszmpxeYaBh5OwICo6IweJgrnphbmHms9L1H8oGg==
+
+"@nestjs-hybrid-auth/linkedin@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@nestjs-hybrid-auth/linkedin/-/linkedin-1.0.0.tgz#51b77fcba52d0c5f6cbfa60d2ca5000ba87f3a6c"
+  integrity sha512-w6BfDLSGq34twmzKeTleSv3PYTLUYX6Y4vVVu6Ahsavps84kIdyskq1v7ir6TXXjR2SogDpvuluyHN4YcAPCeg==
+  dependencies:
+    "@nestjs-hybrid-auth/core" "^1.0.0"
+    "@types/lodash" "^4.14.174"
+    "@types/passport-linkedin-oauth2" "^1.5.3"
+    lodash "^4.17.21"
+    passport-linkedin-oauth2 "^2.0.0"
+
 "@nestjs/axios@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@nestjs/axios/-/axios-4.0.0.tgz#520ff7c6238e635658fe334ee62db9d1b9c5546f"
@@ -1474,6 +1490,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/lodash@^4.14.174":
+  version "4.17.20"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.17.20.tgz#1ca77361d7363432d29f5e55950d9ec1e1c6ea93"
+  integrity sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==
+
 "@types/methods@^1.1.4":
   version "1.1.4"
   resolved "https://registry.npmjs.org/@types/methods/-/methods-1.1.4.tgz"
@@ -1535,7 +1556,7 @@
     "@types/jsonwebtoken" "*"
     "@types/passport-strategy" "*"
 
-"@types/passport-linkedin-oauth2@^1.5.6":
+"@types/passport-linkedin-oauth2@^1.5.3", "@types/passport-linkedin-oauth2@^1.5.6":
   version "1.5.6"
   resolved "https://registry.npmjs.org/@types/passport-linkedin-oauth2/-/passport-linkedin-oauth2-1.5.6.tgz"
   integrity sha512-LlIwa+GGK8KoUHDxxwO2+5uqB6YmIHysqdLwpn+YJsjfmqFdAH+4YjhXO7riYwfYcpEr/pI+dSEDlwF0Xt+qhg==
@@ -4928,7 +4949,7 @@ passport-jwt@^4.0.1:
 
 passport-linkedin-oauth2@^2.0.0:
   version "2.0.0"
-  resolved "https://registry.npmjs.org/passport-linkedin-oauth2/-/passport-linkedin-oauth2-2.0.0.tgz"
+  resolved "https://registry.yarnpkg.com/passport-linkedin-oauth2/-/passport-linkedin-oauth2-2.0.0.tgz#c320374baa44c1412a9b023590d1d0c1c77cfe73"
   integrity sha512-PnSeq2HzFQ/y1/p2RTF/kG2zhJ7kwGVg4xO3E+JNxz2aI0pFJGAqC503FVpUksYbhQdNhL6QYlK9qrEXD7ZYCg==
   dependencies:
     passport-oauth2 "1.x.x"

@@ -11,7 +11,7 @@ export class LinkedInStrategy extends PassportStrategy(LinkedInStrategyBase, 'li
       clientID: process.env.LINKEDIN_CLIENT_ID || '',
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
       callbackURL: process.env.LINKEDIN_CALLBACK_URL || '',
-      scope: ['r_liteprofile', 'r_emailaddress'], // orden sugerido por LinkedIn
+      scope: ['openid', 'profile', 'email'],// orden sugerido por LinkedIn
     };
 
     super(options);
