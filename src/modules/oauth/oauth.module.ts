@@ -20,8 +20,8 @@ import { OauthController } from './oauth.controller';
         TypeOrmModule.forFeature([Registro, Usuario, Rol]),
         UserModule,
         EncryptModule,
-        PassportModule.register({ session: false }), // Importar PassportModule
-        ConfigModule.forRoot({ isGlobal: true }), // Configura ConfigModule global si quieres
+        PassportModule.register({ session: false }),
+        ConfigModule, // Ya importaste globalmente, no hace falta forRoot aquí
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => ({
@@ -31,7 +31,7 @@ import { OauthController } from './oauth.controller';
             inject: [ConfigService],
         }),
     ],
-    providers: [OauthService, LinkedInStrategy, GoogleStrategy, JwtStrategy], // Registrar la estrategia aquí
+    providers: [OauthService, LinkedInStrategy, GoogleStrategy, JwtStrategy],
     controllers: [OauthController],
     exports: [OauthService],
 })

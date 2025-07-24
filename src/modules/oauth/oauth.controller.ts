@@ -64,9 +64,6 @@ export class OauthController {
         res.send(htmlResponse);
     }
 
-
-
-
     // LINKEDIN OAUTH
     // @Get('linkedin')
     // @UseGuards(AuthGuard('linkedin'))
@@ -74,29 +71,27 @@ export class OauthController {
     //     // No hace falta lógica aquí, el guard redirige a LinkedIn
     // }
 
-    @Get('linkedin/login')
+
+    @Get('linkedin')
     @UseGuards(AuthGuard('linkedin'))
     async linkedinLogin() {
-        // Este endpoint solo redirige a LinkedIn
+        // Este endpoint solo redirige a LinkedIn mediante el guard de passport
+        // No necesitas hacer nada más aquí
     }
-
-
-
-    // 
 
     @Get('linkedin/callback')
     @UseGuards(AuthGuard('linkedin'))
     async linkedinCallback(@Req() req: Request, @Res() res: Response) {
         const user = req.user as any;
 
+        // Asumiendo que oauthService.loginWithOAuth devuelve un objeto con token
         const { token } = await this.oauthService.loginWithOAuth({
             email: user.email,
             name: user.name,
-            picture: user.photo,
+            picture: user.picture,
         });
 
-        // Redirige a tu frontend con el token como query param (ajusta según tu frontend)
-        // return res.redirect(`https://tuempleo.cl/oauth/callback?token=${token}`);
-        return res.redirect(`http://127.0.0.1:5500/jobox/empresas/login-employer.html#?token=${token}`);
+        // Redirige a tu frontend con el token como query param o fragmento hash
+        return res.redirect(`http://127.0.0.1:5500/jobox/empresas/login-employer.html#token=${token}`);
     }
 }
