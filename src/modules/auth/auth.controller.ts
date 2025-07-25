@@ -54,7 +54,10 @@ export class AuthController {
         return this.authService.login(loginData, rolEmpleador);
     }
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> dev
     @UseGuards(AuthGuard('jwt'))
     @Patch('me')
     async updateMe(@Req() req, @Body() dto: UpdateMeDto) {
