@@ -3,7 +3,10 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as passport from 'passport';
-require('dotenv').config();
+import * as session from 'express-session'; // Importar express-session
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -29,6 +32,20 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Agregar middleware de sesión
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'mi-secreto-super-seguro',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false }, // cambiar a true si usas HTTPS
+    }),
+  );
+
+  // Inicializar passport y passport session
+  app.use(passport.initialize());
+  app.use(passport.session());
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // swagger config
@@ -44,7 +61,6 @@ async function bootstrap() {
 
   const port = parseInt(process.env.PORT ?? '3000', 10);
   await app.listen(port);
-
 }
 
 void bootstrap();

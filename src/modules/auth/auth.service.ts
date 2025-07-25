@@ -7,10 +7,12 @@ import { Registro } from '../../repository/register/register.entity';
 import { Usuario } from '../../repository/user/user.entity';
 import { Rol } from '../../repository/role/role.entity';
 import { RegistrarUsuarioDto } from './dto/register';
-import { IniciarSesionDto } from './dto/login';
+import { IniciarSesionDto } from '../oauth/dto/login';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { User } from 'src/shared/decorators/user.decorator';
 import { UpdateMeDto } from './dto/update-me';
+import { RegistrarUsuarioOAuthDto } from '../oauth/dto/register-oauth';
+import { OAuthLoginDto } from '../oauth/dto/oauth-login';
 
 
 
@@ -110,113 +112,6 @@ export class AuthService {
             token,
         };
     }
-
-
-    async createTokenFromOAuth(user: any): Promise<string> {
-        console.log('User en createTokenFromOAuth:', user);
-
-        if (!user || !user.id || !user.email) {
-            throw new Error('Usuario inválido para crear token');
-        }
-        if (!user.rol || !user.rol.id) {
-            throw new Error('El usuario no tiene rol asignado');
-        }
-
-        const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
-        return this.jwtService.sign(payload);
-    }
-
-    async validateOAuthUser(oauthPayload: {
-        email: string;
-        name: string;
-        picture: string | null;
-        provider: 'google' | 'linkedin';
-        oauthId: string;
-    }): Promise<Usuario> {
-        try {
-            const { email, name, picture } = oauthPayload;
-
-            // Buscar usuario con rol
-            let usuario = await this.usuarioRepository.findOne({
-                where: { email },
-                relations: ['rol'],
-            });
-
-            if (usuario) {
-                if (!usuario.is_activo) {
-                    usuario.is_activo = true;
-                    usuario = await this.usuarioRepository.save(usuario);
-                }
-
-                // Asignar rol 2 si no tiene rol asignado
-                if (!usuario.rol) {
-                    const rolDefault = await this.rolRepository.findOne({ where: { id: 2 } });
-                    if (!rolDefault) {
-                        throw new Error('Rol predeterminado no encontrado');
-                    }
-                    usuario.rol = rolDefault;
-                    usuario = await this.usuarioRepository.save(usuario);
-                }
-
-                return usuario;
-            }
-
-            // Si no existe usuario, crear uno nuevo
-            const nombre = name.split(' ')[0];
-            const apellido = name.split(' ').slice(1).join(' ') || '';
-
-            // Crear registro si no existe
-            let registro = await this.registroRepository.findOne({ where: { email } });
-            if (!registro) {
-                registro = this.registroRepository.create({
-                    email,
-                    nombre_completo: name,
-                    es_activo: false,
-                });
-                await this.registroRepository.save(registro);
-            }
-
-            // Buscar rol predeterminado
-            const rol = await this.rolRepository.findOne({ where: { id: 2 } });
-            if (!rol) {
-                throw new Error('Rol predeterminado no encontrado');
-            }
-
-            usuario = new Usuario();
-            usuario.email = email;
-            usuario.nombres = nombre;
-            usuario.apellidos = apellido;
-            usuario.password = '';
-            usuario.rol = rol;
-            usuario.perfil_foto = picture || null;
-            usuario.id_empresa = null;
-            usuario.is_activo = true;
-
-            const nuevoUsuario = await this.usuarioRepository.save(usuario);
-
-            // Recargar usuario con rol para garantizar que esté bien cargado
-            const usuarioConRol = await this.usuarioRepository.findOne({
-                where: { id: nuevoUsuario.id },
-                relations: ['rol'],
-            });
-
-            if (!usuarioConRol) {
-                throw new Error('Usuario no encontrado después de crear el usuario');
-            }
-            if (!usuarioConRol.rol) {
-                throw new Error('Usuario creado sin rol asignado');
-            }
-
-            return usuarioConRol;
-        } catch (error) {
-            console.error('Error en validateOAuthUser:', error);
-            throw new Error('Error validando o creando usuario OAuth');
-        }
-    }
-
-
-
-
 
 
     async findUserFullById(id: number) {

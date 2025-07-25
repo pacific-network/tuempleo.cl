@@ -13,11 +13,12 @@ export class BlockBrowserMiddleware implements NestMiddleware {
       '/api/v1/auth/google/callback',
       '/api/v1/auth/linkedin',
       '/api/v1/auth/linkedin/callback',
-      '/v1/auth/google',
-      '/v1/auth/google/callback',
-      '/v1/auth/linkedin',
-      '/v1/auth/linkedin/callback',
+      '/v1/oauth/google',
+      '/v1/oauth/google/callback',
+      '/v1/oauth/linkedin',
+      '/v1/oauth/linkedin/callback',
       '/v1/webpay/return',
+
     ];
 
     // Verifica si la URL coincide con alguna ruta exenta

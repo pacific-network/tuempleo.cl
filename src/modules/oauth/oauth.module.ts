@@ -1,0 +1,38 @@
+//src/modules/auth/auth.module.ts
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserModule } from '../user/user.module';
+import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Registro } from 'src/repository/register/register.entity';
+import { Usuario } from 'src/repository/user/user.entity';
+import { Rol } from 'src/repository/role/role.entity';
+import { PassportModule } from '@nestjs/passport';
+import { LinkedInStrategy } from '../auth/strategies/linkedin.strategy'; // Ajusta la ruta según corresponda
+import { GoogleStrategy } from '../auth/strategies/google.strategy';
+import { JwtStrategy } from '../auth/strategies/jwt.strategy';
+import { OauthService } from './oauth.service';
+import { OauthController } from './oauth.controller';
+
+@Module({
+    imports: [
+        TypeOrmModule.forFeature([Registro, Usuario, Rol]),
+        UserModule,
+        EncryptModule,
+        PassportModule.register({ session: false }),
+        ConfigModule, // Ya importaste globalmente, no hace falta forRoot aquí
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            useFactory: async (configService: ConfigService) => ({
+                secret: configService.get<string>('JWT_SECRET'),
+                signOptions: { expiresIn: '3h' },
+            }),
+            inject: [ConfigService],
+        }),
+    ],
+    providers: [OauthService, LinkedInStrategy, GoogleStrategy, JwtStrategy],
+    controllers: [OauthController],
+    exports: [OauthService],
+})
+export class OauthModule { }

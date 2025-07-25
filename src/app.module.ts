@@ -21,6 +21,7 @@ import { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { BlockBrowserMiddleware } from './middleware/block-browser.middleware';
 import { SiiModule } from './modules/api-gateway/sii.module';
 import { HiringProcessModule } from './modules/hiring_process/hiring_process.module';
+import { OauthModule } from './modules/oauth/oauth.module';
 
 
 
@@ -55,7 +56,8 @@ import { HiringProcessModule } from './modules/hiring_process/hiring_process.mod
     OfertaModule,
     ApplicationModule,
     SiiModule,
-    HiringProcessModule
+    HiringProcessModule,
+    OauthModule
 
 
 

@@ -11,6 +11,7 @@ export class Registro {
     @Column({ type: 'varchar', length: 255, nullable: false })
     password: string;
 
+
     @Column({ type: 'varchar', length: 255, nullable: false, unique: true })
     email: string;
 
