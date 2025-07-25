@@ -113,6 +113,7 @@ export class AuthService {
         };
     }
 
+
     async findUserFullById(id: number) {
         const user = await this.usuarioRepository.findOne({ where: { id } });
         if (!user) {
