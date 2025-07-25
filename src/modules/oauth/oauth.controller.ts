@@ -64,12 +64,6 @@ export class OauthController {
         res.send(htmlResponse);
     }
 
-    // LINKEDIN OAUTH
-    // @Get('linkedin')
-    // @UseGuards(AuthGuard('linkedin'))
-    // async linkedinAuth(@Req() req: Request) {
-    //     // No hace falta lógica aquí, el guard redirige a LinkedIn
-    // }
 
 
     @Get('linkedin')
@@ -79,19 +73,52 @@ export class OauthController {
         // No necesitas hacer nada más aquí
     }
 
+    // @Get('linkedin/callback')
+    // @UseGuards(AuthGuard('linkedin'))
+    // async linkedinCallback(@Req() req: Request, @Res() res: Response) {
+    //     const user = req.user as any;
+
+    //     // Asumiendo que oauthService.loginWithOAuth devuelve un objeto con token
+    //     const { token } = await this.oauthService.loginWithOAuth({
+    //         email: user.email,
+    //         name: user.name,
+    //         picture: user.picture,
+    //     });
+
+    //     // Redirige a tu frontend con el token como query param o fragmento hash
+    //     return res.redirect(`http://127.0.0.1:5500/jobox/empresas/login-employer.html#token=${token}`);
+    // }
+
     @Get('linkedin/callback')
     @UseGuards(AuthGuard('linkedin'))
     async linkedinCallback(@Req() req: Request, @Res() res: Response) {
         const user = req.user as any;
 
-        // Asumiendo que oauthService.loginWithOAuth devuelve un objeto con token
-        const { token } = await this.oauthService.loginWithOAuth({
+        const usuarioRegistrado = await this.oauthService.validateOAuthUser({
             email: user.email,
             name: user.name,
             picture: user.picture,
+            provider: 'linkedin',
+            oauthId: user.accessToken,
         });
 
-        // Redirige a tu frontend con el token como query param o fragmento hash
-        return res.redirect(`http://127.0.0.1:5500/jobox/empresas/login-employer.html#token=${token}`);
+        const token = await this.oauthService.createTokenFromOAuth(usuarioRegistrado);
+
+        const htmlResponse = `
+    <html>
+    <body>
+        <script>
+            window.opener.postMessage(
+                { token: "${token}", user: ${JSON.stringify(usuarioRegistrado)} },
+                "*"
+            );
+            window.close();
+        </script>
+    </body>
+    </html>
+    `;
+
+        res.send(htmlResponse);
     }
+
 }

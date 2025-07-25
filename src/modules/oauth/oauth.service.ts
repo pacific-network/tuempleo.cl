@@ -124,67 +124,6 @@ export class OauthService {
     }
 
 
-    // async registerOAuth(userData: RegistrarUsuarioOAuthDto): Promise<any> {
-    //     try {
-    //         const { email, nombre_completo } = userData;
-
-    //         const existingRegistro = await this.registroRepository.findOne({ where: { email } });
-    //         if (existingRegistro) {
-    //             throw new UnauthorizedException('Email ya registrado');
-    //         }
-
-    //         const newRegistro = this.registroRepository.create({
-    //             email,
-    //             nombre_completo,
-    //             es_activo: false,
-    //         });
-
-    //         await this.registroRepository.save(newRegistro);
-    //         return { message: 'Registro vía OAuth exitoso. Espera la activación.' };
-    //     } catch (error) {
-    //         if (error instanceof UnauthorizedException) {
-    //             throw new UnauthorizedException(error.message);
-    //         } else {
-    //             throw new InternalServerErrorException('Error al registrar el usuario vía OAuth');
-    //         }
-    //     }
-    // }
-
-
-    //     async loginOAuth(oauthData: RegistrarUsuarioOAuthDto): Promise<{ token: string; message: string }> {
-    //         const { email } = oauthData;
-
-    //         const user = await this.usuarioRepository.findOne({
-    //             where: { email },
-    //             relations: ['rol'],
-    //         });
-
-    //         if (!user) {
-    //             throw new UnauthorizedException('Usuario no registrado previamente');
-    //         }
-
-    //         if (!user.is_activo) {
-    //             user.is_activo = true;
-    //             await this.usuarioRepository.save(user);
-    //         }
-
-    //         const token = this.jwtService.sign(
-    //             {
-    //                 email: user.email,
-    //                 sub: user.id,
-    //                 rolId: user.rol.id,
-    //             },
-    //             {
-    //                 expiresIn: '1h', // Opcional, tu tiempo de expiración deseado
-    //             }
-    //         );
-
-    //         return {
-    //             message: 'Inicio de sesión exitoso',
-    //             token,
-    //         };
-    //     }
-
     async loginWithOAuth({
         email,
         name,
