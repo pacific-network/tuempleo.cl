@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Param, NotFoundException, Patch, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, NotFoundException, Patch, UseGuards, Req, Query } from '@nestjs/common';
 import { EmpleadorService } from './employer.service';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { CreateEmployerDto } from '../employer/dto/create-employer.dto';
@@ -7,6 +7,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { Empresa } from 'src/repository/business/business.entity';
 import { UpdateBusinessDto } from '../business/dto/update-business.dto';
 import { UpdateEmployerDto } from './dto/update-employer.dto';
+import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
+import { PageDto } from 'src/shared/pagination/page.dto';
 
 
 @Controller('v1/empleador')
@@ -61,6 +63,15 @@ export class EmpleadorController {
   ): Promise<Empleador> {
     const userId = req.user.userId;
     return this.empleadorService.updateEmployerData(userId, dto);
+  }
+
+  @Get()
+  @UseGuards(AuthGuard('jwt'))
+  async getAllEmployers(
+    @Param('empleadorId') empleadorId: number,
+    @Query() pageOptionsDto: PageOptionsDto
+  ): Promise<PageDto<Empleador>> {
+    return this.empleadorService.findAllEmployers(empleadorId, pageOptionsDto);
   }
 
 

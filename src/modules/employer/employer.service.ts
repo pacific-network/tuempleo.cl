@@ -8,6 +8,9 @@ import { CreateEmployerDto } from "../employer/dto/create-employer.dto";
 import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
 import { UpdateBusinessDto } from "../business/dto/update-business.dto";
 import { UpdateEmployerDto } from "./dto/update-employer.dto";
+import { PageDto } from "src/shared/pagination/page.dto";
+import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
+import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 
 @Injectable()
 export class EmpleadorService {
@@ -148,7 +151,26 @@ export class EmpleadorService {
         await this.usuarioRepository.update(usuarioId, { id_empresa: empresaId });
     }
 
+    async findAllEmployers(
+        empleadorId: number,
+        pageOptions: PageOptionsDto
+    ): Promise<PageDto<Empleador>> {
+        const queryBuilder = this.empleadorRepository.createQueryBuilder('empleador')
+            .leftJoinAndSelect('empleador.usuario', 'usuario')
+            .leftJoinAndSelect('empleador.empresa', 'empresa')
+            .where('empleador.id = :empleadorId', { empleadorId })
+            .skip(pageOptions.skip)
+            .take(pageOptions.take);
 
+        const [entities, total] = await queryBuilder.getManyAndCount();
+
+        const meta = new PageMetaDto({
+            pageOptionsDto: pageOptions,
+            itemCount: total,
+        });
+
+        return new PageDto(entities, meta);
+    }
 
 
 

@@ -47,7 +47,7 @@ export class WebpayController {
             throw new UnauthorizedException("ID de usuario no encontrado en token");
         }
 
-        const sessionId = `session_${userId}`;
+        const sessionId = `${userId}`;
 
         return this.webpayService.createTransaction(amount, orderId, sessionId);
     }
