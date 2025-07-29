@@ -144,6 +144,9 @@ export class EmpleadorService {
         return this.empleadorRepository.save(empleador);
     }
 
+    async updateCompanyId(usuarioId: number, empresaId: number): Promise<void> {
+        await this.usuarioRepository.update(usuarioId, { id_empresa: empresaId });
+    }
 
 
 

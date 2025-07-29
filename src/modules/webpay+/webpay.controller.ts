@@ -8,10 +8,13 @@ import {
     Res,
     BadRequestException,
     NotFoundException,
+    UseGuards,
+    UnauthorizedException,
 } from "@nestjs/common";
 import { WebpayService } from "./webpay.service";
 import { Request, Response } from "express";
 import { WEBPAY_CONFIG } from "./config/webpay.config";
+import { AuthGuard } from "@nestjs/passport";
 
 @Controller("v1/webpay")
 export class WebpayController {
@@ -24,14 +27,30 @@ export class WebpayController {
      * @param sessionId ID de la sesión
      */
     @Post("/create")
+    @UseGuards(AuthGuard("jwt"))
     async createTransaction(
         @Body("amount") amount: number,
         @Body("orderId") orderId: string,
-        @Body("sessionId") sessionId: string,
+        @Req() req: Request
     ) {
+        console.log("Contenido de req.user:", req.user);
+
+        const user = req.user as any;
+        if (!user) {
+            throw new UnauthorizedException("Usuario no autenticado");
+        }
+
+        // Aquí inspecciona si el ID está en otro campo
+        const userId = user.sub ?? user.userId ?? user.id;
+
+        if (!userId) {
+            throw new UnauthorizedException("ID de usuario no encontrado en token");
+        }
+
+        const sessionId = `session_${userId}`;
+
         return this.webpayService.createTransaction(amount, orderId, sessionId);
     }
-
     /**
      * Endpoint para confirmar la transacción Webpay
      * Este endpoint lo llama Webpay al finalizar el pago

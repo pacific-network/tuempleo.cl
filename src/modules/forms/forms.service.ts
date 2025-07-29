@@ -2,6 +2,7 @@ import { ConflictException, Injectable, InternalServerErrorException } from '@ne
 import { RegisterBusinessEmployerDto } from './dto/register-business-employer.dto';
 import { EmpresaService } from '../business/business.service';
 import { EmpleadorService } from '../employer/employer.service';
+import { create } from 'domain';
 
 @Injectable()
 export class FormsService {
@@ -21,6 +22,9 @@ export class FormsService {
                     dto.employer,
                     createdBusiness.id,
                 );
+
+                //3.Actualizar usuario con el id de la empresa
+                await this.empleadorService.updateCompanyId(createdEmployer.id, createdBusiness.id);
 
                 return {
                     business: createdBusiness,
