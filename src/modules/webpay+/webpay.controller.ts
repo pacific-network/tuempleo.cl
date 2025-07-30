@@ -15,6 +15,7 @@ import { WebpayService } from "./webpay.service";
 import { Request, Response } from "express";
 import { WEBPAY_CONFIG } from "./config/webpay.config";
 import { AuthGuard } from "@nestjs/passport";
+import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 
 @Controller("v1/webpay")
 export class WebpayController {
@@ -98,4 +99,13 @@ export class WebpayController {
             response_data: transaction.response_data,
         };
     }
+    @Get()
+    async obtenerTransacciones(
+        @Query() pageOptions: PageOptionsDto,
+        @Query('fechaInicio') fechaInicio?: string,
+        @Query('fechaFin') fechaFin?: string,
+    ) {
+        return this.webpayService.obtenerTransacciones(pageOptions, fechaInicio, fechaFin);
+    }
+
 }

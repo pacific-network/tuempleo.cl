@@ -9,6 +9,7 @@ import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
+import { SearchOfertaDto } from "./dto/search-oferta.dto";
 
 @Injectable()
 export class OfertaService {
@@ -20,9 +21,70 @@ export class OfertaService {
         @InjectRepository(Empresa)
         private readonly empresaRepository: Repository<Empresa>,
     ) { }
-    async obtenerOfertas(): Promise<Oferta[]> {
-        return this.ofertaRepository.find({ relations: ['empresa', 'empleador'] });
+
+    public async findAllOfertas(
+        pageOptionsDto: PageOptionsDto,
+        filters: SearchOfertaDto
+    ): Promise<PageDto<Oferta>> {
+        const { region, comuna, categoria, modalidad, searchQuery } = filters;
+
+        const queryBuilder = this.ofertaRepository.createQueryBuilder("oferta")
+            .leftJoinAndSelect("oferta.empresa", "empresa")
+            .leftJoinAndSelect("oferta.empleador", "empleador")
+            .skip(pageOptionsDto.skip)
+            .take(pageOptionsDto.take);
+
+        if (region) {
+            queryBuilder.andWhere(
+                "LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.region'))) LIKE :region",
+                { region: `%${region.toLowerCase()}%` }
+            );
+        }
+
+        if (comuna) {
+            queryBuilder.andWhere(
+                "LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.comuna'))) LIKE :comuna",
+                { comuna: `%${comuna.toLowerCase()}%` }
+            );
+        }
+
+        if (categoria) {
+            queryBuilder.andWhere(
+                "LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.area_trabajo'))) LIKE :categoria",
+                { categoria: `%${categoria.toLowerCase()}%` }
+            );
+        }
+
+        if (modalidad) {
+            queryBuilder.andWhere(
+                "LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.modalidad'))) LIKE :modalidad",
+                { modalidad: `%${modalidad.toLowerCase()}%` }
+            );
+        }
+
+        if (searchQuery) {
+            const search = `%${searchQuery.toLowerCase()}%`;
+
+            queryBuilder.andWhere(
+                `
+                LOWER(oferta.titulo) LIKE :search OR 
+                LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.descripcion_puesto'))) LIKE :search OR
+                LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.area_trabajo'))) LIKE :search OR
+                LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data, '$.modalidad'))) LIKE :search
+                `,
+                { search }
+            );
+        }
+
+        const itemCount = await queryBuilder.getCount();
+        const { entities } = await queryBuilder.getRawAndEntities();
+        const meta = new PageMetaDto({ itemCount, pageOptionsDto });
+
+        return new PageDto(entities, meta);
     }
+
+
+
 
     async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
         const empleador = await this.empleadorRepository.findOne({ where: { id: data.empleador_id } });

@@ -5,6 +5,9 @@ import { Repository } from "typeorm";
 import { Transaction } from "../../repository/transaction/transaction.entity";
 import { WEBPAY_CONFIG } from "./config/webpay.config";
 import { Usuario } from "src/repository/user/user.entity";
+import { PageDto } from "src/shared/pagination/page.dto";
+import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
+import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 
 const { commerceCode, apiKey, environment: envString, returnUrl } = WEBPAY_CONFIG;
 
@@ -115,6 +118,41 @@ export class WebpayService {
     async findTransactionByToken(token: string) {
         console.log("[WebpayService] findTransactionByToken called with token:", token);
         return await this.transactionRepository.findOne({ where: { token } });
+    }
+
+
+    async obtenerTransacciones(
+        pageOptions: PageOptionsDto,
+        fechaInicio?: string,
+        fechaFin?: string
+    ): Promise<PageDto<Transaction>> {
+        const queryBuilder = this.transactionRepository.createQueryBuilder('transaction');
+
+        // Filtro por rango de fechas (si se proveen)
+        if (fechaInicio && fechaFin) {
+            queryBuilder.where('transaction.created_at BETWEEN :fechaInicio AND :fechaFin', {
+                fechaInicio,
+                fechaFin,
+            });
+        } else if (fechaInicio) {
+            queryBuilder.where('transaction.created_at >= :fechaInicio', { fechaInicio });
+        } else if (fechaFin) {
+            queryBuilder.where('transaction.created_at <= :fechaFin', { fechaFin });
+        }
+
+        queryBuilder
+            .orderBy('transaction.created_at', 'DESC')
+            .skip(pageOptions.skip)
+            .take(pageOptions.take);
+
+        const [entities, itemCount] = await queryBuilder.getManyAndCount();
+
+        const meta = new PageMetaDto({
+            pageOptionsDto: pageOptions,
+            itemCount,
+        });
+
+        return new PageDto(entities, meta);
     }
 
 
