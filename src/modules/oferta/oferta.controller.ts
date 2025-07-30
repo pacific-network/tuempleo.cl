@@ -8,6 +8,7 @@ import { AuthGuard } from '../auth/guards/auth.guards';
 import { User } from 'src/shared/decorators/user.decorator';
 import { UpdateOfertaDto } from './dto/updadte-oferta.dto';
 import { Empleador } from 'src/repository/employer/employer.entity';
+import { SearchOfertaDto } from './dto/search-oferta.dto';
 
 @Controller('v1/ofertas')
 export class OfertaController {
@@ -19,8 +20,11 @@ export class OfertaController {
     }
 
     @Get()
-    async listarOfertas(): Promise<Oferta[]> {
-        return this.ofertaService.obtenerOfertas();
+    async listarOfertas(
+        @Query() pageOptionsDto: PageOptionsDto,
+        @Query() query: SearchOfertaDto
+    ): Promise<PageDto<Oferta>> {
+        return this.ofertaService.findAllOfertas(pageOptionsDto, query);
     }
 
 

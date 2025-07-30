@@ -150,4 +150,18 @@ export class OauthService {
 
         return { token };
     }
+
+    async findUserByEmail(email: string): Promise<Usuario | null> {
+        const user = await this.usuarioRepository.findOne({
+            where: { email },
+            relations: ['rol'],
+        });
+
+        if (!user) {
+            throw new NotFoundException(`Usuario con email ${email} no encontrado`);
+        }
+
+        return user;
+    }
+    
 }

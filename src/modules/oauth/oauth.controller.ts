@@ -10,6 +10,8 @@ import {
     UseGuards,
     UnauthorizedException,
     Patch,
+    Query,
+    NotFoundException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
@@ -119,6 +121,16 @@ export class OauthController {
     `;
 
         res.send(htmlResponse);
+    }
+
+    @Get('user-by-email')
+    @UseGuards(AuthGuard('jwt')) // Asegúrate de que el usuario esté autenticado
+    async getUserByEmail(@Query('email') email: string) {
+        const user = await this.oauthService.findUserByEmail(email);
+        if (!user) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+        return user;
     }
 
 }
