@@ -106,7 +106,16 @@ export class OauthController {
       </html>
     `;
 
-        res.send(htmlResponse);
-    }
+    res.send(htmlResponse);
+  }
 
+  @Get('user-by-email')
+  @UseGuards(AuthGuard('jwt'))
+  async getUserByEmail(@Query('email') email: string) {
+    const user = await this.oauthService.findUserByEmail(email);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    return user;
+  }
 }
