@@ -28,6 +28,7 @@ export class EmpleadorService {
         createEmployerDto: CreateEmployerDto,
         empresaId: number,
     ): Promise<Empleador> {
+        // 1. Buscar usuario por id
         const usuario = await this.usuarioRepository.findOne({
             where: { id: createEmployerDto.userId },
         });
@@ -36,6 +37,11 @@ export class EmpleadorService {
             throw new NotAcceptableException('Usuario no encontrado');
         }
 
+        // 2. Actualizar rut en usuario
+        usuario.rut = createEmployerDto.rut;
+        await this.usuarioRepository.save(usuario);
+
+        // 3. Buscar empresa
         const empresa = await this.empresaRepository.findOne({
             where: { id: empresaId },
         });
@@ -44,13 +50,15 @@ export class EmpleadorService {
             throw new NotAcceptableException('Empresa no encontrada');
         }
 
+        // 4. Crear empleador relacionado al usuario y empresa
         const empleador = this.empleadorRepository.create({
             usuario,
             empresa,
             data: createEmployerDto.data,
         });
 
-        return this.empleadorRepository.save(empleador);
+        // 5. Guardar y retornar
+        return await this.empleadorRepository.save(empleador);
     }
 
     async findEmployerByUserId(userId: number): Promise<Empleador | null> {
