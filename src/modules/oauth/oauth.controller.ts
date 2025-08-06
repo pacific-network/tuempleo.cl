@@ -1,3 +1,5 @@
+// src/modules/oauth/oauth.controller.ts
+
 import {
   Controller,
   Get,
@@ -9,20 +11,16 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
-import { JwtService } from '@nestjs/jwt';
 import { OauthService } from './oauth.service';
 
 @Controller('v1/oauth')
 export class OauthController {
-  constructor(
-    private readonly oauthService: OauthService,
-    private readonly jwtService: JwtService,
-  ) { }
+  constructor(private readonly oauthService: OauthService) {}
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth(@Req() req: Request) {
-    // Passport redirige automáticamente a Google
+    // Redirige automáticamente a Google
   }
 
   @Get('google/callback')
@@ -30,7 +28,7 @@ export class OauthController {
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
 
-    const usuarioRegistrado = await this.oauthService.validateOAuthUser({
+    const { usuario, token, requiereEmpresa } = await this.oauthService.validateOAuthUser({
       email: user.email,
       name: user.name,
       picture: user.picture,
@@ -38,19 +36,16 @@ export class OauthController {
       oauthId: user.accessToken,
     });
 
-    const token = await this.oauthService.createTokenFromOAuth(usuarioRegistrado);
-
-    const safeUser = JSON.stringify(usuarioRegistrado).replace(/</g, '\\u003c');
+    const payload = JSON.stringify({ usuario, token, requiereEmpresa }).replace(/</g, '\\u003c');
 
     const htmlResponse = `
       <html>
         <body>
           <script>
             (function() {
-              const token = "${token}";
-              const user = JSON.parse(\`${safeUser}\`);
+              const response = JSON.parse(\`${payload}\`);
               if (window.opener) {
-                window.opener.postMessage({ token, user }, "*");
+                window.opener.postMessage(response, "*");
                 window.close();
               } else {
                 document.body.innerText = "No se pudo comunicar con la ventana principal.";
@@ -75,7 +70,7 @@ export class OauthController {
   async linkedinCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
 
-    const usuarioRegistrado = await this.oauthService.validateOAuthUser({
+    const { usuario, token, requiereEmpresa } = await this.oauthService.validateOAuthUser({
       email: user.email,
       name: user.name,
       picture: user.picture,
@@ -83,19 +78,16 @@ export class OauthController {
       oauthId: user.accessToken,
     });
 
-    const token = await this.oauthService.createTokenFromOAuth(usuarioRegistrado);
-
-    const safeUser = JSON.stringify(usuarioRegistrado).replace(/</g, '\\u003c');
+    const payload = JSON.stringify({ usuario, token, requiereEmpresa }).replace(/</g, '\\u003c');
 
     const htmlResponse = `
       <html>
         <body>
           <script>
             (function() {
-              const token = "${token}";
-              const user = JSON.parse(\`${safeUser}\`);
+              const response = JSON.parse(\`${payload}\`);
               if (window.opener) {
-                window.opener.postMessage({ token, user }, "*");
+                window.opener.postMessage(response, "*");
                 window.close();
               } else {
                 document.body.innerText = "No se pudo comunicar con la ventana principal.";
