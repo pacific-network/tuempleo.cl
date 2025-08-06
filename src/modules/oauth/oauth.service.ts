@@ -25,59 +25,59 @@ export class OauthService {
     ) { }
 
 
-    async createTokenFromOAuth(user: any): Promise<string> {
-        console.log('User en createTokenFromOAuth:', user);
-
-        if (!user || !user.id || !user.email) {
-            throw new Error('Usuario inválido para crear token');
-        }
-        if (!user.rol || !user.rol.id) {
-            throw new Error('El usuario no tiene rol asignado');
-        }
-
-        const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
-        return this.jwtService.sign(payload);
-    }
+    // src/repository/oauth/login.repository.ts
     async validateOAuthUser(oauthPayload: {
         email: string;
         name: string;
         picture: string | null;
         provider: 'google' | 'linkedin';
         oauthId: string;
-    }): Promise<Usuario> {
+    }): Promise<{ usuario: Usuario; token: string; requiereEmpresa: boolean }> {
         try {
             const { email, name, picture } = oauthPayload;
 
-            // Buscar usuario con rol
             let usuario = await this.usuarioRepository.findOne({
                 where: { email },
                 relations: ['rol'],
             });
 
             if (usuario) {
+                let updated = false;
+
                 if (!usuario.is_activo) {
                     usuario.is_activo = true;
-                    usuario = await this.usuarioRepository.save(usuario);
+                    updated = true;
                 }
 
                 if (!usuario.rol) {
                     const rolDefault = await this.rolRepository.findOne({ where: { id: 2 } });
                     if (!rolDefault) throw new Error('Rol predeterminado no encontrado');
-
                     usuario.rol = rolDefault;
-                    usuario = await this.usuarioRepository.save(usuario);
+                    updated = true;
                 }
 
-                return usuario;
+                if (updated) usuario = await this.usuarioRepository.save(usuario);
+
+                const token = this.jwtService.sign({
+                    email: usuario.email,
+                    sub: usuario.id,
+                    rolId: usuario.rol.id,
+                });
+
+                return {
+                    usuario,
+                    token,
+                    requiereEmpresa: !usuario.id_empresa,
+                };
             }
 
             // Si no existe usuario, crear uno nuevo
-            const nombre = name.split(' ')[0];
-            const apellido = name.split(' ').slice(1).join(' ') || '';
+            const [nombre, ...restoApellido] = name.split(' ');
+            const apellido = restoApellido.join(' ') || '';
 
             const dummyPassword = await this.encryptService.encrypt('oauth_dummy_password');
 
-            // Crear registro si no existe
+            // Crear registro en tabla Registro si no existe
             let registro = await this.registroRepository.findOne({ where: { email } });
             if (!registro) {
                 registro = this.registroRepository.create({
@@ -89,67 +89,41 @@ export class OauthService {
                 await this.registroRepository.save(registro);
             }
 
-            // Buscar rol predeterminado
             const rol = await this.rolRepository.findOne({ where: { id: 2 } });
             if (!rol) throw new Error('Rol predeterminado no encontrado');
 
-            usuario = this.usuarioRepository.create({
+            const nuevoUsuario = this.usuarioRepository.create({
                 email,
                 nombres: nombre,
                 apellidos: apellido,
                 password: dummyPassword,
                 rol,
                 perfil_foto: picture || null,
-                id_empresa: null,
-                is_activo: false,
+                is_activo: true,
+                fecha_creacion: new Date(),
+                id_empresa: null, // se asociará después
             });
 
-            const nuevoUsuario = await this.usuarioRepository.save(usuario);
+            const savedUsuario = await this.usuarioRepository.save(nuevoUsuario);
 
-            // Recargar usuario con rol
-            const usuarioConRol = await this.usuarioRepository.findOne({
-                where: { id: nuevoUsuario.id },
-                relations: ['rol'],
+            const token = this.jwtService.sign({
+                email: savedUsuario.email,
+                sub: savedUsuario.id,
+                rolId: savedUsuario.rol.id,
             });
 
-            if (!usuarioConRol) throw new Error('Usuario no encontrado después de crear');
-            if (!usuarioConRol.rol) throw new Error('Usuario creado sin rol asignado');
-
-            return usuarioConRol;
+            return {
+                usuario: savedUsuario,
+                token,
+                requiereEmpresa: true,
+            };
 
         } catch (error) {
             console.error('Error en validateOAuthUser:', error);
-            throw new Error('Error validando o creando usuario OAuth');
+            throw new InternalServerErrorException('Error validando o creando usuario OAuth');
         }
     }
 
-
-    async loginWithOAuth({
-        email,
-        name,
-        picture,
-    }: {
-        email: string;
-        name: string;
-        picture?: string;
-    }) {
-        let user = await this.usuarioRepository.findOne({ where: { email } });
-
-        user = this.usuarioRepository.create({
-            email,
-            nombres: name, // Cambiado de 'nombre'
-            apellidos: '', // Asigna algo válido si es obligatorio
-            password: await this.encryptService.encrypt('oauth_dummy_password'),
-            perfil_foto: picture || null,
-            is_activo: false,
-            fecha_creacion: new Date(), // Cambiado de 'created_at'
-        });
-
-        const payload = { sub: user.id, email: user.email };
-        const token = this.jwtService.sign(payload);
-
-        return { token };
-    }
 
     async findUserByEmail(email: string): Promise<Usuario | null> {
         const user = await this.usuarioRepository.findOne({
@@ -163,5 +137,5 @@ export class OauthService {
 
         return user;
     }
-    
+
 }
