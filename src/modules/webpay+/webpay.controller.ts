@@ -56,24 +56,47 @@ export class WebpayController {
      * Endpoint para confirmar la transacción Webpay
      * Este endpoint lo llama Webpay al finalizar el pago
      */
-    @Post("/return")
-    async confirmTransaction(@Req() req: Request, @Res() res: Response) {
-        const token_ws = req.body.token_ws || req.query.token_ws;
+    // @Get("/return")
+    // async confirmTransaction(@Req() req: Request, @Res() res: Response) {
+    //     const token_ws = req.body.token_ws || req.query.token_ws;
 
-        if (!token_ws) {
-            return res.status(400).json({ message: "token_ws es requerido" });
+    //     if (!token_ws) {
+    //         return res.status(400).json({ message: "token_ws es requerido" });
+    //     }
+
+    //     try {
+    //         await this.webpayService.confirmTransaction(token_ws);
+
+    //         // Redirige al HTML final del frontend
+    //         return res.redirect(`${WEBPAY_CONFIG.finalUrl}?token_ws=${token_ws}`);
+    //     } catch (error) {
+    //         console.error("Error en confirmación de transacción:", error.message);
+    //         return res.redirect(
+    //             `${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`,
+    //         );
+    //     }
+    // }
+
+    @Get('/return')
+    async confirmTransaction(@Req() req: Request, @Res() res: Response) {
+        let token_ws = req.query.token_ws;
+
+        if (Array.isArray(token_ws)) {
+            // Si es un array, toma el primero
+            token_ws = token_ws[0];
+        }
+
+        if (typeof token_ws !== 'string') {
+            return res.status(400).json({ message: 'token_ws debe ser un string' });
         }
 
         try {
             await this.webpayService.confirmTransaction(token_ws);
 
-            // Redirige al HTML final del frontend
             return res.redirect(`${WEBPAY_CONFIG.finalUrl}?token_ws=${token_ws}`);
         } catch (error) {
-            console.error("Error en confirmación de transacción:", error.message);
-            return res.redirect(
-                `${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`,
-            );
+            console.error('Error en confirmación de transacción:', error.message);
+            return res.redirect(`${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`);
         }
     }
 
