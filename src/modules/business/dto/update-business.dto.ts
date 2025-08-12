@@ -37,4 +37,5 @@ export class UpdateBusinessDto {
     @IsOptional()
     @IsString()
     logo_url?: string;
+    
 }

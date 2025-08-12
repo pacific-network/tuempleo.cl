@@ -63,6 +63,7 @@ export class BusinessDataDto {
     @IsNotEmpty()
     @IsString()
     descripcion: string;
+    
 }
 
 export class CreateBusinessDto {

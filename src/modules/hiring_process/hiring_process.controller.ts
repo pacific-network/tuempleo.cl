@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Param, ParseIntPipe, Req, UseGuards, Patch } from '@nestjs/common';
+import { Body, Controller, Post, Param, ParseIntPipe, Req, UseGuards, Patch, Get } from '@nestjs/common';
 import { ProcesoSeleccionService } from './hiring_process.service';
 import { AuthGuard } from '@nestjs/passport'; // corregido: importar desde '@nestjs/passport'
 
@@ -34,5 +34,12 @@ export class ProcesoSeleccionController {
     ) {
         const empleadorId = req.user.userId;
         return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'contratado');
+    }
+    
+    @UseGuards(AuthGuard('jwt'))
+    @Get('mias')
+    async misNotificaciones(@Req() req) {
+      const userId = req.user.userId; // id del Usuario (postulante)
+      return this.seleccionService.listarProcesosDelPostulante(userId);
     }
 }
