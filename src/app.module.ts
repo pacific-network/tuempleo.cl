@@ -38,6 +38,7 @@ import { OauthModule } from './modules/oauth/oauth.module';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
       global: true

@@ -10,176 +10,145 @@ import { PageMetaDto } from 'src/shared/pagination/page-meta.dto';
 
 @Injectable()
 export class PostulanteService {
-    constructor(
-        @InjectRepository(Postulante)
-        private readonly postulanteRepository: Repository<Postulante>,
-        @InjectRepository(Usuario)
-        private readonly usuarioRepository: Repository<Usuario>,
-    ) { }
+  constructor(
+    @InjectRepository(Postulante)
+    private readonly postulanteRepository: Repository<Postulante>,
+    @InjectRepository(Usuario)
+    private readonly usuarioRepository: Repository<Usuario>,
+  ) {}
 
-    async crearPostulante(userId: number, rut: string, data: Record<string, any>): Promise<Postulante> {
-        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
-
-        if (!usuario) {
-            throw new NotFoundException('Usuario no encontrado');
-        }
-
-        // Verificar si el RUT ya existe en otro usuario
-        const rutExistente = await this.usuarioRepository.findOne({ where: { rut } });
-        if (rutExistente) {
-            throw new NotFoundException('El RUT ya está asociado a otro usuario');
-        }
-
-        // Actualizar el RUT del usuario
-        usuario.rut = rut;
-        await this.usuarioRepository.save(usuario);
-
-        // Crear el postulante asociado
-        const nuevoPostulante = this.postulanteRepository.create({
-            usuario,
-            data,
-        });
-
-        return this.postulanteRepository.save(nuevoPostulante);
+  async crearPostulante(
+    userId: number,
+    rut: string,
+    data: Record<string, any>,
+  ): Promise<Postulante> {
+    const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
     }
 
-    async obtenerPostulante(userId: number): Promise<Postulante> {
-        const postulante = await this.postulanteRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['usuario'],  // Aquí hacemos el JOIN
-        });
-
-        if (!postulante) {
-            throw new NotFoundException('Postulante no encontrado');
-        }
-
-        return postulante;
+    // RUT único (permitiendo mismo usuario)
+    if (rut) {
+      const rutExistente = await this.usuarioRepository.findOne({ where: { rut } });
+      if (rutExistente && rutExistente.id !== userId) {
+        throw new NotFoundException('El RUT ya está asociado a otro usuario');
+      }
+      usuario.rut = rut;
     }
 
-    // async updatePostulant(payload: UpdatePostulantDto, userId: number): Promise<Postulante> {
-    //     const postulant = await this.postulanteRepository.findOne({
-    //         where: { usuario: { id: userId } },
-    //         relations: ['usuario'],
-    //     });
+    // Nombre / Apellido se esperan DENTRO de "data"
+    // admite data.nombre / data.apellido o data.datos_personales.nombre/apellido
+    const nombre =
+      (typeof data?.nombre === 'string' && data.nombre.trim()) ||
+      (typeof data?.datos_personales?.nombre === 'string' && data.datos_personales.nombre.trim()) ||
+      '';
 
-    //     if (!postulant) {
-    //         throw new NotFoundException('Postulante no encontrado');
-    //     }
+    const apellido =
+      (typeof data?.apellido === 'string' && data.apellido.trim()) ||
+      (typeof data?.datos_personales?.apellido === 'string' && data.datos_personales.apellido.trim()) ||
+      '';
 
-    //     // Aseguramos que las propiedades sean siempre arrays si no existen
-    //     const updatedPostulant = {
-    //         ...postulant,
-    //         data: {
-    //             ...postulant.data,
-    //             ...payload.data,
-    //             datos_personales: {
-    //                 ...postulant.data.datos_personales,
-    //                 ...payload.data?.datos_personales,
-    //             },
-    //             educacion: Array.isArray(postulant.data.educacion)
-    //                 ? [
-    //                     ...postulant.data.educacion,
-    //                     ...(payload.data?.educacion || [])
-    //                 ]
-    //                 : (payload.data?.educacion || []), // Si no es un array, inicializamos como vacío o con lo del payload
-    //             experiencias: Array.isArray(postulant.data.experiencias)
-    //                 ? [
-    //                     ...postulant.data.experiencias,
-    //                     ...(payload.data?.experiencias || [])
-    //                 ]
-    //                 : (payload.data?.experiencias || []),
-    //             idiomas: Array.isArray(postulant.data.idiomas)
-    //                 ? [
-    //                     ...postulant.data.idiomas,
-    //                     ...(payload.data?.idiomas || [])
-    //                 ]
-    //                 : (payload.data?.idiomas || []),
-    //             preferencias: {
-    //                 ...postulant.data.preferencias,
-    //                 ...(payload.data?.preferencias || {}),
-    //             },
-    //             redes_sociales: Array.isArray(postulant.data.redes_sociales)
-    //                 ? [
-    //                     ...postulant.data.redes_sociales,
-    //                     ...(payload.data?.redes_sociales || [])
-    //                 ]
-    //                 : (payload.data?.redes_sociales || []),
-    //         },
-    //     };
+    if (nombre)   usuario.nombres   = nombre;
+    if (apellido) usuario.apellidos = apellido;
 
-    //     // Realizamos la actualización
-    //     await this.postulanteRepository.update(postulant.id, updatedPostulant);
-    //     return updatedPostulant;
-    // }
+    await this.usuarioRepository.save(usuario);
 
-    async updatePostulant(payload: UpdatePostulantDto, userId: number): Promise<Postulante> {
-        const postulant = await this.postulanteRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['usuario'],
-        });
+    // Crear / actualizar postulante (upsert)
+    let postulante = await this.postulanteRepository.findOne({
+      where: { usuario: { id: userId } },
+      relations: ['usuario'],
+    });
 
-        if (!postulant) {
-            throw new NotFoundException('Postulante no encontrado');
-        }
-
-        // Realizamos la actualización de los datos
-        if (payload.data) {
-            postulant.data = {
-                ...payload.data,
-                datos_personales: {
-                    ...postulant.data.datos_personales,
-                    ...payload.data?.datos_personales,
-                },
-                educacion: [
-                    ...(payload.data?.educacion || [])
-                ],
-                experiencias: [
-                    ...(payload.data?.experiencias || [])
-                ],
-                idiomas: [
-                    ...(payload.data?.idiomas || [])
-                ],
-                preferencias: {
-                    ...(payload.data?.preferencias || {}),
-                },
-                redes_sociales: [
-                    ...(payload.data?.redes_sociales || [])
-                ],
-            };
-        }
-
-        postulant.fecha_update = new Date();
-        postulant.modificado_por = userId;
-
-        // Usamos save para actualizar la entidad y sus relaciones
-        await this.postulanteRepository.save(postulant);
-
-        return {
-            ...postulant,
-            usuario: {
-                ...postulant.usuario,
-            }
-        };
+    if (!postulante) {
+      postulante = this.postulanteRepository.create({
+        usuario,
+        data: data ?? {},
+      });
+    } else {
+      const prev = postulante.data || {};
+      postulante.data = { ...prev, ...(data || {}) };
     }
 
-    //get all postulant
-    async findAllPostulants(pageOptionsDto: PageOptionsDto): Promise<PageDto<Postulante>> {
-        const queryBuilder = this.postulanteRepository.createQueryBuilder('postulante');
+    return this.postulanteRepository.save(postulante);
+  }
 
-        queryBuilder
-            .leftJoinAndSelect('postulante.usuario', 'usuario')
-            .skip(pageOptionsDto.skip)
-            .take(pageOptionsDto.take);
+  async obtenerPostulante(userId: number): Promise<Postulante> {
+    const postulante = await this.postulanteRepository.findOne({
+      where: { usuario: { id: userId } },
+      relations: ['usuario'],
+    });
 
-        const itemCount = await queryBuilder.getCount();
-        const { entities } = await queryBuilder.getRawAndEntities();
-
-        const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
-        return new PageDto(entities, pageMetaDto);
+    if (!postulante) {
+      throw new NotFoundException('Postulante no encontrado');
     }
 
+    return postulante;
+  }
 
+  async updatePostulant(payload: UpdatePostulantDto, userId: number): Promise<Postulante> {
+    const postulant = await this.postulanteRepository.findOne({
+      where: { usuario: { id: userId } },
+      relations: ['usuario'],
+    });
 
+    if (!postulant) {
+      throw new NotFoundException('Postulante no encontrado');
+    }
 
+    const base = (postulant.data || {}) as Record<string, any>;
+    const incoming = (payload.data || {}) as Record<string, any>;
 
+    // Si viene nombre/apellido en data, también actualiza el usuario
+    const incNombre =
+      (typeof incoming?.nombre === 'string' && incoming.nombre.trim()) ||
+      (typeof incoming?.datos_personales?.nombre === 'string' && incoming.datos_personales.nombre.trim()) ||
+      '';
+    const incApellido =
+      (typeof incoming?.apellido === 'string' && incoming.apellido.trim()) ||
+      (typeof incoming?.datos_personales?.apellido === 'string' && incoming.datos_personales.apellido.trim()) ||
+      '';
+
+    if (incNombre)   postulant.usuario.nombres   = incNombre;
+    if (incApellido) postulant.usuario.apellidos = incApellido;
+    await this.usuarioRepository.save(postulant.usuario);
+
+    postulant.data = {
+      ...base,
+      ...incoming,
+      datos_personales: {
+        ...(base.datos_personales || {}),
+        ...(incoming.datos_personales || {}),
+      },
+      educacion: Array.isArray(incoming.educacion) ? incoming.educacion : (base.educacion || []),
+      experiencias: Array.isArray(incoming.experiencias) ? incoming.experiencias : (base.experiencias || []),
+      idiomas: Array.isArray(incoming.idiomas) ? incoming.idiomas : (base.idiomas || []),
+      preferencias: { ...(base.preferencias || {}), ...(incoming.preferencias || {}) },
+      redes_sociales: Array.isArray(incoming.redes_sociales) ? incoming.redes_sociales : (base.redes_sociales || []),
+    };
+
+    postulant.fecha_update = new Date();
+    postulant.modificado_por = userId;
+
+    await this.postulanteRepository.save(postulant);
+
+    return {
+      ...postulant,
+      usuario: { ...postulant.usuario },
+    };
+  }
+
+  async findAllPostulants(pageOptionsDto: PageOptionsDto): Promise<PageDto<Postulante>> {
+    const queryBuilder = this.postulanteRepository.createQueryBuilder('postulante');
+
+    queryBuilder
+      .leftJoinAndSelect('postulante.usuario', 'usuario')
+      .skip(pageOptionsDto.skip)
+      .take(pageOptionsDto.take);
+
+    const itemCount = await queryBuilder.getCount();
+    const { entities } = await queryBuilder.getRawAndEntities();
+
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+    return new PageDto(entities, pageMetaDto);
+  }
 }

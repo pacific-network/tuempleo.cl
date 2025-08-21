@@ -1,38 +1,47 @@
-//src/modules/auth/auth.module.ts
+// src/modules/oauth/oauth.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserModule } from '../user/user.module';
-import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
+import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { Registro } from 'src/repository/register/register.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 import { Rol } from 'src/repository/role/role.entity';
-import { PassportModule } from '@nestjs/passport';
-import { LinkedInStrategy } from '../auth/strategies/linkedin.strategy'; // Ajusta la ruta según corresponda
-import { GoogleStrategy } from '../auth/strategies/google.strategy';
-import { JwtStrategy } from '../auth/strategies/jwt.strategy';
-import { OauthService } from './oauth.service';
+
+import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
 import { OauthController } from './oauth.controller';
+import { OauthService } from './oauth.service';
+
+import { GoogleStrategy } from 'src/modules/auth/strategies/google.strategy';
+import { LinkedInStrategy } from 'src/modules/auth/strategies/linkedin.strategy';
+import { JwtStrategy } from 'src/modules/auth/strategies/jwt.strategy';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Registro, Usuario, Rol]),
-        UserModule,
-        EncryptModule,
-        PassportModule.register({ session: false }),
-        ConfigModule, // Ya importaste globalmente, no hace falta forRoot aquí
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET'),
-                signOptions: { expiresIn: '3h' },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
-    providers: [OauthService, LinkedInStrategy, GoogleStrategy, JwtStrategy],
-    controllers: [OauthController],
-    exports: [OauthService],
+  imports: [
+    TypeOrmModule.forFeature([Registro, Usuario, Rol]),
+    EncryptModule,
+    PassportModule.register({ session: false }),
+    ConfigModule, // si ya es global, basta con importarlo aquí
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => ({
+        // ⬇️ MISMO secreto y mismo fallback que en AuthModule
+        secret: config.get<string>('JWT_SECRET') || 'pacificNetwork2024',
+        signOptions: { expiresIn: '3h' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [OauthController],
+  providers: [
+    OauthService,
+    // Estrategias usadas durante el flujo de OAuth:
+    GoogleStrategy,
+    LinkedInStrategy,
+    // También exponemos JwtStrategy porque este módulo expone rutas protegidas (/oauth/user-by-email):
+    JwtStrategy,
+  ],
+  exports: [OauthService],
 })
-export class OauthModule { }
+export class OauthModule {}

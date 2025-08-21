@@ -2,19 +2,24 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-    constructor(configService: ConfigService) {
-        super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            ignoreExpiration: false,
-            secretOrKey: configService.get<string>('JWT_SECRET') || 'pacificNetwork2024', // ✅ valor por defecto
-        });
-    }
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: process.env.JWT_SECRET || 'pacificNetwork2024',
+      ignoreExpiration: false,
+    });
+  }
 
-    async validate(payload: any) {
-        return { userId: payload.sub }; // Esto quedará disponible en req.user
-    }
+  async validate(payload: any) {
+    // 👇 clave: devolver userId mapeado desde sub
+    return {
+      userId: Number(payload?.sub),
+      email: payload?.email || null,
+      rolId: payload?.rolId || null,
+      sub: Number(payload?.sub) || null,
+    };
+  }
 }
