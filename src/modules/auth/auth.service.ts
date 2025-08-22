@@ -1,5 +1,7 @@
-//src.modules/auth/auth.service.ts
-import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable, UnauthorizedException, BadRequestException,
+  InternalServerErrorException, NotFoundException
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,134 +11,191 @@ import { Rol } from '../../repository/role/role.entity';
 import { RegistrarUsuarioDto } from './dto/register';
 import { IniciarSesionDto } from '../oauth/dto/login';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
-import { User } from 'src/shared/decorators/user.decorator';
 import { UpdateMeDto } from './dto/update-me';
-import { RegistrarUsuarioOAuthDto } from '../oauth/dto/register-oauth';
-import { OAuthLoginDto } from '../oauth/dto/oauth-login';
-
-
 
 @Injectable()
 export class AuthService {
-    constructor(
-        @InjectRepository(Registro)
-        private readonly registroRepository: Repository<Registro>,
-        @InjectRepository(Usuario)
-        private readonly usuarioRepository: Repository<Usuario>,
-        @InjectRepository(Rol)
-        private readonly rolRepository: Repository<Rol>,
-        private readonly jwtService: JwtService,
-        private readonly encryptService: EncryptService
-    ) { }
+  constructor(
+    @InjectRepository(Registro) private readonly registroRepo: Repository<Registro>,
+    @InjectRepository(Usuario)  private readonly usuarioRepo: Repository<Usuario>,
+    @InjectRepository(Rol)      private readonly rolRepo: Repository<Rol>,
+    private readonly jwt: JwtService,
+    private readonly encrypt: EncryptService,
+  ) {}
 
-    // Registro del usuario
-    async register(userData: RegistrarUsuarioDto): Promise<any> {
-        try {
-            const { email, password, nombre_completo } = userData;
+  // ---------- helpers públicos ----------
+  async findUserFullByIdSafe(id?: number): Promise<Usuario | null> {
+    if (!Number.isFinite(id)) return null;
+    return this.usuarioRepo.findOne({ where: { id: Number(id) }, relations: ['rol'] });
+  }
 
-            const existingRegistro = await this.registroRepository.findOne({ where: { email } });
-            if (existingRegistro) {
-                throw new UnauthorizedException('Email ya registrado');
-            }
+  async findUserByEmailSafe(email?: string): Promise<Usuario | null> {
+    const e = (email || '').trim().toLowerCase();
+    if (!e) return null;
+    return this.usuarioRepo.findOne({ where: { email: e }, relations: ['rol'] });
+  }
 
-            const passwordHash = await this.encryptService.encrypt(password);
+  // Crea (o completa) el usuario a partir de los claims del JWT (OAuth)
+  // payload esperado: { email, name?, given_name?/givenName?/first_name?/localizedFirstName, family_name?/familyName?/last_name?/localizedLastName, rolId? }
+  async ensureUserFromJwt(payload: any): Promise<Usuario> {
+    const email = (payload?.email || '').trim().toLowerCase();
+    if (!email) throw new UnauthorizedException('Token sin email');
 
-            const newRegistro = this.registroRepository.create({
-                email,
-                password: passwordHash,
-                nombre_completo,
-                es_activo: false,
-            });
+    // ¿ya existe?
+    let user = await this.usuarioRepo.findOne({ where: { email }, relations: ['rol'] });
 
-            await this.registroRepository.save(newRegistro);
-            return { message: 'Registro exitoso. Espera la activación.' };
-        } catch (error) {
-            if (error instanceof UnauthorizedException) {
-                throw new UnauthorizedException(error.message);
-            } else {
-                throw new InternalServerErrorException('Error al registrar el usuario');
-            }
-        }
+    // Derivar nombres desde varios posibles claims (Google/LinkedIn/otros)
+    const claim = (v?: any) => (typeof v === 'string' ? v.trim() : '');
+
+    let given  =
+      claim(payload?.given_name) ||
+      claim(payload?.givenName) ||
+      claim(payload?.first_name) ||
+      claim(payload?.profile?.given_name) ||
+      claim(payload?.profile?.first_name) ||
+      claim(payload?.localizedFirstName);
+
+    let family =
+      claim(payload?.family_name) ||
+      claim(payload?.familyName) ||
+      claim(payload?.last_name)  ||
+      claim(payload?.profile?.family_name) ||
+      claim(payload?.profile?.last_name) ||
+      claim(payload?.localizedLastName);
+
+    const full = claim(payload?.name) || claim(payload?.displayName) || claim(payload?.profile?.name);
+
+    // Si faltan given/family, partir 'name' por el último espacio
+    if ((!given || !family) && full) {
+      const t = full.replace(/\s+/g, ' ').trim();
+      const i = t.lastIndexOf(' ');
+      if (i > 0) {
+        given  = given  || t.slice(0, i);
+        family = family || t.slice(i + 1);
+      } else {
+        given = given || t;
+      }
     }
 
-    async login(loginData: IniciarSesionDto, rolId: number): Promise<any> {
-        const { email, password } = loginData;
+    const nombres   = (given  || '').trim();
+    const apellidos = (family || '').trim();
 
-        // Buscar registro
-        const registro = await this.registroRepository.findOne({ where: { email } });
-        if (!registro) throw new UnauthorizedException('Usuario no encontrado');
-
-        // Verificar password
-        const passwordMatch = await this.encryptService.compare(password, registro.password);
-        if (!passwordMatch) throw new UnauthorizedException('Contraseña incorrecta');
-
-        // Activar registro
-        registro.es_activo = true;
-        await this.registroRepository.save(registro);
-
-        // Buscar usuario
-        let user = await this.usuarioRepository.findOne({
-            where: { email },
-            relations: ['rol'],
-        });
-
-        if (!user) {
-            // Crear usuario con rol asignado según el login
-            const rol = await this.rolRepository.findOne({ where: { id: rolId } });
-            if (!rol) throw new UnauthorizedException('Rol no encontrado');
-
-            user = this.usuarioRepository.create({
-                nombres: registro.nombre_completo.split(' ')[0],
-                apellidos: registro.nombre_completo.split(' ').slice(1).join(' '),
-                password: registro.password,
-                email: registro.email,
-                rol,
-            });
-            await this.usuarioRepository.save(user);
-        } else {
-            // Si existe usuario pero tiene otro rol, actualizarlo al rol del login
-            if (user.rol.id !== rolId) {
-                const rol = await this.rolRepository.findOne({ where: { id: rolId } });
-                if (!rol) throw new UnauthorizedException('Rol no encontrado');
-                user.rol = rol;
-                await this.usuarioRepository.save(user);
-            }
-        }
-
-        // Crear token
-        const payload = { email: user.email, sub: user.id, rolId: user.rol.id };
-        const token = this.jwtService.sign(payload);
-
-        return {
-            message: 'Login exitoso',
-            token,
-        };
+    // Resolver rol: si el usuario YA existe, no lo tocamos (no alterar empresa).
+    let rol: Rol | null = null;
+    if (!user) {
+      let rolId = Number(payload?.rolId);
+      if (!Number.isFinite(rolId) || rolId <= 0) rolId = 1; // 1 = Postulante por defecto
+      rol = await this.rolRepo.findOne({ where: { id: rolId } });
+      if (!rol) {
+        // fallback: intenta 1, o cualquiera
+        rol = await this.rolRepo.findOne({ where: { id: 1 } }) || await this.rolRepo.findOne({});
+        if (!rol) throw new UnauthorizedException('Rol no disponible para crear usuario');
+      }
     }
 
-    async findUserFullById(id: number) {
-        const user = await this.usuarioRepository.findOne({ where: { id } });
-        if (!user) {
-            throw new UnauthorizedException('Usuario no encontrado');
-        }
-        return user;
+    // Password dummy para cumplir esquema
+    const dummy = await this.encrypt.encrypt(`oauth:${email}:${Date.now()}`);
+
+    if (!user) {
+      // Crear nuevo usuario (candidato por defecto si no se indicó otro)
+      user = this.usuarioRepo.create({
+        email,
+        nombres: nombres || '',
+        apellidos: apellidos || '',
+        password: dummy,
+        rol: rol!, // definido arriba
+      });
+      await this.usuarioRepo.save(user);
+    } else {
+      // Completar datos faltantes, pero NO cambiar el rol existente (respeta empresa)
+      let changed = false;
+      if (!user.nombres && nombres)      { user.nombres = nombres; changed = true; }
+      if (!user.apellidos && apellidos)  { user.apellidos = apellidos; changed = true; }
+      if (!user.password)                { user.password = dummy;    changed = true; }
+      if (changed) await this.usuarioRepo.save(user);
     }
 
-    async updateMe(userId: number, dto: UpdateMeDto): Promise<Usuario> {
-        const user = await this.usuarioRepository.findOne({ where: { id: userId } });
-        if (!user) {
-            throw new NotFoundException('Usuario no encontrado');
-        }
+    // devolver con relación de rol
+    return this.usuarioRepo.findOne({ where: { id: user.id }, relations: ['rol'] }) as Promise<Usuario>;
+  }
 
-        // Encriptar la nueva contraseña si viene
-        if (dto.password) {
-            dto.password = this.encryptService.encrypt(dto.password);
-        }
+  // ---------- registro clásico ----------
+  private norm(email?: string) {
+    const e = (email || '').trim().toLowerCase();
+    if (!e) throw new BadRequestException('Email vacío');
+    return e;
+  }
 
-        // Actualizar solo los campos presentes
-        Object.assign(user, dto);
+  async register(dto: RegistrarUsuarioDto) {
+    try {
+      const email = this.norm(dto.email);
 
-        return this.usuarioRepository.save(user);
+      const exists = await this.registroRepo.findOne({ where: { email } });
+      if (exists) throw new UnauthorizedException('Email ya registrado');
+
+      const pass = await this.encrypt.encrypt(dto.password);
+      const reg = this.registroRepo.create({
+        email, password: pass, nombre_completo: dto.nombre_completo, es_activo: false,
+      });
+      await this.registroRepo.save(reg);
+      return { message: 'Registro exitoso. Espera la activación.' };
+    } catch (e) {
+      if (e instanceof UnauthorizedException || e instanceof BadRequestException) throw e;
+      throw new InternalServerErrorException('Error al registrar el usuario');
+    }
+  }
+
+  // ---------- login clásico por rol ----------
+  async login(data: IniciarSesionDto, rolId: number) {
+    const email = this.norm(data.email);
+
+    const registro = await this.registroRepo.findOne({ where: { email } });
+    if (!registro) throw new UnauthorizedException('Usuario no encontrado');
+
+    const ok = await this.encrypt.compare(data.password, registro.password);
+    if (!ok) throw new UnauthorizedException('Contraseña incorrecta');
+
+    registro.es_activo = true;
+    await this.registroRepo.save(registro);
+
+    let user = await this.usuarioRepo.findOne({ where: { email }, relations: ['rol'] });
+    if (!user) {
+      const rol = await this.rolRepo.findOne({ where: { id: rolId } });
+      if (!rol) throw new UnauthorizedException('Rol no encontrado');
+
+      const parts = (registro.nombre_completo || '').trim().split(/\s+/);
+      user = this.usuarioRepo.create({
+        email,
+        nombres: parts[0] || '',
+        apellidos: parts.slice(1).join(' '),
+        password: registro.password,
+        rol,
+      });
+      await this.usuarioRepo.save(user);
+    } else if (user.rol?.id !== rolId) {
+      const rol = await this.rolRepo.findOne({ where: { id: rolId } });
+      if (!rol) throw new UnauthorizedException('Rol no encontrado');
+      user.rol = rol;
+      await this.usuarioRepo.save(user);
     }
 
+    const token = this.jwt.sign({ email: user.email, sub: Number(user.id), rolId: user.rol.id });
+    return { message: 'Login exitoso', token };
+  }
+
+  // ---------- misceláneos ----------
+  async findUserFullById(id: number) {
+    const user = await this.usuarioRepo.findOne({ where: { id }, relations: ['rol'] });
+    if (!user) throw new UnauthorizedException('Usuario no encontrado');
+    return user;
+  }
+
+  async updateMe(userId: number, dto: UpdateMeDto): Promise<Usuario> {
+    const user = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    if (dto.password) dto.password = await this.encrypt.encrypt(dto.password);
+    Object.assign(user, dto);
+    return this.usuarioRepo.save(user);
+  }
 }
-

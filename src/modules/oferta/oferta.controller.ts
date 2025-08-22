@@ -7,62 +7,59 @@ import { PageDto } from 'src/shared/pagination/page.dto';
 import { AuthGuard } from '../auth/guards/auth.guards';
 import { User } from 'src/shared/decorators/user.decorator';
 import { UpdateOfertaDto } from './dto/updadte-oferta.dto';
-import { Empleador } from 'src/repository/employer/employer.entity';
-import { SearchOfertaDto } from './dto/search-oferta.dto';
+import { FilterOfertasDto } from './dto/filter-ofertas.dto';
 
 @Controller('v1/ofertas')
 export class OfertaController {
-    constructor(private readonly ofertaService: OfertaService) { }
+  constructor(private readonly ofertaService: OfertaService) {}
 
-    @Post()
-    async crearOferta(@Body() dto: CreateOfertaDto): Promise<Oferta> {
-        return this.ofertaService.crearOferta(dto);
-    }
+  @Post()
+  async crearOferta(@Body() dto: CreateOfertaDto): Promise<Oferta> {
+    return this.ofertaService.crearOferta(dto);
+  }
 
-    @Get()
-    async listarOfertas(
-        @Query() pageOptionsDto: PageOptionsDto,
-        @Query() query: SearchOfertaDto
-    ): Promise<PageDto<Oferta>> {
-        return this.ofertaService.findAllOfertas(pageOptionsDto, query);
-    }
+  /** Listado público con filtros/búsqueda/paginación */
+  @Get()
+  async listarOfertas(
+    @Query() pageOptionsDto: PageOptionsDto,
+    @Query() query: FilterOfertasDto,
+  ): Promise<PageDto<Oferta>> {
+    return this.ofertaService.findAllOfertas(pageOptionsDto, query);
+  }
 
+  /** Listado por empleador (dashboard empresa) */
+  @Get('empleador/:empleadorId')
+  async obtenerOfertasPorEmpleador(
+    @Param('empleadorId', ParseIntPipe) empleadorId: number,
+    @Query() pageOptionsDto: PageOptionsDto
+  ): Promise<PageDto<Oferta>> {
+    return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto);
+  }
 
-    @Get(':id')
-    async obtenerOfertaPorId(@Param('id', ParseIntPipe) id: number) {
-        return this.ofertaService.obtenerOfertaPorId(id);
-    }
+  /** Detalle de oferta */
+  @Get(':id')
+  async obtenerOfertaPorId(@Param('id', ParseIntPipe) id: number) {
+    return this.ofertaService.obtenerOfertaPorId(id);
+  }
 
-    // @Get('empleador/:empleadorId')
-    // async obtenerOfertasPorEmpleador(@Param('empleadorId', ParseIntPipe) empleadorId: number): Promise<Oferta[]> {
-    //     return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId);
-    // }
-    @Get('empleador/:empleadorId')
-    async obtenerOfertasPorEmpleador(
-        @Param('empleadorId') empleadorId: number,
-        @Query() pageOptionsDto: PageOptionsDto
-    ): Promise<PageDto<Oferta>> {
-        return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto);
-    }
+  /** Soft delete */
+  @UseGuards(AuthGuard)
+  @Delete(':id')
+  async eliminarOferta(
+    @Param('id', ParseIntPipe) id: number,
+    @User() user: any
+  ): Promise<{ message: string }> {
+    return this.ofertaService.eliminarOferta(id, user.sub);
+  }
 
-    @UseGuards(AuthGuard)
-    @Delete(':id')
-    async eliminarOferta(
-        @Param('id') id: number,
-        @User() user: any
-    ): Promise<{ message: string }> {
-        return this.ofertaService.eliminarOferta(id, user.sub);
-    }
-
-    @UseGuards(AuthGuard)
-    @Patch(':id')
-    async actualizarOferta(
-        @Param('id') id: number,
-        @User() user: any,
-        @Body() updateOfertaDto: UpdateOfertaDto
-    ): Promise<Oferta> {
-        return this.ofertaService.actualizarOferta(+id, updateOfertaDto, user.sub);
-    }
-
-
+  /** Update parcial */
+  @UseGuards(AuthGuard)
+  @Patch(':id')
+  async actualizarOferta(
+    @Param('id', ParseIntPipe) id: number,
+    @User() user: any,
+    @Body() updateOfertaDto: UpdateOfertaDto
+  ): Promise<Oferta> {
+    return this.ofertaService.actualizarOferta(+id, updateOfertaDto, user.sub);
+  }
 }

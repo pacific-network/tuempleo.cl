@@ -7,10 +7,10 @@ import { OfertaService } from "./oferta.service";
 import { OfertaController } from "./oferta.controller";
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Oferta, Empleador, Empresa]),
-    ],
-    providers: [OfertaService],
-    controllers: [OfertaController],
+  imports: [
+    TypeOrmModule.forFeature([Oferta, Empleador, Empresa]),
+  ],
+  providers: [OfertaService],
+  controllers: [OfertaController],
 })
 export class OfertaModule { }

@@ -81,4 +81,17 @@ export class ProcesoSeleccionService {
         console.log('Fin gestionarSeleccion');
         return { success: true };
     }
+    async listarProcesosDelPostulante(userId: number) {
+    // Devuelve los procesos que tocan postulaciones cuyo postulante pertenece al usuario autenticado
+    return this.procesoRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.postulacion', 'post')
+      .leftJoinAndSelect('post.postulante', 'postulante')
+      .leftJoinAndSelect('postulante.usuario', 'usuario')
+      .leftJoinAndSelect('post.oferta', 'oferta')
+      .leftJoinAndSelect('p.gestor', 'gestor')
+      .where('usuario.id = :userId', { userId })
+      .orderBy('p.fecha', 'DESC')
+      .getMany();
+  }
 }
