@@ -15,6 +15,7 @@ import { ShoppingCart } from 'src/repository/shopping/shopping.entity';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 import { TrabajoGuardado } from 'src/repository/saved-job/saved-job.entity';
+import { CompanyReview } from 'src/modules/company-reviews/entities/company-review.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -28,7 +29,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview],
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };
