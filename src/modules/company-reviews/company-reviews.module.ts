@@ -3,17 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CompanyReview } from './entities/company-review.entity';
 import { CompanyReviewsService } from './company-reviews.service';
 import { CompanyReviewsController } from './company-reviews.controller';
-import { CompanyReviewsByRutController } from './company-reviews-by-rut.controller';
 import { Empresa } from 'src/repository/business/business.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CompanyReview, Empresa]), // <-- agrega Empresa
+    TypeOrmModule.forFeature([CompanyReview, Empresa]),
   ],
-  controllers: [
-    CompanyReviewsController,        // /v1/companies/:companyId/reviews
-    CompanyReviewsByRutController,   // /v1/empresas/:rut/reviews
-  ],
+  controllers: [CompanyReviewsController],
   providers: [CompanyReviewsService],
   exports: [CompanyReviewsService],
 })

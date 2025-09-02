@@ -7,6 +7,7 @@ export type ReviewType = 'trabajo' | 'postulacion';
 
 @Entity('company_reviews')
 @Index(['employerUserId'])
+@Index(['employerUserId', 'reviewerUserId'], { unique: true }) // 1 review por usuario/empresa
 export class CompanyReview {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true, name: 'id' })
   id: number;
@@ -22,6 +23,13 @@ export class CompanyReview {
 
   @Column({ type: 'json', name: 'data' })
   data: Record<string, number>;
+
+  // NUEVOS
+  @Column({ type: 'varchar', length: 50, name: 'motivo' })
+  motivo: string;
+
+  @Column({ type: 'varchar', length: 255, name: 'motivo_extra', nullable: true })
+  motivoExtra: string | null;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, name: 'overall' })
   overall: number;

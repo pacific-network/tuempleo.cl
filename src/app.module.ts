@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { databaseConfig } from './config/database';
 import { UserModule } from './modules/user/user.module';
 import { EncryptModule } from './shared/encrypt/encrypt.module';
@@ -29,6 +30,12 @@ import { OauthModule } from './modules/oauth/oauth.module';
 
 @Module({
   imports: [
+
+    ServeStaticModule.forRoot({
+      rootPath: '/var/www/html/uploads', // Ruta absoluta en el servidor
+      serveRoot: '/uploads', // Ruta pública para acceder a los archivos
+    }),
+
     ConfigModule.forRoot({
       isGlobal: true,
     }),

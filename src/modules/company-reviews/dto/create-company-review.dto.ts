@@ -20,6 +20,14 @@ export class CreateCompanyReviewDto {
   @Validate(RatingsValidator)
   data: Record<string, number>;
 
+  // NUEVO: motivo fuera de data
+  @IsString()
+  motivo: string;
+
+  // NUEVO: detalle opcional cuando el motivo sea “otro”
+  @IsOptional() @IsString()
+  motivo_extra?: string;
+
   @IsOptional() @IsString()
   comentario?: string;
 }

@@ -1,11 +1,16 @@
 // src/modules/company-reviews/company-reviews.service.ts
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { CompanyReview } from './entities/company-review.entity';
 import { CreateCompanyReviewDto } from './dto/create-company-review.dto';
-import { Empresa } from 'src/repository/business/business.entity';   // <— entidad Empresa
+import { Empresa } from 'src/repository/business/business.entity';
 
 @Injectable()
 export class CompanyReviewsService {
@@ -13,7 +18,7 @@ export class CompanyReviewsService {
     @InjectRepository(CompanyReview)
     private readonly repo: Repository<CompanyReview>,
     @InjectRepository(Empresa)
-    private readonly empresasRepo: Repository<Empresa>,              // <— repo empresa
+    private readonly empresasRepo: Repository<Empresa>,
   ) {}
 
   private computeOverall(data: Record<string, number>) {
@@ -23,51 +28,48 @@ export class CompanyReviewsService {
     return Number(avg.toFixed(2));
   }
 
-  /** 
-   * Dado un RUT, intenta devolver la llave que usaremos como employer_user_id.
-   * 1) empresa.usuario.id       (si existe relación)
-   * 2) empresa.userId           (si existe campo)
-   * 3) empresa.empleador.usuario.id (si existe relación)
-   * 4) empresa.id               (fallback consistente: usamos companyId como key)
-   */
-  async resolveEmployerKeyFromRut(rut: string): Promise<number> {
-    const empresa = await this.empresasRepo.findOne({
-      where: { rut },
-      relations: ['usuario', 'empleador', 'empleador.usuario'], // ignora las que no existan
-    });
-    if (!empresa) throw new NotFoundException('Empresa no encontrada');
-
-    const candidates = [
-      (empresa as any)?.usuario?.id,
-      (empresa as any)?.userId,
-      (empresa as any)?.empleador?.usuario?.id,
-      (empresa as any)?.empleador?.userId,
-      (empresa as any)?.id, // fallback
-    ].filter((x) => Number.isFinite(Number(x)));
-
-    return Number(candidates[0]); // siempre habrá al menos empresa.id
-  }
-
   async create(
-    employerUserId: number,
+    employerUserId: number,                 // aquí recibes empresa.id desde el controller (como antes)
     reviewerUserId: number | null,
     dto: CreateCompanyReviewDto,
     ip?: string,
   ) {
+    if (!Number.isFinite(reviewerUserId)) {
+      throw new UnauthorizedException('Debes iniciar sesión para calificar.');
+    }
+
+    // Evita duplicados app-side (además del índice único en DB)
+    const already = await this.repo.findOne({
+      where: { employerUserId, reviewerUserId: Number(reviewerUserId) },
+      select: ['id'],
+    });
+    if (already) {
+      throw new BadRequestException('Ya calificaste esta empresa.');
+    }
+
     const overall = this.computeOverall(dto.data);
     const ipHash = ip ? crypto.createHash('sha256').update(ip).digest('hex') : null;
 
-    const review = this.repo.create({
-      employerUserId,
-      reviewerUserId,
-      type: dto.type,
-      data: dto.data,
-      overall,
-      comentario: dto.comentario ?? null,
-      ipHash,
-      isVisible: true,
-    });
-    return this.repo.save(review);
+    try {
+      const review = this.repo.create({
+        employerUserId,
+        reviewerUserId: Number(reviewerUserId),
+        type: dto.type,
+        data: dto.data,
+        overall,
+        motivo: dto.motivo,
+        motivoExtra: dto.motivo === 'otro' ? (dto.motivo_extra || null) : null,
+        comentario: dto.comentario ?? null,
+        ipHash,
+        isVisible: true,
+      });
+      return await this.repo.save(review);
+    } catch (err: any) {
+      if (err?.code === 'ER_DUP_ENTRY') {
+        throw new ConflictException('Ya calificaste esta empresa.');
+      }
+      throw err;
+    }
   }
 
   async summary(employerUserId: number) {
@@ -99,7 +101,7 @@ export class CompanyReviewsService {
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
-      select: ['id','type','data','overall','comentario','createdAt'],
+      select: ['id','type','data','overall','motivo','motivoExtra','comentario','createdAt'],
     });
     return { items, total, page, limit };
   }

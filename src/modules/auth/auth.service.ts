@@ -36,7 +36,6 @@ export class AuthService {
   }
 
   // Crea (o completa) el usuario a partir de los claims del JWT (OAuth)
-  // payload esperado: { email, name?, given_name?/givenName?/first_name?/localizedFirstName, family_name?/familyName?/last_name?/localizedLastName, rolId? }
   async ensureUserFromJwt(payload: any): Promise<Usuario> {
     const email = (payload?.email || '').trim().toLowerCase();
     if (!email) throw new UnauthorizedException('Token sin email');
@@ -44,10 +43,10 @@ export class AuthService {
     // ¿ya existe?
     let user = await this.usuarioRepo.findOne({ where: { email }, relations: ['rol'] });
 
-    // Derivar nombres desde varios posibles claims (Google/LinkedIn/otros)
+    // Derivar nombres desde varios posibles claims
     const claim = (v?: any) => (typeof v === 'string' ? v.trim() : '');
 
-    let given  =
+    let given =
       claim(payload?.given_name) ||
       claim(payload?.givenName) ||
       claim(payload?.first_name) ||
@@ -58,19 +57,18 @@ export class AuthService {
     let family =
       claim(payload?.family_name) ||
       claim(payload?.familyName) ||
-      claim(payload?.last_name)  ||
+      claim(payload?.last_name) ||
       claim(payload?.profile?.family_name) ||
       claim(payload?.profile?.last_name) ||
       claim(payload?.localizedLastName);
 
     const full = claim(payload?.name) || claim(payload?.displayName) || claim(payload?.profile?.name);
 
-    // Si faltan given/family, partir 'name' por el último espacio
     if ((!given || !family) && full) {
       const t = full.replace(/\s+/g, ' ').trim();
       const i = t.lastIndexOf(' ');
       if (i > 0) {
-        given  = given  || t.slice(0, i);
+        given = given || t.slice(0, i);
         family = family || t.slice(i + 1);
       } else {
         given = given || t;
@@ -80,15 +78,15 @@ export class AuthService {
     const nombres   = (given  || '').trim();
     const apellidos = (family || '').trim();
 
-    // Resolver rol: si el usuario YA existe, no lo tocamos (no alterar empresa).
+    // Resolver rol solo si el usuario no existe
     let rol: Rol | null = null;
     if (!user) {
       let rolId = Number(payload?.rolId);
       if (!Number.isFinite(rolId) || rolId <= 0) rolId = 1; // 1 = Postulante por defecto
       rol = await this.rolRepo.findOne({ where: { id: rolId } });
       if (!rol) {
-        // fallback: intenta 1, o cualquiera
-        rol = await this.rolRepo.findOne({ where: { id: 1 } }) || await this.rolRepo.findOne({});
+        // fallback seguro: solo intenta con id=1
+        rol = await this.rolRepo.findOne({ where: { id: 1 } });
         if (!rol) throw new UnauthorizedException('Rol no disponible para crear usuario');
       }
     }
@@ -97,7 +95,6 @@ export class AuthService {
     const dummy = await this.encrypt.encrypt(`oauth:${email}:${Date.now()}`);
 
     if (!user) {
-      // Crear nuevo usuario (candidato por defecto si no se indicó otro)
       user = this.usuarioRepo.create({
         email,
         nombres: nombres || '',
@@ -107,15 +104,14 @@ export class AuthService {
       });
       await this.usuarioRepo.save(user);
     } else {
-      // Completar datos faltantes, pero NO cambiar el rol existente (respeta empresa)
+      // Completar datos faltantes, no sobreescribir rol existente
       let changed = false;
-      if (!user.nombres && nombres)      { user.nombres = nombres; changed = true; }
-      if (!user.apellidos && apellidos)  { user.apellidos = apellidos; changed = true; }
-      if (!user.password)                { user.password = dummy;    changed = true; }
+      if (!user.nombres && nombres)     { user.nombres = nombres; changed = true; }
+      if (!user.apellidos && apellidos) { user.apellidos = apellidos; changed = true; }
+      if (!user.password)               { user.password = dummy;    changed = true; }
       if (changed) await this.usuarioRepo.save(user);
     }
 
-    // devolver con relación de rol
     return this.usuarioRepo.findOne({ where: { id: user.id }, relations: ['rol'] }) as Promise<Usuario>;
   }
 
@@ -145,7 +141,7 @@ export class AuthService {
     }
   }
 
-  // ---------- login clásico por rol ----------
+  // ---------- login clásico ----------
   async login(data: IniciarSesionDto, rolId: number) {
     const email = this.norm(data.email);
 

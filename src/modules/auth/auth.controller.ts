@@ -9,7 +9,6 @@ import { IniciarSesionDto } from '../oauth/dto/login';
 import { UpdateMeDto } from './dto/update-me';
 import { JwtService } from '@nestjs/jwt';
 
-// Nota: NO usamos AuthGuard en /auth/me para poder crear el usuario on-the-fly con el token OAuth.
 @Controller('v1/auth')
 export class AuthController {
   constructor(
@@ -24,7 +23,6 @@ export class AuthController {
 
   @Get('me')
   async getMe(@Req() req: Request) {
-    // 0) tomar token del header
     const header = req.headers['authorization'];
     const token =
       typeof header === 'string' && header.startsWith('Bearer ')
@@ -33,7 +31,6 @@ export class AuthController {
 
     if (!token) throw new UnauthorizedException('Token requerido');
 
-    // 1) verificar firma
     let payload: any;
     try {
       payload = this.jwtService.verify(token, {
@@ -43,23 +40,45 @@ export class AuthController {
       throw new UnauthorizedException('Token inválido o expirado');
     }
 
-    // 2) intentar resolver usuario por sub
+    // --- 1) Intentar por sub ---
     const subNum = Number(payload?.sub);
     if (Number.isFinite(subNum)) {
       const bySub = await this.authService.findUserFullByIdSafe(subNum);
-      if (bySub) return bySub;
+      if (bySub) {
+        return {
+          id: bySub.id,
+          email: bySub.email,
+          nombres: bySub.nombres,
+          apellidos: bySub.apellidos,
+          rol: bySub.rol ? { id: bySub.rol.id, nombre: bySub.rol.nombre } : null,
+        };
+      }
     }
 
-    // 3) intentar por email
+    // --- 2) Intentar por email ---
     const email = (payload?.email || '').trim().toLowerCase();
     if (email) {
       const byEmail = await this.authService.findUserByEmailSafe(email);
-      if (byEmail) return byEmail;
+      if (byEmail) {
+        return {
+          id: byEmail.id,
+          email: byEmail.email,
+          nombres: byEmail.nombres,
+          apellidos: byEmail.apellidos,
+          rol: byEmail.rol ? { id: byEmail.rol.id, nombre: byEmail.rol.nombre } : null,
+        };
+      }
     }
 
-    // 4) si no existe aún, crearlo a partir del token (OAuth)
+    // --- 3) Crear si no existe (OAuth) ---
     const created = await this.authService.ensureUserFromJwt(payload);
-    return created;
+    return {
+      id: created.id,
+      email: created.email,
+      nombres: created.nombres,
+      apellidos: created.apellidos,
+      rol: created.rol ? { id: created.rol.id, nombre: created.rol.nombre } : null,
+    };
   }
 
   @Post('login-postulante')
@@ -74,8 +93,6 @@ export class AuthController {
     return this.authService.login(loginData, 2);
   }
 
-  // Si tu JwtStrategy depende de DB, puedes mantener el guard aquí;
-  // de lo contrario, replica la validación manual como en /me.
   @Patch('me')
   async updateMe(@Req() req: any, @Body() dto: UpdateMeDto) {
     const header = req.headers['authorization'];
@@ -83,6 +100,7 @@ export class AuthController {
       typeof header === 'string' && header.startsWith('Bearer ')
         ? header.slice(7)
         : null;
+
     if (!token) throw new UnauthorizedException('Token requerido');
 
     let payload: any;
@@ -95,7 +113,10 @@ export class AuthController {
     }
 
     const subNum = Number(payload?.sub);
-    if (!Number.isFinite(subNum)) throw new UnauthorizedException('Token sin sub');
+    if (!Number.isFinite(subNum)) {
+      throw new UnauthorizedException('Token sin sub');
+    }
+
     return this.authService.updateMe(subNum, dto);
   }
 }
