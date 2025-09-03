@@ -18,6 +18,8 @@ export class BlockBrowserMiddleware implements NestMiddleware {
       '/v1/oauth/linkedin',
       '/v1/oauth/linkedin/callback',
       '/v1/webpay/return',
+      '/uploads',
+      '/v1/uploads/'
 
     ];
 
@@ -29,6 +31,11 @@ export class BlockBrowserMiddleware implements NestMiddleware {
     if (isExempted) {
       return next(); // no bloquear si está permitido
     }
+
+    const looksStatic =
+      req.originalUrl.startsWith('/uploads/') ||
+      req.originalUrl.startsWith('/v1/uploads/');
+    if (looksStatic) return next(); // no bloquear si es un archivo estático
 
     const isBrowserRequest =
       req.method === 'GET' &&

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { databaseConfig } from './config/database';
 import { UserModule } from './modules/user/user.module';
 import { EncryptModule } from './shared/encrypt/encrypt.module';
@@ -22,12 +23,19 @@ import { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { BlockBrowserMiddleware } from './middleware/block-browser.middleware';
 import { SiiModule } from './modules/api-gateway/sii.module';
 import { HiringProcessModule } from './modules/hiring_process/hiring_process.module';
+import { CompanyReviewsModule } from './modules/company-reviews/company-reviews.module';
 import { OauthModule } from './modules/oauth/oauth.module';
 
 
 
 @Module({
   imports: [
+
+    ServeStaticModule.forRoot({
+      rootPath: '/var/www/html/uploads', // Ruta absoluta en el servidor
+      serveRoot: '/uploads', // Ruta pública para acceder a los archivos
+    }),
+
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -60,7 +68,8 @@ import { OauthModule } from './modules/oauth/oauth.module';
     SiiModule,
     HiringProcessModule,
     OauthModule,
-    GuardadosModule
+    GuardadosModule,
+    CompanyReviewsModule
 
 
 
