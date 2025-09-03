@@ -9,6 +9,7 @@ import { IniciarSesionDto } from '../oauth/dto/login';
 import { UpdateMeDto } from './dto/update-me';
 import { JwtService } from '@nestjs/jwt';
 
+// Nota: NO usamos AuthGuard en /auth/me para poder crear el usuario on-the-fly con el token OAuth.
 @Controller('v1/auth')
 export class AuthController {
   constructor(
@@ -100,7 +101,6 @@ export class AuthController {
       typeof header === 'string' && header.startsWith('Bearer ')
         ? header.slice(7)
         : null;
-
     if (!token) throw new UnauthorizedException('Token requerido');
 
     let payload: any;
