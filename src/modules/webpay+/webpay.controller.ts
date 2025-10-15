@@ -79,25 +79,26 @@ export class WebpayController {
 
     @Get('/return')
     async confirmTransaction(@Req() req: Request, @Res() res: Response) {
-        let token_ws = req.query.token_ws;
-
-        if (Array.isArray(token_ws)) {
-            // Si es un array, toma el primero
-            token_ws = token_ws[0];
-        }
-
-        if (typeof token_ws !== 'string') {
-            return res.status(400).json({ message: 'token_ws debe ser un string' });
-        }
-
-        try {
-            await this.webpayService.confirmTransaction(token_ws);
-
-            return res.redirect(`${WEBPAY_CONFIG.finalUrl}?token_ws=${token_ws}`);
-        } catch (error) {
-            console.error('Error en confirmación de transacción:', error.message);
-            return res.redirect(`${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`);
-        }
+      // Caso cancelado por el usuario
+      const tbkToken = req.query.TBK_TOKEN as string | undefined;
+      if (tbkToken) {
+        const orden = (req.query.TBK_ORDEN_COMPRA as string) || 'N/A';
+        return res.redirect(`${WEBPAY_CONFIG.finalUrl}?error=1&reason=aborted&order=${encodeURIComponent(orden)}`);
+      }
+  
+      // Caso normal con token_ws
+      let token_ws = req.query.token_ws;
+      if (Array.isArray(token_ws)) token_ws = token_ws[0];
+      if (typeof token_ws !== 'string') {
+        return res.status(400).json({ message: 'token_ws debe ser un string' });
+      }
+  
+      try {
+        await this.webpayService.confirmTransaction(token_ws);
+        return res.redirect(`${WEBPAY_CONFIG.finalUrl}?token_ws=${token_ws}`);
+      } catch {
+        return res.redirect(`${WEBPAY_CONFIG.finalUrl}?error=1&message=confirmacion_fallida`);
+      }
     }
 
     /**

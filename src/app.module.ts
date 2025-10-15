@@ -25,6 +25,7 @@ import { SiiModule } from './modules/api-gateway/sii.module';
 import { HiringProcessModule } from './modules/hiring_process/hiring_process.module';
 import { CompanyReviewsModule } from './modules/company-reviews/company-reviews.module';
 import { OauthModule } from './modules/oauth/oauth.module';
+import { PublicationModule } from './modules/publication/publication.module';
 
 
 
@@ -69,7 +70,8 @@ import { OauthModule } from './modules/oauth/oauth.module';
     HiringProcessModule,
     OauthModule,
     GuardadosModule,
-    CompanyReviewsModule
+    CompanyReviewsModule,
+    PublicationModule,
 
 
 
