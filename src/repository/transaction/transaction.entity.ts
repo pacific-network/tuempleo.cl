@@ -5,11 +5,14 @@ import {
     PrimaryGeneratedColumn,
     Column,
     CreateDateColumn,
+    UpdateDateColumn,
+    OneToMany,
 } from "typeorm";
+import { TransactionItem } from "../transaction_items/transaction-items.entity";
 
-@Entity("transactions")
+@Entity('transactions')
 export class Transaction {
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn('uuid')
     id: string;
 
     @Column({ nullable: false })
@@ -18,7 +21,7 @@ export class Transaction {
     @Column({ nullable: false })
     sessionId: string;
 
-    @Column("decimal", { nullable: false })
+    @Column('decimal', { nullable: false })
     amount: number;
 
     @Column({ nullable: true })
@@ -27,9 +30,19 @@ export class Transaction {
     @Column({ nullable: true })
     status: string;
 
-    @Column({ type: "json", nullable: true })
+    @Column({ type: 'json', nullable: true })
     response_data: object;
 
-    @CreateDateColumn()
-    created_at: Date;
+    @CreateDateColumn({ type: 'datetime', name: 'created_at' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
+    updatedAt: Date;
+
+    // 🔹 Relación con los ítems
+    @OneToMany(() => TransactionItem, (item) => item.transaction, {
+        cascade: true,
+    })
+    items: TransactionItem[];
 }
+

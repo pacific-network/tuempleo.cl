@@ -18,7 +18,7 @@ async function bootstrap() {
         'https://www.tuempleo.cl',
         'https://104.21.14.12',
         'https://172.67.133.188',
-        'http://127.0.0.1:5500',
+        'http://127.0.0.1:5501',
       ];
 
       if (!origin || allowedOrigins.includes(origin)) {
