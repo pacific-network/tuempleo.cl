@@ -78,19 +78,42 @@ export class StockService {
     /**
      * ➖ Usa un crédito de un tipo específico
      */
-    async useCredit(empresaId: number, tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM') {
+    async useCredit(
+        empresaId: number,
+        tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+    ) {
         const stock = await this.stockRepo.findOne({
             where: { empresa: { id: empresaId }, tipoAviso },
-            lock: { mode: 'pessimistic_write' },
         });
 
-        if (!stock || stock.cantidad_disponible <= 0) {
-            throw new BadRequestException(`No hay créditos disponibles del tipo ${tipoAviso}`);
+        if (!stock) {
+            throw new NotFoundException(
+                `No se encontró stock del tipo ${tipoAviso} para la empresa ${empresaId}`,
+            );
         }
 
-        stock.cantidad_disponible -= 1;
-        await this.stockRepo.save(stock);
+        if (stock.cantidad_disponible <= 0) {
+            throw new BadRequestException(
+                `No hay créditos disponibles del tipo ${tipoAviso}`,
+            );
+        }
+
+        console.log(
+            `🧮 Antes de descontar: Empresa ${empresaId}, Tipo ${tipoAviso}, Cantidad actual ${stock.cantidad_disponible}`,
+        );
+
+        // 🔹 Descontar crédito
+        stock.cantidad_disponible = stock.cantidad_disponible - 1;
+
+        const saved = await this.stockRepo.save(stock);
+
+        console.log(
+            `✅ Crédito usado: Empresa ${empresaId}, Tipo ${tipoAviso}, Nuevo stock ${saved.cantidad_disponible}`,
+        );
+
+        return saved;
     }
+
 
     /**
      * 🔍 Consulta del stock actual

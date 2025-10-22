@@ -1,45 +1,61 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn, ManyToOne, DeleteDateColumn } from "typeorm";
-import { Empresa } from "../business/business.entity";
-import { Empleador } from "../employer/employer.entity";
+// src/repository/oferta/oferta.entity.ts
+import {
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    ManyToOne,
+    JoinColumn,
+    CreateDateColumn,
+    UpdateDateColumn,
+    DeleteDateColumn,
+} from 'typeorm';
+import { Empresa } from '../business/business.entity';
+import { Empleador } from '../employer/employer.entity';
 
-
-@Entity("oferta")
+@Entity('oferta')
 export class Oferta {
-
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ name: "titulo" })
+    @Column({ type: 'varchar', length: 255 })
     titulo: string;
 
-    @ManyToOne(() => Empresa, empresa => empresa.ofertas)
-    @JoinColumn({ name: "empresa_id" })
-    empresa: Empresa; // vincuarlo a la empresa para saber de quien es la oferta 
+    @ManyToOne(() => Empresa, (empresa) => empresa.ofertas, { eager: false })
+    @JoinColumn({ name: 'empresa_id' })
+    empresa: Empresa;
 
-    @ManyToOne(() => Empleador, empleador => empleador.ofertas)
-    @JoinColumn({ name: "empleador_id" })
-    empleador: Empleador;  // vincularlo a la tabla usuario o empleador?  es para saber quien lo publico 
+    @ManyToOne(() => Empleador, (empleador) => empleador.ofertas, { eager: false })
+    @JoinColumn({ name: 'empleador_id' })
+    empleador: Empleador;
 
-    // @Column({ type: "varchar", length: 255 })
-    // publicado_por: Empleador;
+    /**
+     * 🔹 Tipo de aviso que consume del stock
+     * (BASICO | ESTANDAR | PREMIUM)
+     */
+    @Column({
+        type: 'enum',
+        enum: ['BASICO', 'ESTANDAR', 'PREMIUM'],
+        nullable: false,
+    })
+    tipo_aviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
 
-    @Column({ type: "datetime" })
+    @CreateDateColumn({ name: 'fecha_publicacion' })
     fecha_publicacion: Date;
 
-    @Column({ type: "int" })
-    duracion_publicacion: number;
+    @Column({ type: 'int', default: 30 })
+    duracion_publicacion: number; // días
 
     @Column({ type: 'boolean', default: true })
     es_activa: boolean;
 
-    @Column({ type: "datetime" })
+    @Column({ type: 'datetime', nullable: true })
     fecha_cierre: Date;
 
-    @Column({ type: 'text' })
+    @Column({ type: 'text', nullable: true })
     data: string;
 
-    @DeleteDateColumn()
-    fecha_eliminacion: Date; // para saber si fue eliminado o no, no se elimina fisicamente, solo se marca como eliminado
+    @DeleteDateColumn({ name: 'fecha_eliminacion' })
+    fecha_eliminacion: Date;
 
     @ManyToOne(() => Empleador, { nullable: true })
     @JoinColumn({ name: 'eliminada_por' })
@@ -48,8 +64,4 @@ export class Oferta {
     @ManyToOne(() => Empleador, { nullable: true })
     @JoinColumn({ name: 'modificada_por' })
     modificada_por: Empleador;
-
-
-
-
 }
