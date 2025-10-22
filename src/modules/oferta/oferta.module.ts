@@ -6,9 +6,11 @@ import { Empresa } from "../../repository/business/business.entity";
 import { OfertaService } from "./oferta.service";
 import { OfertaController } from "./oferta.controller";
 
+import { StockModule } from "../stock/stock.module";
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Oferta, Empleador, Empresa]),
+    TypeOrmModule.forFeature([Oferta, Empleador, Empresa]), StockModule,
   ],
   providers: [OfertaService],
   controllers: [OfertaController],

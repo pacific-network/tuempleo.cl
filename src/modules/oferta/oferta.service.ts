@@ -10,6 +10,7 @@ import { PageDto } from "src/shared/pagination/page.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
+import { StockService } from "../stock/stock.service";
 
 @Injectable()
 export class OfertaService {
@@ -20,7 +21,8 @@ export class OfertaService {
     private readonly empleadorRepository: Repository<Empleador>,
     @InjectRepository(Empresa)
     private readonly empresaRepository: Repository<Empresa>,
-  ) {}
+    private readonly StockService: StockService,
+  ) { }
 
   /**
    * Listado público con filtros/búsqueda/paginación.
@@ -210,7 +212,7 @@ export class OfertaService {
       const now = new Date();
       const from = new Date(now);
       if (postedVal === '24h') from.setDate(now.getDate() - 1);
-      if (postedVal === '7d')  from.setDate(now.getDate() - 7);
+      if (postedVal === '7d') from.setDate(now.getDate() - 7);
       if (postedVal === '30d') from.setDate(now.getDate() - 30);
       if (postedVal === '60d') from.setDate(now.getDate() - 60);
 
@@ -228,8 +230,8 @@ export class OfertaService {
     const scoreExpr = scoreParts.length ? `(${scoreParts.join(' + ')})` : `0`;
     qb.addSelect(scoreExpr, 'rank_score');
 
-    const by  = (sortBy === 'fecha_cierre' ? 'fecha_cierre' : 'fecha_publicacion');
-    const dir = (order === 'ASC' ? 'ASC' : 'DESC') as ('ASC'|'DESC');
+    const by = (sortBy === 'fecha_cierre' ? 'fecha_cierre' : 'fecha_publicacion');
+    const dir = (order === 'ASC' ? 'ASC' : 'DESC') as ('ASC' | 'DESC');
 
     qb.orderBy('rank_score', 'DESC')
       .addOrderBy(`oferta.${by}`, dir);
@@ -240,16 +242,60 @@ export class OfertaService {
     return new PageDto(entities, meta);
   }
 
+  // async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
+  //   const empleador = await this.empleadorRepository.findOne({ where: { id: data.empleador_id } });
+  //   if (!empleador) throw new NotFoundException(`Empleador con ID ${data.empleador_id} no encontrado`);
+
+  //   const empresa = await this.empresaRepository.findOne({ where: { id: data.empresa_id } });
+  //   if (!empresa) throw new NotFoundException(`Empresa con ID ${data.empresa_id} no encontrada`);
+
+  //   const oferta = this.ofertaRepository.create({ ...data, empresa, empleador });
+  //   return this.ofertaRepository.save(oferta);
+  // }
+
   async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
-    const empleador = await this.empleadorRepository.findOne({ where: { id: data.empleador_id } });
-    if (!empleador) throw new NotFoundException(`Empleador con ID ${data.empleador_id} no encontrado`);
+    // 1️⃣ Buscar empleador
+    const empleador = await this.empleadorRepository.findOne({
+      where: { id: data.empleador_id },
+    });
+    if (!empleador) {
+      throw new NotFoundException(
+        `Empleador con ID ${data.empleador_id} no encontrado`,
+      );
+    }
 
-    const empresa = await this.empresaRepository.findOne({ where: { id: data.empresa_id } });
-    if (!empresa) throw new NotFoundException(`Empresa con ID ${data.empresa_id} no encontrada`);
+    // 2️⃣ Buscar empresa
+    const empresa = await this.empresaRepository.findOne({
+      where: { id: data.empresa_id },
+    });
+    if (!empresa) {
+      throw new NotFoundException(
+        `Empresa con ID ${data.empresa_id} no encontrada`,
+      );
+    }
 
-    const oferta = this.ofertaRepository.create({ ...data, empresa, empleador });
-    return this.ofertaRepository.save(oferta);
+    // 3️⃣ Verificar y descontar crédito de stock
+    // Si la empresa no tiene stock suficiente lanza BadRequestException automáticamente
+    await this.StockService.useCredit(data.empresa_id, data.tipo_aviso);
+
+    // 4️⃣ Crear la oferta
+    const oferta = this.ofertaRepository.create({
+      ...data,
+      empresa,
+      empleador,
+      fecha_publicacion: data.fecha_publicacion ?? new Date(),
+      es_activa: data.es_activa ?? true,
+    });
+
+    const saved = await this.ofertaRepository.save(oferta);
+
+    console.log(
+      `🧾 Oferta creada correctamente: ${saved.titulo} (Empresa ${empresa.id}) - Crédito descontado del stock (${data.tipo_aviso})`,
+    );
+
+    return saved;
   }
+
 
   async obtenerOfertaPorId(id: number): Promise<Oferta> {
     const oferta = await this.ofertaRepository.findOne({ where: { id }, relations: ['empresa', 'empleador'] });

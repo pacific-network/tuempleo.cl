@@ -43,14 +43,11 @@ export class CompanyReview {
   @Column({ type: 'varchar', length: 128, name: 'ip_hash', nullable: true })
   ipHash: string | null;
 
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamp',
-    name: 'updated_at',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date;
+
+
 }
