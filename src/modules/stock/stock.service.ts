@@ -1,82 +1,108 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+// src/modules/stock/stock.service.ts
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Stock } from '../../repository/stock/stock.entity';
+import { Transaction } from '../../repository/transaction/transaction.entity';
+import { TransactionItem } from '../../repository/transaction_items/transaction-items.entity';
 
 @Injectable()
 export class StockService {
-  constructor(
-    @InjectRepository(Stock)
-    private readonly stockRepo: Repository<Stock>,
-  ) {}
+    constructor(
+        @InjectRepository(Stock)
+        private readonly stockRepo: Repository<Stock>,
 
-  /**
-   * ➕ Agrega créditos (usa upsert lógico: crea o suma)
-   */
-  async addCredits(
-    empresaId: number,
-    tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
-    cantidad: number,
-  ) {
-    try {
-      let stock = await this.stockRepo.findOne({
-        where: { empresa: { id: empresaId }, tipoAviso },
-        relations: ['empresa'],
-      });
+        @InjectRepository(Transaction)
+        private readonly transactionRepo: Repository<Transaction>,
 
-      if (!stock) {
-        // Crear nuevo registro si no existe
-        stock = this.stockRepo.create({
-          empresa: { id: empresaId },
-          tipoAviso,
-          cantidad_disponible: cantidad,
+        @InjectRepository(TransactionItem)
+        private readonly itemRepo: Repository<TransactionItem>,
+    ) { }
+
+    /**
+     * 📦 Genera o actualiza stock basado en una transacción autorizada
+     */
+    async processTransactionStock(transactionId: string, empresaId: number) {
+        // 1️⃣ Buscar la transacción y sus ítems
+        const transaction = await this.transactionRepo.findOne({
+            where: { id: transactionId },
+            relations: ['items'],
         });
-      } else {
-        // Si existe, sumamos los créditos
-        stock.cantidad_disponible += cantidad;
-      }
 
-      await this.stockRepo.save(stock);
+        if (!transaction) {
+            throw new NotFoundException(`Transacción ${transactionId} no encontrada`);
+        }
 
-      console.log(
-        `✅ Stock actualizado: empresa=${empresaId}, tipoAviso=${tipoAviso}, +${cantidad}`,
-      );
-      return stock;
-    } catch (error) {
-      console.error('❌ Error al actualizar stock:', error);
-      throw error;
-    }
-  }
+        if (!transaction.items || transaction.items.length === 0) {
+            throw new BadRequestException(`Transacción ${transactionId} sin ítems`);
+        }
 
-  /**
-   * ➖ Usa un crédito del tipo de aviso
-   */
-  async useCredit(
-    empresaId: number,
-    tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
-  ) {
-    const stock = await this.stockRepo.findOne({
-      where: { empresa: { id: empresaId }, tipoAviso },
-      lock: { mode: 'pessimistic_write' },
-    });
+        console.log(`🧾 Procesando stock desde transacción ${transactionId}`);
 
-    if (!stock || stock.cantidad_disponible <= 0) {
-      throw new BadRequestException(
-        `No hay créditos disponibles del tipo ${tipoAviso}`,
-      );
+        // 2️⃣ Iterar sobre los ítems y actualizar stock
+        for (const item of transaction.items) {
+            await this.addCreditsByTransaction(empresaId, item.tipoAviso, item.cantidad);
+        }
+
+        console.log(`✅ Stock generado/actualizado para empresa ${empresaId}`);
     }
 
-    stock.cantidad_disponible -= 1;
-    await this.stockRepo.save(stock);
-  }
+    /**
+     * ➕ Crea o incrementa créditos según el tipo de aviso
+     */
+    private async addCreditsByTransaction(
+        empresaId: number,
+        tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+        cantidad: number,
+    ) {
+        let stock = await this.stockRepo.findOne({
+            where: { empresa: { id: empresaId }, tipoAviso },
+            relations: ['empresa'],
+        });
 
-  /**
-   * 🔍 Obtiene todos los créditos disponibles por tipo de aviso
-   */
-  async getAvailability(empresaId: number) {
-    return this.stockRepo.find({
-      where: { empresa: { id: empresaId } },
-      order: { tipoAviso: 'ASC' },
-    });
-  }
+        if (!stock) {
+            stock = this.stockRepo.create({
+                tipoAviso,
+                cantidad_disponible: cantidad,
+                empresa: { id: empresaId } as any,
+            });
+            console.log(`🆕 Creando nuevo stock (${tipoAviso}) con ${cantidad} créditos`);
+        } else {
+            stock.cantidad_disponible += cantidad;
+            console.log(`♻️ Sumando ${cantidad} créditos a ${tipoAviso} (nuevo total: ${stock.cantidad_disponible})`);
+        }
+
+        await this.stockRepo.save(stock);
+    }
+
+    /**
+     * ➖ Usa un crédito de un tipo específico
+     */
+    async useCredit(empresaId: number, tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM') {
+        const stock = await this.stockRepo.findOne({
+            where: { empresa: { id: empresaId }, tipoAviso },
+            lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!stock || stock.cantidad_disponible <= 0) {
+            throw new BadRequestException(`No hay créditos disponibles del tipo ${tipoAviso}`);
+        }
+
+        stock.cantidad_disponible -= 1;
+        await this.stockRepo.save(stock);
+    }
+
+    /**
+     * 🔍 Consulta del stock actual
+     */
+    async getAvailability(empresaId: number) {
+        return this.stockRepo.find({
+            where: { empresa: { id: empresaId } },
+            order: { tipoAviso: 'ASC' },
+        });
+    }
+
+
 }
+
+

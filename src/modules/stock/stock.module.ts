@@ -5,9 +5,10 @@ import { Stock } from 'src/repository/stock/stock.entity';
 import { StockService } from './stock.service';
 import { WebpayService } from '../webpay+/webpay.service';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
+import { TransactionItem } from 'src/repository/transaction_items/transaction-items.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Stock, Transaction])],
+    imports: [TypeOrmModule.forFeature([Stock, Transaction, TransactionItem])],
     providers: [StockService],
     exports: [StockService], // 👈 importante para que otros módulos lo usen
 })

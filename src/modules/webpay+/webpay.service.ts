@@ -52,45 +52,33 @@ export class WebpayService {
     // ==============================
     // 0️⃣ Crear transacción pendiente (antes de enviar a Webpay)
     // ==============================
+    // ===========================================================
+    // 0️⃣ Crear transacción pendiente (usando relaciones ORM)
+    // ===========================================================
     async createPendingTransaction(empresaId: number, userId: number, items: any[]) {
         try {
             const total = items.reduce(
-                (sum, item) => sum + (item.precioUnitario ?? 0) * (item.cantidad ?? 1),
-                0,
+                (sum, i) => sum + (i.precioUnitario ?? 0) * (i.cantidad ?? 1),
+                0
             );
 
-            // Generar orderId único
             const orderId = Math.random().toString(36).substring(2, 14);
 
-            // 1️⃣ Crear transacción base
+            // 🧾 Crear transacción con sus ítems (ORM puro)
             const transaction = this.transactionRepository.create({
                 orderId,
                 sessionId: String(userId),
                 amount: total,
                 status: 'PENDING',
+                items: items.map((i) => ({
+                    tipoAviso: i.tipoAviso,
+                    cantidad: i.cantidad,
+                    precioUnitario: i.precioUnitario,
+                    subtotal: (i.precioUnitario ?? 0) * (i.cantidad ?? 1),
+                })),
             });
 
-            // 2️⃣ Guardar primero la transacción
-            const savedTransaction = await this.transactionRepository.save(transaction);
-
-            // 3️⃣ Insertar ítems en tabla transaction_item
-            const itemsInsertQuery = items.map((item) => ({
-                transaction_id: savedTransaction.id,
-                tipo_aviso: item.tipoAviso,
-                cantidad: item.cantidad,
-                precio_unitario: item.precioUnitario,
-                total: (item.precioUnitario ?? 0) * (item.cantidad ?? 1),
-            }));
-
-            await this.transactionRepository.query(`
-        INSERT INTO transaction_items (transaction_id, tipoAviso, cantidad, precioUnitario, subtotal)
-        VALUES ${itemsInsertQuery
-                    .map(
-                        (i) =>
-                            `('${i.transaction_id}', '${i.tipo_aviso}', ${i.cantidad}, ${i.precio_unitario}, ${i.total})`,
-                    )
-                    .join(', ')}
-      `);
+            await this.transactionRepository.save(transaction);
 
             console.log(`🧾 Creando transacción pendiente:
         - Usuario ID: ${userId}
@@ -106,6 +94,8 @@ export class WebpayService {
 
 
 
+
+
     // ==============================================================
     // 1️⃣ Crear transacción Webpay (inicio del pago)
     // ==============================================================
@@ -113,79 +103,151 @@ export class WebpayService {
         try {
             const response = await webpay.create(orderId, sessionId, amount, returnUrl);
 
-            const transaction = this.transactionRepository.create({
-                orderId,
-                sessionId, // equivale al ID del usuario (userId)
-                amount,
-                token: response.token,
-                status: 'CREATED',
-            });
+            // Buscar la transacción pendiente por orderId y actualizarla con el token
+            const transaction = await this.transactionRepository.findOne({ where: { orderId } });
 
-            await this.transactionRepository.save(transaction);
+            if (transaction) {
+                transaction.token = response.token;
+                transaction.status = 'CREATED';
+                await this.transactionRepository.save(transaction);
+            } else {
+                // Fallback por si no se encuentra
+                await this.transactionRepository.save({
+                    orderId,
+                    sessionId,
+                    amount,
+                    token: response.token,
+                    status: 'CREATED',
+                });
+            }
 
-            return {
-                url: response.url,
-                token: response.token,
-            };
+            console.log(`💳 Creando transacción Webpay:
+            - Usuario ID: ${sessionId}
+            - Orden: ${orderId}
+            - Monto: ${amount}
+            - Token: ${response.token}`);
+
+            return { url: response.url, token: response.token };
         } catch (error) {
             console.error('❌ Error creando transacción Webpay:', error);
             throw new InternalServerErrorException('No se pudo crear la transacción Webpay');
         }
     }
 
+
     // ==============================================================
     // 2️⃣ Confirmar transacción Webpay y actualizar stock automáticamente
     // ==============================================================
+    // async confirmTransaction(token: string) {
+    //     try {
+    //         // 🔹 Confirmación con Transbank
+    //         const response = await webpay.commit(token);
+
+    //         // 🔹 Buscar la transacción en la base de datos
+    //         const transaction = await this.transactionRepository.findOne({
+    //             where: { token },
+    //             relations: ['items'],
+    //         });
+
+    //         if (!transaction) {
+    //             throw new NotFoundException('Transacción no encontrada');
+    //         }
+
+    //         // 🔹 Actualizar estado y guardar datos de respuesta
+    //         transaction.status = response.status;
+    //         transaction.response_data = response;
+    //         await this.transactionRepository.save(transaction);
+
+    //         // ==============================================================
+    //         // ✅ Si está autorizada, actualizar stock de la empresa asociada
+    //         // ==============================================================
+    //         if (response.status === 'AUTHORIZED') {
+    //             const userId = Number(transaction.sessionId);
+
+    //             // Buscar empleador vinculado al usuario
+    //             const empleador = await this.empleadorRepository.findOne({
+    //                 where: { usuario: { id: userId } },
+    //                 relations: ['empresa'],
+    //             });
+
+    //             if (!empleador?.empresa?.id) {
+    //                 console.warn(`⚠️ Usuario ${userId} no tiene empresa asociada (no se actualiza stock).`);
+    //                 return response;
+    //             }
+
+    //             const empresaId = empleador.empresa.id;
+
+    //             // 🔹 Actualizar créditos según los ítems comprados
+    //             for (const item of transaction.items ?? []) {
+    //                 await this.stockService.addCredits(
+    //                     empresaId,
+    //                     item.tipoAviso,
+    //                     item.cantidad,
+    //                 );
+    //             }
+
+    //             console.log(
+    //                 `✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${transaction.orderId})`,
+    //             );
+    //         }
+
+    //         return response;
+    //     } catch (error) {
+    //         console.error('❌ Error confirmando transacción:', error);
+    //         throw new InternalServerErrorException('No se pudo confirmar la transacción Webpay');
+    //     }
+    // }
+    // src/modules/webpay/webpay.service.ts
     async confirmTransaction(token: string) {
         try {
-            // 🔹 Confirmación con Transbank
+            // 1️⃣ Confirmar con Transbank
             const response = await webpay.commit(token);
 
-            // 🔹 Buscar la transacción en la base de datos
+            // 2️⃣ Buscar la transacción en base de datos (con sus ítems)
             const transaction = await this.transactionRepository.findOne({
                 where: { token },
-                relations: ['items'],
+                relations: ['items'], // fundamental
             });
 
             if (!transaction) {
                 throw new NotFoundException('Transacción no encontrada');
             }
 
-            // 🔹 Actualizar estado y guardar datos de respuesta
+            // 3️⃣ Actualizar estado y datos de respuesta
             transaction.status = response.status;
             transaction.response_data = response;
             await this.transactionRepository.save(transaction);
 
-            // ==============================================================
-            // ✅ Si está autorizada, actualizar stock de la empresa asociada
-            // ==============================================================
+            // 4️⃣ Procesar solo si está AUTORIZADA
             if (response.status === 'AUTHORIZED') {
                 const userId = Number(transaction.sessionId);
 
-                // Buscar empleador vinculado al usuario
+                // Buscar la empresa asociada al usuario
                 const empleador = await this.empleadorRepository.findOne({
                     where: { usuario: { id: userId } },
                     relations: ['empresa'],
                 });
 
                 if (!empleador?.empresa?.id) {
-                    console.warn(`⚠️ Usuario ${userId} no tiene empresa asociada (no se actualiza stock).`);
+                    console.warn(`⚠️ Usuario ${userId} no tiene empresa asociada (stock no actualizado).`);
                     return response;
                 }
 
                 const empresaId = empleador.empresa.id;
 
-                // 🔹 Actualizar créditos según los ítems comprados
-                for (const item of transaction.items ?? []) {
-                    await this.stockService.addCredits(
-                        empresaId,
-                        item.tipoAviso,
-                        item.cantidad,
+                // 🧩 Si no cargó los ítems (caso edge), los recuperamos manualmente
+                if (!transaction.items || transaction.items.length === 0) {
+                    transaction.items = await this.transactionRepository.query(
+                        `SELECT tipoAviso, cantidad FROM transaction_items WHERE transaction_id = ?`,
+                        [transaction.id]
                     );
                 }
 
+                // 5️⃣ Procesar stock basado en la transacción
+                await this.stockService.processTransactionStock(transaction.id, empresaId);
+
                 console.log(
-                    `✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${transaction.orderId})`,
+                    `✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${transaction.orderId})`
                 );
             }
 
@@ -195,6 +257,8 @@ export class WebpayService {
             throw new InternalServerErrorException('No se pudo confirmar la transacción Webpay');
         }
     }
+
+
 
     // ==============================================================
     // 3️⃣ Buscar transacción por token (para vista final del frontend)
