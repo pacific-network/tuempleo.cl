@@ -132,16 +132,4 @@ export class WebpayController {
             response_data: transaction.response_data,
         };
     }
-
-    // ==============================================================
-    // 4️⃣ Listar transacciones (administración / auditoría)
-    // ==============================================================
-    @Get()
-    async obtenerTransacciones(
-        @Query() pageOptions: PageOptionsDto,
-        @Query('fechaInicio') fechaInicio?: string,
-        @Query('fechaFin') fechaFin?: string,
-    ) {
-        return this.webpayService.obtenerTransacciones(pageOptions, fechaInicio, fechaFin);
-    }
 }

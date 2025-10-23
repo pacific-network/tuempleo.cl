@@ -99,33 +99,64 @@ export class WebpayService {
     // ==============================================================
     // 1️⃣ Crear transacción Webpay (inicio del pago)
     // ==============================================================
+    // async createTransaction(amount: number, orderId: string, sessionId: string) {
+    //     try {
+    //         const response = await webpay.create(orderId, sessionId, amount, returnUrl);
+
+    //         // Buscar la transacción pendiente por orderId y actualizarla con el token
+    //         const transaction = await this.transactionRepository.findOne({ where: { orderId } });
+
+    //         if (transaction) {
+    //             transaction.token = response.token;
+    //             transaction.status = 'CREATED';
+    //             await this.transactionRepository.save(transaction);
+    //         } else {
+    //             // Fallback por si no se encuentra
+    //             await this.transactionRepository.save({
+    //                 orderId,
+    //                 sessionId,
+    //                 amount,
+    //                 token: response.token,
+    //                 status: 'CREATED',
+    //             });
+    //         }
+
+    //         console.log(`💳 Creando transacción Webpay:
+    //         - Usuario ID: ${sessionId}
+    //         - Orden: ${orderId}
+    //         - Monto: ${amount}
+    //         - Token: ${response.token}`);
+
+    //         return { url: response.url, token: response.token };
+    //     } catch (error) {
+    //         console.error('❌ Error creando transacción Webpay:', error);
+    //         throw new InternalServerErrorException('No se pudo crear la transacción Webpay');
+    //     }
+    // }
+
     async createTransaction(amount: number, orderId: string, sessionId: string) {
         try {
             const response = await webpay.create(orderId, sessionId, amount, returnUrl);
 
-            // Buscar la transacción pendiente por orderId y actualizarla con el token
+            // Buscar la transacción pendiente por orderId
             const transaction = await this.transactionRepository.findOne({ where: { orderId } });
 
-            if (transaction) {
-                transaction.token = response.token;
-                transaction.status = 'CREATED';
-                await this.transactionRepository.save(transaction);
-            } else {
-                // Fallback por si no se encuentra
-                await this.transactionRepository.save({
-                    orderId,
-                    sessionId,
-                    amount,
-                    token: response.token,
-                    status: 'CREATED',
-                });
+            if (!transaction) {
+                throw new NotFoundException(
+                    `No se encontró una transacción pendiente con orderId: ${orderId}`,
+                );
             }
 
-            console.log(`💳 Creando transacción Webpay:
-            - Usuario ID: ${sessionId}
-            - Orden: ${orderId}
-            - Monto: ${amount}
-            - Token: ${response.token}`);
+            // Actualizar la transacción existente (sin crear una nueva)
+            transaction.token = response.token;
+            transaction.status = 'CREATED';
+            await this.transactionRepository.save(transaction);
+
+            console.log(`💳 Transacción Webpay actualizada:
+          - Usuario ID: ${sessionId}
+          - Orden: ${orderId}
+          - Monto: ${amount}
+          - Token: ${response.token}`);
 
             return { url: response.url, token: response.token };
         } catch (error) {
@@ -133,6 +164,7 @@ export class WebpayService {
             throw new InternalServerErrorException('No se pudo crear la transacción Webpay');
         }
     }
+
 
 
     // ==============================================================

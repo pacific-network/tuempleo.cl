@@ -26,6 +26,7 @@ import { HiringProcessModule } from './modules/hiring_process/hiring_process.mod
 import { CompanyReviewsModule } from './modules/company-reviews/company-reviews.module';
 import { OauthModule } from './modules/oauth/oauth.module';
 import { PublicationModule } from './modules/publication/publication.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 
 
 
@@ -72,6 +73,7 @@ import { PublicationModule } from './modules/publication/publication.module';
     GuardadosModule,
     CompanyReviewsModule,
     PublicationModule,
+    TransactionsModule
 
 
 
