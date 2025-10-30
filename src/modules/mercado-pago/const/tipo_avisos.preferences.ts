@@ -54,7 +54,7 @@ export const crearPreferenciaPago = async (tipoAviso: string) => {
                 failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
                 pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
             },
-            // auto_return: 'all', // Retorna automáticamente si se aprueba el pago
+            auto_return: 'all', // Retorna automáticamente si se aprueba el pago
         },
     });
 
