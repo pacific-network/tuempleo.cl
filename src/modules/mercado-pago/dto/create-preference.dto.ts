@@ -2,8 +2,8 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class CreatePreferenceDto {
   @IsString()
-  @IsIn(['BASICA', 'ESTANDAR', 'PREMIUM'])
-  tipo: 'BASICA' | 'ESTANDAR' | 'PREMIUM';
+  @IsIn(['BASICO', 'ESTANDAR', 'PREMIUM'])
+  tipo: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
 
   // Opcionalmente puedes asociar el aviso/orden para guardarlo luego
   @IsOptional()

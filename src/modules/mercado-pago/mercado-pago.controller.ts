@@ -1,13 +1,25 @@
-import { Controller, Post, Body, BadRequestException, Req, UseGuards } from '@nestjs/common';
+import {
+    Controller,
+    Post,
+    Body,
+    BadRequestException,
+    Req,
+    Res,
+    UseGuards,
+    HttpCode,
+    HttpStatus,
+} from '@nestjs/common';
 import { MercadoPagoService } from './mercado-pago.service';
 import { AuthGuard } from '@nestjs/passport';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 @Controller('v1/mercadopago')
 export class MercadoPagoController {
     constructor(private readonly mpService: MercadoPagoService) { }
 
-    // 🔐 Protección opcional con JWT
+    // ======================================================
+    // 💳 Crear preferencia (checkout)
+    // ======================================================
     @UseGuards(AuthGuard('jwt'))
     @Post('preferences')
     async createPreference(
@@ -15,7 +27,7 @@ export class MercadoPagoController {
         @Req() req: Request,
     ) {
         // ✅ Validación del tipo de aviso
-        const validTypes = ['BASICA', 'ESTANDAR', 'PREMIUM'];
+        const validTypes = ['BASICO', 'ESTANDAR', 'PREMIUM'];
         if (!tipo || !validTypes.includes(tipo.toUpperCase())) {
             throw new BadRequestException(
                 `Tipo de aviso inválido. Debe ser uno de: ${validTypes.join(', ')}.`,
@@ -32,7 +44,7 @@ export class MercadoPagoController {
 
         // ✅ Crear preferencia y registrar transacción
         const result = await this.mpService.crearPreferenciaYRegistrar(
-            tipo.toUpperCase() as 'BASICA' | 'ESTANDAR' | 'PREMIUM',
+            tipo.toUpperCase() as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
             userId,
         );
 
@@ -40,5 +52,54 @@ export class MercadoPagoController {
             message: 'Preferencia creada correctamente',
             ...result,
         };
+    }
+
+    // ======================================================
+    // 🔔 Webhook de Mercado Pago (notificaciones)
+    // ======================================================
+    @Post('webhook')
+    @HttpCode(HttpStatus.OK)
+    async handleWebhook(@Req() req: Request, @Res() res: Response) {
+        try {
+            const body = req.body;
+
+            console.log('📦 Webhook Mercado Pago recibido:');
+            console.log(JSON.stringify(body, null, 2));
+
+            // Mercado Pago puede enviar distintas estructuras según el evento
+            const topic = body?.topic || body?.type; // algunos envían 'topic', otros 'type'
+            const paymentId = body?.data?.id ?? body?.id;
+
+            if (!paymentId) {
+                console.warn('⚠️ Webhook sin ID de pago. No se procesa.');
+                return res.sendStatus(200);
+            }
+
+            // Solo procesamos pagos (ignora órdenes, reclamos, etc.)
+            if (topic && topic !== 'payment') {
+                console.log(`ℹ️ Evento ignorado (topic=${topic})`);
+                return res.sendStatus(200);
+            }
+
+            // 🔹 Procesar pago en el servicio
+            await this.mpService.procesarNotificacionPago(String(paymentId));
+
+            // ✅ Siempre responde 200 para evitar reintentos de Mercado Pago
+            return res.sendStatus(200);
+        } catch (error) {
+            console.error('❌ Error al procesar webhook de Mercado Pago:', error);
+            return res.sendStatus(500);
+        }
+    }
+
+    // ======================================================
+    // 🧪 Endpoint de test para verificar el webhook
+    // ======================================================
+    @Post('webhook/test')
+    async testWebhook(@Req() req: Request, @Res() res: Response) {
+        console.log('🧪 Test de webhook recibido:', req.body);
+        return res
+            .status(200)
+            .json({ message: 'Webhook test recibido OK', body: req.body });
     }
 }

@@ -15,7 +15,7 @@ const preference = new Preference(client);
 export const crearPreferenciaPago = async (tipoAviso: string) => {
     // Definir configuración según el tipo de aviso
     const avisos = {
-        BASICA: {
+        BASICO: {
             title: 'Aviso Básico',
             description: 'Incluye 9999 avisos por 45 días y postulaciones ilimitadas.',
             price: 80000,
@@ -62,5 +62,5 @@ export const crearPreferenciaPago = async (tipoAviso: string) => {
     return result;
 };
 
-// // Ejemplo de uso (puedes quitar esto en producción)
-// crearPreferenciaPago('PREMIUM').catch(console.error);
+// Ejemplo de uso (puedes quitar esto en producción)
+// crearPreferenciaPago('BASICO').catch(console.error);
