@@ -34,7 +34,7 @@ export class EmpresaService {
         // Aquí creamos la entidad Empresa con plan como objeto { id: planId }
         const business = this.businessRepository.create({
             ...createBusinessDto,
-            plan: { id: planId },   // esto es clave para relacionar ManyToOne
+            plan: createBusinessDto.plan_id ? { id: createBusinessDto.plan_id } : undefined,   // esto es clave para relacionar ManyToOne
             data: createBusinessDto.data,  // data es JSON y viene en DTO
         });
 

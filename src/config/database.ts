@@ -37,6 +37,6 @@ export const databaseConfig: TypeOrmModuleOptions = {
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
         Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent],
     // logging: true,
-    synchronize: process.env.DB_SYNCHRONIZE === 'false',
+    synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };
