@@ -27,6 +27,7 @@ import { CompanyReviewsModule } from './modules/company-reviews/company-reviews.
 import { OauthModule } from './modules/oauth/oauth.module';
 import { PublicationModule } from './modules/publication/publication.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
 
 
 
@@ -73,7 +74,8 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     GuardadosModule,
     CompanyReviewsModule,
     PublicationModule,
-    TransactionsModule
+    TransactionsModule,
+    MercadoPagoModule
 
 
 
