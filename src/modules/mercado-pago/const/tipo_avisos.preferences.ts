@@ -50,9 +50,9 @@ export const crearPreferenciaPago = async (tipoAviso: string) => {
                 },
             ],
             back_urls: {
-                success: 'http://127.0.0.1:5501/jobox/empresas/resultado-transaccion.html',
-                failure: 'http://127.0.0.1:5501/jobox/empresas/resultado-transaccion.html',
-                pending: 'http://127.0.0.1:5501/jobox/empresas/resultado-transaccion.html',
+                success: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+                failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+                pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
             },
             // auto_return: 'all', // Retorna automáticamente si se aprueba el pago
         },
