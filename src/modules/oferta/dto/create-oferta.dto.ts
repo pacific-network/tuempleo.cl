@@ -13,10 +13,10 @@ export class CreateOfertaDto {
     @IsNotEmpty({ message: 'El título es obligatorio.' })
     titulo: string;
 
-    @IsEnum(['BASICO', 'ESTANDAR', 'PREMIUM'], {
+    @IsEnum(['GRATIS', 'BASICO', 'ESTANDAR', 'PREMIUM'], {
         message: 'El tipo de aviso debe ser BASICO, ESTANDAR o PREMIUM.',
     })
-    tipo_aviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM'; // 👈 necesario para descontar del stock
+    tipo_aviso: 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM'; // 👈 necesario para descontar del stock
 
     @IsInt()
     @IsNotEmpty({ message: 'Debe indicar la empresa asociada.' })

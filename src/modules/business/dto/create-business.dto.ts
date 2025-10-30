@@ -84,6 +84,7 @@ export class CreateBusinessDto {
 
     @ApiProperty({ example: 1 })
 
+    @IsOptional()
     @IsNumber()
     plan_id: number;
 
