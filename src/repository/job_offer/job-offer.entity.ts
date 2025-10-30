@@ -34,10 +34,11 @@ export class Oferta {
      */
     @Column({
         type: 'enum',
-        enum: ['BASICO', 'ESTANDAR', 'PREMIUM'],
+        enum: ['GRATIS', 'BASICO', 'ESTANDAR', 'PREMIUM'],
+        default: 'GRATIS',
         nullable: false,
     })
-    tipo_aviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+    tipo_aviso: 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM';
 
     @CreateDateColumn({ name: 'fecha_publicacion' })
     fecha_publicacion: Date;
