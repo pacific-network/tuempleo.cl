@@ -132,9 +132,13 @@ export const crearPreferenciaPago = async (tipoAviso: string) => {
                     unit_price: plan.price,
                 },
             ],
-            back_urls: backUrls,
+            back_urls: {
+                success: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+                failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+                pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+            },
+            auto_return: 'all', // Retorna automáticamente si se aprueba el pago
             notification_url: 'https://tuempleo.cl/api/v1/mercadopago/webhook',
-            auto_return: 'all', // 👈 solo en producción
         },
     });
 
