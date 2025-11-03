@@ -1,6 +1,7 @@
 import {
     Controller,
     Post,
+    Get,
     Body,
     BadRequestException,
     Req,
@@ -8,6 +9,7 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    Query,
 } from '@nestjs/common';
 import { MercadoPagoService } from './mercado-pago.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -101,5 +103,17 @@ export class MercadoPagoController {
         return res
             .status(200)
             .json({ message: 'Webhook test recibido OK', body: req.body });
+    }
+
+    @Get('detail')
+    async getDetail(@Query('token') token: string) {
+        if (!token) throw new BadRequestException('Falta el parámetro token o preference_id');
+
+        const detail = await this.mpService.getDetailMpTransaccion(token);
+        return {
+            message: 'Detalle de transacción recuperado correctamente',
+            data: detail,
+        };
+
     }
 }

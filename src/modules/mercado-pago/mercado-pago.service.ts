@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Transaction, PaymentGateway } from 'src/repository/transaction/transaction.entity';
@@ -181,6 +181,59 @@ export class MercadoPagoService {
             console.error('❌ Error procesando notificación de Mercado Pago:', error);
         }
     }
+
+    // async getDetailMpTransaccion(preferenceIdOrToken: string) {
+    //     console.log(`🔍 Buscando transacción Mercado Pago con token: ${preferenceIdOrToken}`);
+
+    //     const tx = await this.transactionRepository.findOne({
+    //         where: { token: preferenceIdOrToken },
+    //     });
+
+    //     if (!tx) {
+    //         throw new Error(`❌ No se encontró transacción con token: ${preferenceIdOrToken}`);
+    //     }
+
+    //     // Puedes filtrar solo lo relevante para el front
+    //     const { orderId, sessionId, amount, status, response_data, createdAt, updatedAt } = tx;
+
+    //     return {
+    //         orderId,
+    //         sessionId,
+    //         amount,
+    //         status,
+    //         response_data,
+    //         createdAt,
+    //         updatedAt,
+    //         origen: 'MERCADOPAGO',
+    //     };
+    // }
+    async getDetailMpTransaccion(preferenceIdOrToken: string) {
+        console.log(`🔍 Buscando transacción Mercado Pago con token: ${preferenceIdOrToken}`);
+
+        const tx = await this.transactionRepository.findOne({
+            where: { token: preferenceIdOrToken },
+        });
+
+        if (!tx) {
+            // 👇 Lanzamos un error 404 en lugar de Error genérico
+            throw new NotFoundException(`No se encontró transacción con token: ${preferenceIdOrToken}`);
+        }
+
+        // Estructuramos solo los datos relevantes para el front
+        const { orderId, sessionId, amount, status, response_data, createdAt, updatedAt, origen } = tx;
+
+        return {
+            orderId,
+            sessionId,
+            amount,
+            status,
+            response_data,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            origen,
+        };
+    }
+
 
 
 
