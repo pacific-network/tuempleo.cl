@@ -135,7 +135,6 @@ export const crearPreferenciaPago = async (tipoAviso: string) => {
             back_urls: backUrls,
             notification_url: 'https://tuempleo.cl/api/v1/mercadopago/webhook',
             auto_return: 'all', // 👈 solo en producción
-            metadata: { origen: isProd ? 'PRODUCCION' : 'LOCAL' },
         },
     });
 
