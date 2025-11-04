@@ -14,6 +14,7 @@ import { WEBPAY_CONFIG } from './config/webpay.config';
 import { PageDto } from 'src/shared/pagination/page.dto';
 import { PageMetaDto } from 'src/shared/pagination/page-meta.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
+import { generateOrderId } from 'src/shared/generator/order-id.generator';
 
 // =======================
 // CONFIGURACIÓN WEBPAY
@@ -62,7 +63,7 @@ export class WebpayService {
                 0
             );
 
-            const orderId = Math.random().toString(36).substring(2, 14);
+            const orderId = generateOrderId('WEBPAY');
 
             // 🧾 Crear transacción con sus ítems (ORM puro)
             const transaction = this.transactionRepository.create({
