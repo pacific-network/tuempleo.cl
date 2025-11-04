@@ -142,6 +142,12 @@ export const crearPreferenciaPago = async (tipoAviso: string) => {
         },
     });
 
+    crearPreferenciaPago('BASICO')
+    crearPreferenciaPago('ESTANDAR')
+    crearPreferenciaPago('PREMIUM')
+    
     console.log('✅ Preferencia creada:', result.id);
     return result;
+
+    
 };
