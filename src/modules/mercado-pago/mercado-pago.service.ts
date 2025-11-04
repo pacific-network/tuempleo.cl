@@ -73,6 +73,84 @@ export class MercadoPagoService {
     // ======================================================
     // 🔔 PROCESAR NOTIFICACIÓN (WEBHOOK)
     // ======================================================
+    // async procesarNotificacionPago(paymentId: string): Promise<void> {
+    //     console.log(`📬 [Webhook] Notificación recibida de Mercado Pago → paymentId=${paymentId}`);
+
+    //     try {
+    //         const client = new MercadoPagoConfig({
+    //             accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
+    //         });
+    //         const payment = new Payment(client);
+
+    //         console.log('🔍 Consultando pago en API de Mercado Pago...');
+    //         const result = (await payment.get({ id: paymentId })) as PaymentResponseExtended;
+
+    //         if (!result) {
+    //             console.warn(`⚠️ No se encontró pago con ID ${paymentId} en la API.`);
+    //             return;
+    //         }
+
+    //         console.log(`✅ Pago encontrado en Mercado Pago → ID ${result.id}`);
+
+    //         const prefId = result.preference_id;
+    //         const status = result.status?.toUpperCase() || 'UNKNOWN';
+    //         const externalRef = result.external_reference;
+    //         const statusDetail = result.status_detail;
+
+    //         console.log('📦 Datos del pago:', {
+    //             id: result.id,
+    //             preference_id: prefId,
+    //             status,
+    //             external_reference: externalRef,
+    //             status_detail: statusDetail,
+    //         });
+
+    //         // ===============================
+    //         // 🔍 Buscar transacción en DB
+    //         // ===============================
+    //         let tx: Transaction | null = null;
+
+    //         if (prefId) {
+    //             // Primero intenta por el preference_id (token)
+    //             tx = await this.transactionRepository.findOne({ where: { token: prefId } });
+    //             if (tx) console.log(`✅ Transacción encontrada por token (${prefId})`);
+    //         }
+
+    //         // Si no se encuentra, buscar por ID numérico sin prefijo
+    //         if (!tx) {
+    //             tx = await this.transactionRepository.findOne({
+    //                 where: { orderId: `MP-${paymentId}` },
+    //             });
+
+    //             if (!tx) {
+    //                 tx = await this.transactionRepository.findOne({
+    //                     where: { orderId: paymentId }, // busca por número directo
+    //                 });
+    //             }
+    //         }
+
+    //         if (!tx) {
+    //             console.warn(`⚠️ No se encontró transacción asociada al pago ${paymentId}`);
+    //             return;
+    //         }
+
+    //         // ===============================
+    //         // 🧾 Actualizar transacción
+    //         // ===============================
+    //         console.log('🧾 Transacción encontrada:', {
+    //             orderId: tx.orderId,
+    //             statusAnterior: tx.status,
+    //         });
+
+    //         tx.status = status;
+    //         tx.response_data = result;
+    //         await this.transactionRepository.save(tx);
+
+    //         console.log(`✅ Transacción ${tx.orderId} actualizada correctamente → ${status}`);
+    //     } catch (error) {
+    //         console.error('❌ Error procesando notificación de Mercado Pago:', error);
+    //     }
+    // }
     async procesarNotificacionPago(paymentId: string): Promise<void> {
         console.log(`📬 [Webhook] Notificación recibida de Mercado Pago → paymentId=${paymentId}`);
 
@@ -80,77 +158,51 @@ export class MercadoPagoService {
             const client = new MercadoPagoConfig({
                 accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
             });
-            const payment = new Payment(client);
 
-            console.log('🔍 Consultando pago en API de Mercado Pago...');
+            const payment = new Payment(client);
             const result = (await payment.get({ id: paymentId })) as PaymentResponseExtended;
 
             if (!result) {
-                console.warn(`⚠️ No se encontró pago con ID ${paymentId} en la API.`);
+                console.warn(`⚠️ No se encontró el pago ${paymentId} en la API de Mercado Pago`);
                 return;
             }
 
-            console.log(`✅ Pago encontrado en Mercado Pago → ID ${result.id}`);
-
-            const prefId = result.preference_id;
             const status = result.status?.toUpperCase() || 'UNKNOWN';
-            const externalRef = result.external_reference;
-            const statusDetail = result.status_detail;
-
-            console.log('📦 Datos del pago:', {
+            console.log('📦 Pago consultado:', {
                 id: result.id,
-                preference_id: prefId,
                 status,
-                external_reference: externalRef,
-                status_detail: statusDetail,
+                status_detail: result.status_detail,
             });
 
-            // ===============================
-            // 🔍 Buscar transacción en DB
-            // ===============================
-            let tx: Transaction | null = null;
-
-            if (prefId) {
-                // Primero intenta por el preference_id (token)
-                tx = await this.transactionRepository.findOne({ where: { token: prefId } });
-                if (tx) console.log(`✅ Transacción encontrada por token (${prefId})`);
-            }
-
-            // Si no se encuentra, buscar por ID numérico sin prefijo
-            if (!tx) {
-                tx = await this.transactionRepository.findOne({
-                    where: { orderId: `MP-${paymentId}` },
-                });
-
-                if (!tx) {
-                    tx = await this.transactionRepository.findOne({
-                        where: { orderId: paymentId }, // busca por número directo
-                    });
-                }
-            }
+            // 🔍 Buscar transacción directamente por orderId que contiene el paymentId
+            const tx = await this.transactionRepository.findOne({
+                where: [
+                    { orderId: `MP-${paymentId}` },
+                    { orderId: paymentId },
+                ],
+            });
 
             if (!tx) {
-                console.warn(`⚠️ No se encontró transacción asociada al pago ${paymentId}`);
+                console.warn(`⚠️ No se encontró transacción asociada al paymentId ${paymentId}`);
                 return;
             }
 
-            // ===============================
-            // 🧾 Actualizar transacción
-            // ===============================
+            // 🧾 Actualizar estado y guardar respuesta completa
             console.log('🧾 Transacción encontrada:', {
                 orderId: tx.orderId,
-                statusAnterior: tx.status,
+                estadoAnterior: tx.status,
             });
 
             tx.status = status;
             tx.response_data = result;
-            await this.transactionRepository.save(tx);
 
+            await this.transactionRepository.save(tx);
             console.log(`✅ Transacción ${tx.orderId} actualizada correctamente → ${status}`);
         } catch (error) {
             console.error('❌ Error procesando notificación de Mercado Pago:', error);
         }
     }
+
 
 
     // ======================================================
