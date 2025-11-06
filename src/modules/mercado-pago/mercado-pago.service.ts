@@ -17,33 +17,92 @@ export class MercadoPagoService {
     // ======================================================
     // 💳 CREAR PREFERENCIA + REGISTRAR TRANSACCIÓN
     // ======================================================
+    // async crearPreferenciaYRegistrar(
+    //     tipo: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+    //     userId: number,
+    // ) {
+    //     console.log('🧠 [MercadoPagoService] → Iniciando creación de preferencia.');
+    //     console.log(`📦 Tipo: ${tipo} | Usuario: ${userId}`);
+
+    //     // 1️⃣ Crear preferencia
+    //     const preference = await crearPreferenciaPago(tipo);
+    //     console.log('🪄 Preferencia creada en Mercado Pago:', preference.id);
+
+    //     // 2️⃣ Calcular monto
+    //     const price = {
+    //         BASICO: 80000,
+    //         ESTANDAR: 140000,
+    //         PREMIUM: 180000,
+    //     }[tipo];
+
+    //     if (!price) {
+    //         throw new Error(`❌ Tipo de aviso no válido o sin precio definido: ${tipo}`);
+    //     }
+
+    //     // 3️⃣ Crear transacción en base de datos
+    //     const transaction = this.transactionRepository.create({
+    //         orderId: generateOrderId('MERCADOPAGO'),
+    //         sessionId: String(userId),
+    //         amount: price,
+    //         token: preference.id,
+    //         status: 'PENDING',
+    //         origen: PaymentGateway.MERCADOPAGO,
+    //         response_data: preference,
+    //     });
+
+    //     await this.transactionRepository.save(transaction);
+
+    //     console.log('💾 Transacción registrada correctamente:');
+    //     console.log({
+    //         orderId: transaction.orderId,
+    //         userId,
+    //         tipo,
+    //         monto: price,
+    //         preferenceId: preference.id,
+    //     });
+
+    //     // 4️⃣ Retornar datos al front
+    //     console.log('🔗 URL de inicio de pago:', preference.init_point);
+    //     return {
+    //         preferenceId: preference.id,
+    //         init_point: preference.init_point,
+    //         sandbox_init_point: preference.sandbox_init_point,
+    //     };
+    // }
     async crearPreferenciaYRegistrar(
-        tipo: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+        tipos: ('BASICO' | 'ESTANDAR' | 'PREMIUM')[],
         userId: number,
     ) {
-        console.log('🧠 [MercadoPagoService] → Iniciando creación de preferencia.');
-        console.log(`📦 Tipo: ${tipo} | Usuario: ${userId}`);
+        console.log('🧠 [MercadoPagoService] → Iniciando creación de preferencia múltiple.');
+        console.log(`📦 Tipos seleccionados: ${tipos.join(', ')} | Usuario: ${userId}`);
 
-        // 1️⃣ Crear preferencia
-        const preference = await crearPreferenciaPago(tipo);
+        if (!Array.isArray(tipos) || tipos.length === 0) {
+            throw new Error('Debes seleccionar al menos un tipo de aviso.');
+        }
+
+        // 1️⃣ Crear preferencia con varios ítems
+        const preference = await crearPreferenciaPago(tipos);
         console.log('🪄 Preferencia creada en Mercado Pago:', preference.id);
 
-        // 2️⃣ Calcular monto
-        const price = {
+        // 2️⃣ Calcular monto total
+        const precios: Record<'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
             BASICO: 80000,
             ESTANDAR: 140000,
             PREMIUM: 180000,
-        }[tipo];
+        };
 
-        if (!price) {
-            throw new Error(`❌ Tipo de aviso no válido o sin precio definido: ${tipo}`);
+        let total = 0;
+        for (const tipo of tipos) {
+            const price = precios[tipo];
+            if (!price) throw new Error(`❌ Tipo de aviso no válido o sin precio definido: ${tipo}`);
+            total += price;
         }
 
         // 3️⃣ Crear transacción en base de datos
         const transaction = this.transactionRepository.create({
             orderId: generateOrderId('MERCADOPAGO'),
             sessionId: String(userId),
-            amount: price,
+            amount: total,
             token: preference.id,
             status: 'PENDING',
             origen: PaymentGateway.MERCADOPAGO,
@@ -56,8 +115,8 @@ export class MercadoPagoService {
         console.log({
             orderId: transaction.orderId,
             userId,
-            tipo,
-            monto: price,
+            tipos,
+            monto_total: total,
             preferenceId: preference.id,
         });
 
@@ -67,8 +126,10 @@ export class MercadoPagoService {
             preferenceId: preference.id,
             init_point: preference.init_point,
             sandbox_init_point: preference.sandbox_init_point,
+            total,
         };
     }
+
 
     // ======================================================
     // 🔔 PROCESAR NOTIFICACIÓN (WEBHOOK)
