@@ -22,10 +22,43 @@ export class MercadoPagoController {
     // ======================================================
     // 💳 Crear preferencia (checkout)
     // ======================================================
-    @UseGuards(AuthGuard('jwt'))
+    // @UseGuards(AuthGuard('jwt'))
+    // @Post('preferences')
+    // async createPreference(
+    //     @Body('tipo') tipo: string,
+    //     @Req() req: Request,
+    // ) {
+    //     // ✅ Validación del tipo de aviso
+    //     const validTypes = ['BASICO', 'ESTANDAR', 'PREMIUM'];
+    //     if (!tipo || !validTypes.includes(tipo.toUpperCase())) {
+    //         throw new BadRequestException(
+    //             `Tipo de aviso inválido. Debe ser uno de: ${validTypes.join(', ')}.`,
+    //         );
+    //     }
+
+    //     // 🔹 Obtener el ID del usuario autenticado
+    //     const user = req.user as any;
+    //     const userId = user?.sub ?? user?.id ?? null;
+
+    //     if (!userId) {
+    //         throw new BadRequestException('No se pudo determinar el usuario.');
+    //     }
+
+    //     // ✅ Crear preferencia y registrar transacción
+    //     const result = await this.mpService.crearPreferenciaYRegistrar(
+    //         tipo.toUpperCase() as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+    //         userId,
+    //     );
+
+    //     return {
+    //         message: 'Preferencia creada correctamente',
+    //         ...result,
+    //     };
+    // }
     @Post('preferences')
     async createPreference(
         @Body('tipo') tipo: string,
+        @Body('items') items: any[],
         @Req() req: Request,
     ) {
         // ✅ Validación del tipo de aviso
@@ -44,17 +77,20 @@ export class MercadoPagoController {
             throw new BadRequestException('No se pudo determinar el usuario.');
         }
 
+        // ✅ Validar que los ítems existan y sean un arreglo
+        if (!Array.isArray(items) || items.length === 0) {
+            throw new BadRequestException('El carrito (items) no puede estar vacío.');
+        }
+
         // ✅ Crear preferencia y registrar transacción
-        const result = await this.mpService.crearPreferenciaYRegistrar(
-            tipo.toUpperCase() as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
-            userId,
-        );
+        const result = await this.mpService.crearPreferenciaYRegistrar(userId, items);
 
         return {
             message: 'Preferencia creada correctamente',
             ...result,
         };
     }
+
 
     // ======================================================
     // 🔔 Webhook de Mercado Pago (notificaciones)
