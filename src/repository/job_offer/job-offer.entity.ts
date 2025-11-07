@@ -8,9 +8,11 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     DeleteDateColumn,
+    OneToMany,
 } from 'typeorm';
 import { Empresa } from '../business/business.entity';
 import { Empleador } from '../employer/employer.entity';
+import { CountVisit } from '../count_visits/count-visits.entity';
 
 @Entity('oferta')
 export class Oferta {
@@ -54,6 +56,14 @@ export class Oferta {
 
     @Column({ type: 'text', nullable: true })
     data: string;
+
+    // 👁️ Relación inversa (para acceder a las visitas de la oferta)
+    @OneToMany(() => CountVisit, (visit) => visit.oferta)
+    countVisits: CountVisit[];
+
+    // 🧮 Total acumulado de visitas únicas
+    @Column({ type: 'int', default: 0, name: 'visits_total' })
+    visitsTotal: number;
 
     @DeleteDateColumn({ name: 'fecha_eliminacion' })
     fecha_eliminacion: Date;

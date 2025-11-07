@@ -22,6 +22,7 @@ import { OfferPolicy } from 'src/modules/publication/entities/offer-policy.entit
 import { TransactionItem } from 'src/repository/transaction_items/transaction-items.entity';
 import { Stock } from 'src/repository/stock/stock.entity';
 import { PaymentIntent } from 'src/modules/publication/entities/payment-intent.entity';
+import { CountVisit } from 'src/repository/count_visits/count-visits.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -35,8 +36,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit],
     // logging: true,
-    synchronize: process.env.DB_SYNCHRONIZE === 'true',
+    synchronize: process.env.DB_SYNCHRONIZE === 'false',
 
 };
