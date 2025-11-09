@@ -74,4 +74,10 @@ export class OfertaController {
     const userId = user?.id ?? user?.sub ?? null;
     return this.countVisitService.registerVisit(id, userId);
   }
+
+  @UseGuards(AuthGuard)
+  @Get("empresa/:empresaId")
+  async obtenerPorEmpresa(@Param("empresaId", ParseIntPipe) empresaId: number) {
+    return this.ofertaService.obtenerOfertasPorEmpresa(empresaId);
+  }
 }

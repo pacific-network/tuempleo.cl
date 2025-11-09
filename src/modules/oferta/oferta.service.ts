@@ -22,7 +22,7 @@ export class OfertaService {
     @InjectRepository(Empresa)
     private readonly empresaRepository: Repository<Empresa>,
     private readonly StockService: StockService,
-  ) {}
+  ) { }
 
   // ======================================================
   // 🔍 FILTRO DE OFERTAS (BUSCADOR PÚBLICO)
@@ -237,5 +237,26 @@ export class OfertaService {
 
     oferta.modificada_por = empleador;
     return this.ofertaRepository.save(oferta);
+  }
+
+  // 🏢 OBTENER OFERTAS POR EMPRESA
+  // ======================================================
+  async obtenerOfertasPorEmpresa(empresaId: number): Promise<Oferta[]> {
+    const empresa = await this.empresaRepository.findOne({ where: { id: empresaId } });
+    if (!empresa) {
+      throw new NotFoundException(`Empresa con ID ${empresaId} no encontrada`);
+    }
+
+    const ofertas = await this.ofertaRepository.find({
+      where: { empresa: { id: empresaId }, es_activa: true },
+      relations: ['empresa', 'empleador'],
+      order: { fecha_publicacion: 'DESC' },
+    });
+
+    if (!ofertas.length) {
+      throw new NotFoundException(`No se encontraron ofertas activas para la empresa ${empresaId}`);
+    }
+
+    return ofertas;
   }
 }
