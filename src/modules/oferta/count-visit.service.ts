@@ -15,34 +15,42 @@ export class CountVisitService {
     private readonly ofertaRepo: Repository<Oferta>,
 
     private readonly ds: DataSource,
-  ) {}
+  ) { }
 
-  async registerVisit(ofertaId: number, userId: number) {
-    if (!userId) return { counted: false }; // solo usuarios logueados
-
+  /**
+   * Registra una visita única por usuario o IP.
+   * Si el usuario no está logueado, se usa el hash del IP para evitar duplicados.
+   */
+  async registerVisit(ofertaId: number, userId: number | null, ip?: string) {
+    // Generar hash único del visitante
     const visitorHash = createHash('sha256')
-      .update(`user:${userId}`)
+      .update(userId ? `user:${userId}` : `ip:${ip ?? 'unknown'}`)
       .digest('hex');
 
-    // Verificar si el usuario ya vio esta oferta
+    // Verificar si ya existe
     const existing = await this.visitRepo.findOne({
       where: { visitorHash, oferta: { id: ofertaId } },
       relations: ['oferta'],
     });
 
-    if (!existing) {
-      const oferta = await this.ofertaRepo.findOneBy({ id: ofertaId });
-      if (!oferta) return { counted: false };
+    if (existing) return { counted: false, reason: 'already_visited' };
 
-      await this.visitRepo.save({ oferta, visitorHash });
-      await this.ds.query(
-        'UPDATE oferta SET visits_total = visits_total + 1 WHERE id = ?',
-        [ofertaId],
-      );
+    // Verificar oferta
+    const oferta = await this.ofertaRepo.findOneBy({ id: ofertaId });
+    if (!oferta) return { counted: false, reason: 'offer_not_found' };
 
-      return { counted: true };
-    }
+    // Guardar registro de visita
+    await this.visitRepo.save({ oferta, visitorHash });
 
-    return { counted: false };
+    // Incrementar contador
+    await this.ds.query(
+      'UPDATE oferta SET visits_total = visits_total + 1 WHERE id = ?',
+      [ofertaId],
+    );
+
+    // Consultar el valor actualizado
+    const updated = await this.ofertaRepo.findOneBy({ id: ofertaId });
+
+    return { counted: true, visitas: updated?.visitsTotal ?? 0 };
   }
 }
