@@ -13,6 +13,7 @@ import {
 import { Empresa } from '../business/business.entity';
 import { Empleador } from '../employer/employer.entity';
 import { CountVisit } from '../count_visits/count-visits.entity';
+import { DataOfertaDto } from 'src/modules/oferta/dto/create-oferta.dto';
 
 @Entity('oferta')
 export class Oferta {

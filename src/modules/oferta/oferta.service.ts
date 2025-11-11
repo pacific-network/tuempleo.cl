@@ -137,7 +137,7 @@ export class OfertaService {
       duracion_publicacion: duracion,
       fecha_cierre,
       es_activa: data.es_activa ?? true,
-      data: data.data,
+      data: JSON.stringify(data.data), // 👈 CORREGIDO
     };
 
     const oferta = this.ofertaRepository.create(nuevaOferta);
@@ -152,6 +152,7 @@ export class OfertaService {
 
     return saved;
   }
+
 
   // ======================================================
   // 📄 OBTENER OFERTA POR ID
@@ -232,7 +233,7 @@ export class OfertaService {
 
     if (data.titulo !== undefined) oferta.titulo = data.titulo;
     if (data.data !== undefined) {
-      oferta.data = typeof data.data === 'object' ? JSON.stringify(data.data) : data.data;
+      data.data = typeof data.data === 'object' ? JSON.stringify(data.data) : data.data;
     }
 
     oferta.modificada_por = empleador;
