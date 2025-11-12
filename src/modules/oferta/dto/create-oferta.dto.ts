@@ -147,6 +147,12 @@ export class DataOfertaDto {
     @IsString({ each: true, message: 'Cada herramienta debe ser texto.' })
     herramientas_basicas?: string[];
 
+
+    @IsOptional()
+    @IsArray({ message: 'Las herramientas deben ser una lista.' })
+    @IsString({ each: true, message: 'Cada herramienta debe ser texto.' })
+    otras_herramientas?: string[]
+
     // 16️⃣ Preguntas personalizadas
     @IsOptional()
     @IsArray({ message: 'Las preguntas deben ser una lista.' })
