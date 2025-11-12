@@ -11,6 +11,7 @@ import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
 import { StockService } from "../stock/stock.service";
+import { Order } from "src/shared/pagination/constants";
 
 @Injectable()
 export class OfertaService {
@@ -170,6 +171,9 @@ export class OfertaService {
   // ======================================================
   // 📋 OBTENER OFERTAS POR EMPLEADOR
   // ======================================================
+  // oferta.service.ts
+
+
   async obtenerOfertasPorEmpleador(
     empleadorId: number,
     pageOptions: PageOptionsDto
@@ -181,10 +185,22 @@ export class OfertaService {
       .skip(pageOptions.skip)
       .take(pageOptions.take);
 
+    // ✅ Orden dinámico usando tu enum Order
+    const orderDirection =
+      pageOptions.order === Order.DESC ? 'DESC' : 'ASC';
+
+    qb.orderBy('oferta.id', orderDirection);
+    // 👆 puedes cambiar 'oferta.id' por 'oferta.createdAt' o cualquier campo que represente el orden lógico
+
     const [entities, itemCount] = await qb.getManyAndCount();
-    const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+    const meta = new PageMetaDto({
+      pageOptionsDto: pageOptions,
+      itemCount,
+    });
+
     return new PageDto(entities, meta);
   }
+
 
   // ======================================================
   // ❌ ELIMINAR OFERTA
