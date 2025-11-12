@@ -7,12 +7,14 @@ import { OfertaService } from "./oferta.service";
 import { OfertaController } from "./oferta.controller";
 
 import { StockModule } from "../stock/stock.module";
+import { CountVisitService } from "./count-visit.service";
+import { CountVisit } from "src/repository/count_visits/count-visits.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Oferta, Empleador, Empresa]), StockModule,
+    TypeOrmModule.forFeature([Oferta, Empleador, Empresa, CountVisit]), StockModule,
   ],
-  providers: [OfertaService],
+  providers: [OfertaService, CountVisitService],
   controllers: [OfertaController],
 })
 export class OfertaModule { }

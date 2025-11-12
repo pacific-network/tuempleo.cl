@@ -35,11 +35,18 @@ export class ProcesoSeleccionController {
         const empleadorId = req.user.userId;
         return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'contratado');
     }
-    
+
     @UseGuards(AuthGuard('jwt'))
     @Get('mias')
     async misNotificaciones(@Req() req) {
-      const userId = req.user.userId; // id del Usuario (postulante)
-      return this.seleccionService.listarProcesosDelPostulante(userId);
+        const userId = req.user.userId; // id del Usuario (postulante)
+        return this.seleccionService.listarProcesosDelPostulante(userId);
     }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Get('empresa/:empresaId')
+    async listarPorEmpresa(@Param('empresaId') empresaId: number) {
+        return this.seleccionService.listarPostulacionesPorEmpresa(Number(empresaId));
+    }
+
 }

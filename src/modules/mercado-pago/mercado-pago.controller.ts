@@ -22,31 +22,82 @@ export class MercadoPagoController {
     // ======================================================
     // 💳 Crear preferencia (checkout)
     // ======================================================
+    // @UseGuards(AuthGuard('jwt'))
+    // @Post('preferences')
+    // async createPreference(
+    //     @Body('tipo') tipo: string,
+    //     @Req() req: Request,
+    // ) {
+    //     // ✅ Validación del tipo de aviso
+    //     const validTypes = ['BASICO', 'ESTANDAR', 'PREMIUM'];
+    //     if (!tipo || !validTypes.includes(tipo.toUpperCase())) {
+    //         throw new BadRequestException(
+    //             `Tipo de aviso inválido. Debe ser uno de: ${validTypes.join(', ')}.`,
+    //         );
+    //     }
+
+    //     // 🔹 Obtener el ID del usuario autenticado
+    //     const user = req.user as any;
+    //     const userId = user?.sub ?? user?.id ?? null;
+
+    //     if (!userId) {
+    //         throw new BadRequestException('No se pudo determinar el usuario.');
+    //     }
+
+    //     // ✅ Crear preferencia y registrar transacción
+    //     const result = await this.mpService.crearPreferenciaYRegistrar(
+    //         tipo.toUpperCase() as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+    //         userId,
+    //     );
+
+    //     return {
+    //         message: 'Preferencia creada correctamente',
+    //         ...result,
+    //     };
+    // }
     @UseGuards(AuthGuard('jwt'))
     @Post('preferences')
     async createPreference(
-        @Body('tipo') tipo: string,
+        @Body('tipos') tipos: string[],
         @Req() req: Request,
     ) {
-        // ✅ Validación del tipo de aviso
         const validTypes = ['BASICO', 'ESTANDAR', 'PREMIUM'];
-        if (!tipo || !validTypes.includes(tipo.toUpperCase())) {
+
+        // ✅ Validaciones
+        if (!Array.isArray(tipos) || tipos.length === 0) {
+            throw new BadRequestException('Debes enviar al menos un tipo de aviso.');
+        }
+
+        if (tipos.length > 3) {
+            throw new BadRequestException('Solo puedes seleccionar hasta 3 avisos (uno de cada tipo).');
+        }
+
+        // Normalizar y validar tipos
+        const tiposUpper = tipos.map(t => t.toUpperCase());
+        const tiposInvalidos = tiposUpper.filter(t => !validTypes.includes(t));
+        if (tiposInvalidos.length > 0) {
             throw new BadRequestException(
-                `Tipo de aviso inválido. Debe ser uno de: ${validTypes.join(', ')}.`,
+                `Tipo(s) inválido(s): ${tiposInvalidos.join(', ')}. Deben ser uno de: ${validTypes.join(', ')}.`,
             );
         }
 
-        // 🔹 Obtener el ID del usuario autenticado
+        // Evitar duplicados
+        const tiposUnicos = [...new Set(tiposUpper)];
+        if (tiposUnicos.length !== tiposUpper.length) {
+            throw new BadRequestException('No puedes repetir el mismo tipo de aviso.');
+        }
+
+        // 🔹 Obtener usuario autenticado
         const user = req.user as any;
         const userId = user?.sub ?? user?.id ?? null;
 
         if (!userId) {
-            throw new BadRequestException('No se pudo determinar el usuario.');
+            throw new BadRequestException('No se pudo determinar el usuario autenticado.');
         }
 
         // ✅ Crear preferencia y registrar transacción
         const result = await this.mpService.crearPreferenciaYRegistrar(
-            tipo.toUpperCase() as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+            tiposUnicos as ('BASICO' | 'ESTANDAR' | 'PREMIUM')[],
             userId,
         );
 

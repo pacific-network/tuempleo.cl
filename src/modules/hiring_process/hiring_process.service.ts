@@ -82,16 +82,58 @@ export class ProcesoSeleccionService {
         return { success: true };
     }
     async listarProcesosDelPostulante(userId: number) {
-    // Devuelve los procesos que tocan postulaciones cuyo postulante pertenece al usuario autenticado
-    return this.procesoRepo
-      .createQueryBuilder('p')
-      .leftJoinAndSelect('p.postulacion', 'post')
-      .leftJoinAndSelect('post.postulante', 'postulante')
-      .leftJoinAndSelect('postulante.usuario', 'usuario')
-      .leftJoinAndSelect('post.oferta', 'oferta')
-      .leftJoinAndSelect('p.gestor', 'gestor')
-      .where('usuario.id = :userId', { userId })
-      .orderBy('p.fecha', 'DESC')
-      .getMany();
-  }
+        // Devuelve los procesos que tocan postulaciones cuyo postulante pertenece al usuario autenticado
+        return this.procesoRepo
+            .createQueryBuilder('p')
+            .leftJoinAndSelect('p.postulacion', 'post')
+            .leftJoinAndSelect('post.postulante', 'postulante')
+            .leftJoinAndSelect('postulante.usuario', 'usuario')
+            .leftJoinAndSelect('post.oferta', 'oferta')
+            .leftJoinAndSelect('p.gestor', 'gestor')
+            .where('usuario.id = :userId', { userId })
+            .orderBy('p.fecha', 'DESC')
+            .getMany();
+    }
+
+    // ======================================================
+    // 📨 Listar postulaciones por empresa (para notificaciones)
+    // ======================================================
+    async listarPostulacionesPorEmpresa(empresaId: number) {
+        if (!empresaId) {
+            throw new BadRequestException('El ID de la empresa es requerido.');
+        }
+
+        const postulaciones = await this.postulacionRepo
+            .createQueryBuilder('post')
+            .leftJoinAndSelect('post.postulante', 'postulante')
+            .leftJoinAndSelect('postulante.usuario', 'usuario')
+            .leftJoinAndSelect('post.oferta', 'oferta')
+            .where('oferta.empresa_id = :empresaId', { empresaId })
+            .andWhere('post.estado IS NOT NULL')
+            .orderBy('post.fechaPostulacion', 'DESC')
+            .getMany();
+
+        if (!postulaciones.length) {
+            throw new NotFoundException(`No se encontraron postulaciones para la empresa ${empresaId}`);
+        }
+
+        return postulaciones.map((p) => ({
+            id: p.id,
+            fechaPostulacion: p.fechaPostulacion,
+            estado: p.estado,
+            oferta: {
+                id: p.oferta?.id,
+                titulo: p.oferta?.titulo,
+            },
+            postulante: {
+                id: p.postulante?.id,
+                usuario: {
+                    nombres: p.postulante?.usuario?.nombres,
+                    apellidos: p.postulante?.usuario?.apellidos,
+                    email: p.postulante?.usuario?.email,
+                },
+            },
+        }));
+    }
+
 }

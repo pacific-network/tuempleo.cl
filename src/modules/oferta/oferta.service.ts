@@ -11,6 +11,7 @@ import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
 import { StockService } from "../stock/stock.service";
+import { Order } from "src/shared/pagination/constants";
 
 @Injectable()
 export class OfertaService {
@@ -22,7 +23,7 @@ export class OfertaService {
     @InjectRepository(Empresa)
     private readonly empresaRepository: Repository<Empresa>,
     private readonly StockService: StockService,
-  ) {}
+  ) { }
 
   // ======================================================
   // 🔍 FILTRO DE OFERTAS (BUSCADOR PÚBLICO)
@@ -137,7 +138,7 @@ export class OfertaService {
       duracion_publicacion: duracion,
       fecha_cierre,
       es_activa: data.es_activa ?? true,
-      data: data.data,
+      data: JSON.stringify(data.data), // 👈 CORREGIDO
     };
 
     const oferta = this.ofertaRepository.create(nuevaOferta);
@@ -152,6 +153,7 @@ export class OfertaService {
 
     return saved;
   }
+
 
   // ======================================================
   // 📄 OBTENER OFERTA POR ID
@@ -169,6 +171,9 @@ export class OfertaService {
   // ======================================================
   // 📋 OBTENER OFERTAS POR EMPLEADOR
   // ======================================================
+  // oferta.service.ts
+
+
   async obtenerOfertasPorEmpleador(
     empleadorId: number,
     pageOptions: PageOptionsDto
@@ -180,10 +185,22 @@ export class OfertaService {
       .skip(pageOptions.skip)
       .take(pageOptions.take);
 
+    // ✅ Orden dinámico usando tu enum Order
+    const orderDirection =
+      pageOptions.order === Order.DESC ? 'DESC' : 'ASC';
+
+    qb.orderBy('oferta.id', orderDirection);
+    // 👆 puedes cambiar 'oferta.id' por 'oferta.createdAt' o cualquier campo que represente el orden lógico
+
     const [entities, itemCount] = await qb.getManyAndCount();
-    const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+    const meta = new PageMetaDto({
+      pageOptionsDto: pageOptions,
+      itemCount,
+    });
+
     return new PageDto(entities, meta);
   }
+
 
   // ======================================================
   // ❌ ELIMINAR OFERTA
@@ -232,10 +249,31 @@ export class OfertaService {
 
     if (data.titulo !== undefined) oferta.titulo = data.titulo;
     if (data.data !== undefined) {
-      oferta.data = typeof data.data === 'object' ? JSON.stringify(data.data) : data.data;
+      data.data = typeof data.data === 'object' ? JSON.stringify(data.data) : data.data;
     }
 
     oferta.modificada_por = empleador;
     return this.ofertaRepository.save(oferta);
+  }
+
+  // 🏢 OBTENER OFERTAS POR EMPRESA
+  // ======================================================
+  async obtenerOfertasPorEmpresa(empresaId: number): Promise<Oferta[]> {
+    const empresa = await this.empresaRepository.findOne({ where: { id: empresaId } });
+    if (!empresa) {
+      throw new NotFoundException(`Empresa con ID ${empresaId} no encontrada`);
+    }
+
+    const ofertas = await this.ofertaRepository.find({
+      where: { empresa: { id: empresaId }, es_activa: true },
+      relations: ['empresa', 'empleador'],
+      order: { fecha_publicacion: 'DESC' },
+    });
+
+    if (!ofertas.length) {
+      throw new NotFoundException(`No se encontraron ofertas activas para la empresa ${empresaId}`);
+    }
+
+    return ofertas;
   }
 }
