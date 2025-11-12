@@ -6,12 +6,17 @@ import { crearPreferenciaPago } from './const/tipo_avisos.preferences';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { PaymentResponseExtended } from './interfaces/payment-response.interface';
 import { generateOrderId } from 'src/shared/generator/order-id.generator';
+import { StockService } from '../stock/stock.service';
+import { Empleador } from 'src/repository/employer/employer.entity';
 
 @Injectable()
 export class MercadoPagoService {
     constructor(
         @InjectRepository(Transaction)
         private readonly transactionRepository: Repository<Transaction>,
+        @InjectRepository(Empleador)
+        private readonly empleadorRepository: Repository<Empleador>,
+        private readonly stockService: StockService,
     ) { }
 
     // ======================================================
@@ -330,5 +335,92 @@ export class MercadoPagoService {
             origen,
         };
     }
+    async confirmarPagoMercadoPago(paymentId: string): Promise<void> {
+        console.log(`📬 [Webhook] Notificación recibida de Mercado Pago → paymentId=${paymentId}`);
+
+        try {
+            const client = new MercadoPagoConfig({
+                accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
+            });
+            const payment = new Payment(client);
+
+            console.log('🔍 Consultando pago en API de Mercado Pago...');
+            const result = (await payment.get({ id: paymentId })) as PaymentResponseExtended;
+
+            if (!result) {
+                console.warn(`⚠️ No se encontró pago con ID ${paymentId} en la API.`);
+                return;
+            }
+
+            const prefId = result.preference_id;
+            const status = result.status?.toUpperCase() || 'UNKNOWN';
+
+            // Buscar transacción por token o la más reciente pendiente
+            let tx = await this.transactionRepository.findOne({ where: { token: prefId } });
+            if (!tx) {
+                tx = await this.transactionRepository.findOne({
+                    where: { status: 'PENDING', origen: PaymentGateway.MERCADOPAGO },
+                    order: { createdAt: 'DESC' },
+                });
+            }
+
+            if (!tx) {
+                console.warn(`⚠️ No se encontró transacción asociada al pago ${paymentId}`);
+                return;
+            }
+
+            console.log(`🧾 Transacción encontrada: ${tx.orderId}`);
+
+            // ✅ Actualizar estado y respuesta
+            tx.status = status;
+            tx.response_data = result;
+            await this.transactionRepository.save(tx);
+
+            // Solo continuar si está autorizada
+            if (status === 'APPROVED' || status === 'AUTHORIZED') {
+                const userId = Number(tx.sessionId);
+
+                // Buscar empresa del usuario
+                const empleador = await this.empleadorRepository.findOne({
+                    where: { usuario: { id: userId } },
+                    relations: ['empresa'],
+                });
+
+                if (!empleador?.empresa?.id) {
+                    console.warn(`⚠️ Usuario ${userId} no tiene empresa asociada (stock no actualizado).`);
+                    return;
+                }
+
+                const empresaId = empleador.empresa.id;
+
+                // 🧾 Registrar items si aún no existen
+                const existingItems = await this.transactionRepository.query(
+                    `SELECT COUNT(*) as count FROM transaction_items WHERE transaction_id = ?`,
+                    [tx.id]
+                );
+
+                if (existingItems[0].count == 0 && result.additional_info?.items) {
+                    console.log(`🧩 Insertando ${result.additional_info.items.length} items para la transacción ${tx.id}`);
+                    for (const item of result.additional_info.items) {
+                        await this.transactionRepository.query(
+                            `INSERT INTO transaction_items (transaction_id, tipoAviso, cantidad, precio)
+                             VALUES (?, ?, ?, ?)`,
+                            [tx.id, item.title || item.id, item.quantity || 1, item.unit_price || 0]
+                        );
+                    }
+                }
+
+                // 🔁 Procesar stock
+                await this.stockService.processTransactionStock(tx.id, empresaId);
+
+                console.log(`✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${tx.orderId})`);
+            }
+
+            console.log(`✅ Transacción ${tx.orderId} actualizada correctamente → ${status}`);
+        } catch (error) {
+            console.error('❌ Error procesando notificación de Mercado Pago:', error);
+        }
+    }
+
 }
 
