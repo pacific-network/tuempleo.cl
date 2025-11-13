@@ -213,15 +213,15 @@ export const crearPreferenciaPago = async (tiposAviso: string[]) => {
     const isProd = process.env.NODE_ENV === 'production';
     const backUrls = isProd
         ? {
-            success: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
-            failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
-            pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+            success: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
+            failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
+            pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
         }
         : {
             // ⚠️ Mercado Pago no acepta localhost → usa ngrok o dominio público para pruebas
-            success: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
-            failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
-            pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion.html',
+            success: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
+            failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
+            pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
         };
 
     // 🔹 Crear preferencia Mercado Pago (usando los items válidos)
