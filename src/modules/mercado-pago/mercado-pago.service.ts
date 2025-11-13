@@ -9,6 +9,12 @@ import { generateOrderId } from 'src/shared/generator/order-id.generator';
 import { StockService } from '../stock/stock.service';
 import { Empleador } from 'src/repository/employer/employer.entity';
 
+
+type ItemComprado = {
+    tipo: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+    cantidad: number;
+    precio: number;
+};
 @Injectable()
 export class MercadoPagoService {
     constructor(
@@ -176,23 +182,22 @@ export class MercadoPagoService {
     //         // ===============================
     //         let tx: Transaction | null = null;
 
+    //         // 1️⃣ Buscar por preference_id si existe
     //         if (prefId) {
-    //             // Primero intenta por el preference_id (token)
     //             tx = await this.transactionRepository.findOne({ where: { token: prefId } });
     //             if (tx) console.log(`✅ Transacción encontrada por token (${prefId})`);
     //         }
 
-    //         // Si no se encuentra, buscar por ID numérico sin prefijo
+    //         // 2️⃣ Si no existe preference_id, buscar la más reciente pendiente
     //         if (!tx) {
     //             tx = await this.transactionRepository.findOne({
-    //                 where: { orderId: `MP-${paymentId}` },
+    //                 where: { status: 'PENDING', origen: PaymentGateway.MERCADOPAGO },
+    //                 order: { createdAt: 'DESC' },
     //             });
-
-    //             if (!tx) {
-    //                 tx = await this.transactionRepository.findOne({
-    //                     where: { orderId: paymentId }, // busca por número directo
-    //                 });
-    //             }
+    //             if (tx)
+    //                 console.log(
+    //                     `⚠️ preference_id vacío → usando transacción pendiente más reciente: ${tx.orderId}`,
+    //                 );
     //         }
 
     //         if (!tx) {
@@ -234,42 +239,35 @@ export class MercadoPagoService {
                 return;
             }
 
-            console.log(`✅ Pago encontrado en Mercado Pago → ID ${result.id}`);
-
             const prefId = result.preference_id;
             const status = result.status?.toUpperCase() || 'UNKNOWN';
-            const externalRef = result.external_reference;
-            const statusDetail = result.status_detail;
 
-            console.log('📦 Datos del pago:', {
+            console.log('📦 Datos del pago recibido:', {
                 id: result.id,
-                preference_id: prefId,
                 status,
-                external_reference: externalRef,
-                status_detail: statusDetail,
+                preference_id: prefId,
+                metadata: result.metadata,
+                add_info_items: result.additional_info?.items,
             });
 
             // ===============================
-            // 🔍 Buscar transacción en DB
+            // 🔍 Buscar transacción
             // ===============================
             let tx: Transaction | null = null;
 
-            // 1️⃣ Buscar por preference_id si existe
+            // Intentar por preference_id
             if (prefId) {
                 tx = await this.transactionRepository.findOne({ where: { token: prefId } });
                 if (tx) console.log(`✅ Transacción encontrada por token (${prefId})`);
             }
 
-            // 2️⃣ Si no existe preference_id, buscar la más reciente pendiente
+            // Fallback: última pendiente
             if (!tx) {
                 tx = await this.transactionRepository.findOne({
                     where: { status: 'PENDING', origen: PaymentGateway.MERCADOPAGO },
                     order: { createdAt: 'DESC' },
                 });
-                if (tx)
-                    console.log(
-                        `⚠️ preference_id vacío → usando transacción pendiente más reciente: ${tx.orderId}`,
-                    );
+                if (tx) console.log(`⚠️ preference_id vacío → usando la última transacción pendiente: ${tx.orderId}`);
             }
 
             if (!tx) {
@@ -277,23 +275,108 @@ export class MercadoPagoService {
                 return;
             }
 
-            // ===============================
-            // 🧾 Actualizar transacción
-            // ===============================
-            console.log('🧾 Transacción encontrada:', {
-                orderId: tx.orderId,
-                statusAnterior: tx.status,
-            });
+            console.log(`🧾 Transacción encontrada: ${tx.orderId}`);
 
+            // ===============================
+            // 🧾 Actualizar estado de transacción
+            // ===============================
             tx.status = status;
             tx.response_data = result;
             await this.transactionRepository.save(tx);
 
-            console.log(`✅ Transacción ${tx.orderId} actualizada correctamente → ${status}`);
+            // ===============================
+            // 🚨 Procesar solo si está APROBADO
+            // ===============================
+            if (!(status === 'APPROVED' || status === 'AUTHORIZED')) {
+                console.warn(`⚠️ Pago ${paymentId} no aprobado (estado: ${status}).`);
+                return;
+            }
+
+            // ===============================
+            // 👤 Obtener empresa del usuario
+            // ===============================
+            const userId = Number(tx.sessionId);
+
+            const empleador = await this.empleadorRepository.findOne({
+                where: { usuario: { id: userId } },
+                relations: ['empresa'],
+            });
+
+            if (!empleador?.empresa?.id) {
+                console.warn(`⚠️ Usuario ${userId} no tiene empresa asociada. Stock NO actualizado.`);
+                return;
+            }
+
+            const empresaId = empleador.empresa.id;
+
+            // ===============================
+            // 🧩 RECONSTRUIR ITEMS COMPRADOS
+            // ===============================
+            let items: ItemComprado[] = [];
+
+            // 1️⃣ Intentar desde additional_info.items
+            if (result.additional_info?.items?.length > 0) {
+                console.log(`📦 Items obtenidos desde additional_info (${result.additional_info.items.length})`);
+                items = result.additional_info.items.map(it => ({
+                    tipo: it.id || it.title,
+                    cantidad: it.quantity || 1,
+                    precio: it.unit_price || 0,
+                }));
+            }
+            // 2️⃣ Fallback: desde metadata
+            else if (result.metadata?.tipos?.length > 0) {
+                console.log(`📦 Items obtenidos desde metadata (${result.metadata.tipos.length})`);
+                items = result.metadata.tipos.map((tipo: string) => {
+                    const pricingMap: any = {
+                        BASICO: 80000,
+                        ESTANDAR: 140000,
+                        PREMIUM: 180000,
+                    };
+
+                    return {
+                        tipo,
+                        cantidad: 1,
+                        precio: pricingMap[tipo] || 0,
+                    };
+                });
+            }
+
+            // 3️⃣ Falla crítica
+            if (items.length === 0) {
+                console.error(`❌ No se encontraron items ni en additional_info ni en metadata.`);
+                return;
+            }
+
+            // ===============================
+            // 📝 Insertar transaction_items
+            // ===============================
+            console.log(`🧩 Insertando ${items.length} items en transaction_items...`);
+
+            for (const item of items) {
+                const precioUnitario = item.precio;
+                const subtotal = item.precio * item.cantidad;
+
+                await this.transactionRepository.query(
+                    `INSERT INTO transaction_items 
+                    (transaction_id, tipoAviso, cantidad, precioUnitario, subtotal)
+                    VALUES (?, ?, ?, ?, ?)`,
+                    [tx.id, item.tipo, item.cantidad, precioUnitario, subtotal]
+                );
+            }
+
+            // ===============================
+            // 📦 Procesar stock igual que Webpay
+            // ===============================
+            await this.stockService.processTransactionStock(tx.id, empresaId);
+
+            console.log(`✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${tx.orderId})`);
+
+            console.log(`🎉 Compra procesada correctamente → ${tx.orderId}`);
         } catch (error) {
             console.error('❌ Error procesando notificación de Mercado Pago:', error);
         }
     }
+
 
 
 
