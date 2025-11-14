@@ -1,6 +1,15 @@
 import { PrimaryGeneratedColumn, Column, Entity, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { Empresa } from "../business/business.entity";
 
+export enum PlanPriority {
+    GRATIS = 0,
+    BASICO = 1,
+    ESTANDAR = 2,
+    DESTACADO = 3,
+    PREMIUM = 4,
+}
+
+
 @Entity('planes')
 export class Planes {
     @PrimaryGeneratedColumn()
@@ -17,6 +26,12 @@ export class Planes {
 
     @OneToMany(() => Empresa, (empresa) => empresa.plan)
     empresa: Empresa[];
+
+    @Column({
+        type: 'int',
+        default: PlanPriority.GRATIS,
+    })
+    priority: PlanPriority;
 
     @CreateDateColumn({ type: 'datetime', nullable: false })
     fecha_creacion: Date;

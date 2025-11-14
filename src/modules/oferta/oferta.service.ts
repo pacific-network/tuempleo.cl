@@ -11,7 +11,13 @@ import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
 import { StockService } from "../stock/stock.service";
-import { Order } from "src/shared/pagination/constants";
+
+const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
+  GRATIS: 0,
+  BASICO: 1,
+  ESTANDAR: 2,
+  PREMIUM: 4,
+};
 
 @Injectable()
 export class OfertaService {
@@ -97,6 +103,62 @@ export class OfertaService {
   // ======================================================
   // 🟩 CREAR OFERTA
   // ======================================================
+  // async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
+  //   // 1️⃣ Empleador
+  //   const empleador = await this.empleadorRepository.findOne({
+  //     where: { id: data.empleador_id },
+  //   });
+  //   if (!empleador)
+  //     throw new NotFoundException(`Empleador con ID ${data.empleador_id} no encontrado`);
+
+  //   // 2️⃣ Empresa
+  //   const empresa = await this.empresaRepository.findOne({
+  //     where: { id: data.empresa_id },
+  //   });
+  //   if (!empresa)
+  //     throw new NotFoundException(`Empresa con ID ${data.empresa_id} no encontrada`);
+
+  //   // 3️⃣ Verificar crédito si NO es GRATIS
+  //   if (data.tipo_aviso !== 'GRATIS') {
+  //     await this.StockService.useCredit(
+  //       data.empresa_id,
+  //       data.tipo_aviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM'
+  //     );
+  //   }
+
+  //   // 4️⃣ Calcular fechas seguras
+  //   const publicacion = data.fecha_publicacion ? new Date(data.fecha_publicacion) : new Date();
+  //   const duracion = data.duracion_publicacion ?? 30;
+
+  //   const fecha_cierre = data.fecha_cierre
+  //     ? new Date(data.fecha_cierre)
+  //     : new Date(publicacion.getTime() + duracion * 24 * 60 * 60 * 1000);
+
+  //   // 5️⃣ Crear la oferta
+  //   const nuevaOferta: Partial<Oferta> = {
+  //     titulo: data.titulo,
+  //     tipo_aviso: data.tipo_aviso as any,
+  //     empresa,
+  //     empleador,
+  //     fecha_publicacion: publicacion,
+  //     duracion_publicacion: duracion,
+  //     fecha_cierre,
+  //     es_activa: data.es_activa ?? true,
+  //     data: JSON.stringify(data.data), // 👈 CORREGIDO
+  //   };
+
+  //   const oferta = this.ofertaRepository.create(nuevaOferta);
+  //   const saved = await this.ofertaRepository.save(oferta);
+
+  //   console.log(
+  //     `🧾 Oferta creada correctamente: ${saved.titulo} (Empresa ${empresa.id})` +
+  //     (data.tipo_aviso === 'GRATIS'
+  //       ? ' - Aviso gratuito (no descuenta stock)'
+  //       : ` - Crédito descontado (${data.tipo_aviso})`)
+  //   );
+
+  //   return saved;
+  // }
   async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
     // 1️⃣ Empleador
     const empleador = await this.empleadorRepository.findOne({
@@ -128,17 +190,21 @@ export class OfertaService {
       ? new Date(data.fecha_cierre)
       : new Date(publicacion.getTime() + duracion * 24 * 60 * 60 * 1000);
 
-    // 5️⃣ Crear la oferta
+    // 5️⃣ Determinar PRIORIDAD automática
+    const prioridad = priorityMap[data.tipo_aviso];
+
+    // 6️⃣ Crear la oferta
     const nuevaOferta: Partial<Oferta> = {
       titulo: data.titulo,
-      tipo_aviso: data.tipo_aviso as any,
+      tipo_aviso: data.tipo_aviso,
       empresa,
       empleador,
       fecha_publicacion: publicacion,
       duracion_publicacion: duracion,
       fecha_cierre,
       es_activa: data.es_activa ?? true,
-      data: JSON.stringify(data.data), // 👈 CORREGIDO
+      data: JSON.stringify(data.data),
+      priority: prioridad,  // 👈 AQUI QUEDA LA PRIORIDAD AUTOMÁTICA
     };
 
     const oferta = this.ofertaRepository.create(nuevaOferta);
@@ -153,6 +219,7 @@ export class OfertaService {
 
     return saved;
   }
+
 
 
   // ======================================================
@@ -171,9 +238,6 @@ export class OfertaService {
   // ======================================================
   // 📋 OBTENER OFERTAS POR EMPLEADOR
   // ======================================================
-  // oferta.service.ts
-
-
   async obtenerOfertasPorEmpleador(
     empleadorId: number,
     pageOptions: PageOptionsDto
@@ -185,22 +249,10 @@ export class OfertaService {
       .skip(pageOptions.skip)
       .take(pageOptions.take);
 
-    // ✅ Orden dinámico usando tu enum Order
-    const orderDirection =
-      pageOptions.order === Order.DESC ? 'DESC' : 'ASC';
-
-    qb.orderBy('oferta.id', orderDirection);
-    // 👆 puedes cambiar 'oferta.id' por 'oferta.createdAt' o cualquier campo que represente el orden lógico
-
     const [entities, itemCount] = await qb.getManyAndCount();
-    const meta = new PageMetaDto({
-      pageOptionsDto: pageOptions,
-      itemCount,
-    });
-
+    const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
     return new PageDto(entities, meta);
   }
-
 
   // ======================================================
   // ❌ ELIMINAR OFERTA

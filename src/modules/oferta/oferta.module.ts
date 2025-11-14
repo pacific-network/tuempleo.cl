@@ -9,6 +9,7 @@ import { OfertaController } from "./oferta.controller";
 import { StockModule } from "../stock/stock.module";
 import { CountVisitService } from "./count-visit.service";
 import { CountVisit } from "src/repository/count_visits/count-visits.entity";
+import { Planes } from "src/repository/plans/plans.entity";
 
 @Module({
   imports: [
