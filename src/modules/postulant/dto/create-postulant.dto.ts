@@ -5,6 +5,7 @@ export class PostulantDataDto {
 
     @IsOptional()
     datos_personales?: {
+        direccion?: string;
         comuna: string;
         genero: string;
         region: string;
@@ -45,7 +46,8 @@ export class PostulantDataDto {
     preferencias?: {
         modalidad: string;
         categoria_empleo: string;
-        salario_esperado: string;
+        salario_esperado: number;
+        objetivo_laboral?: string;
     };
 
     @IsOptional()
