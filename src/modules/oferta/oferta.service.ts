@@ -11,6 +11,7 @@ import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
 import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
 import { StockService } from "../stock/stock.service";
+import { jobOfferRepository } from "../../repository/job_offer/job-offer.repository";
 
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
@@ -29,6 +30,7 @@ export class OfertaService {
     @InjectRepository(Empresa)
     private readonly empresaRepository: Repository<Empresa>,
     private readonly StockService: StockService,
+    private readonly jobOfferRepository: jobOfferRepository,
   ) { }
 
   // ======================================================
@@ -328,4 +330,11 @@ export class OfertaService {
 
     return ofertas;
   }
+
+  async getJobsOffersPriority(pageOptionsDto: PageOptionsDto) {
+    return this.jobOfferRepository.getJobsOffersPriority(pageOptionsDto);
+  }
+
+
+
 }

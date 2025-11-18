@@ -1,58 +1,48 @@
-import { Injectable } from '@nestjs/common';
+//src/modules/auth/strategies/linkedin.strategy.ts
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-oauth2';
-import axios from 'axios';
-
-const clientID = process.env.LINKEDIN_CLIENT_ID!;
-const clientSecret = process.env.LINKEDIN_CLIENT_SECRET!;
-const callbackURL = process.env.LINKEDIN_CALLBACK_URL!;
+import { Injectable } from '@nestjs/common';
+import { Strategy as LinkedInStrategyBase, StrategyOption } from 'passport-linkedin-oauth2';
+import { Profile } from 'passport';
 
 @Injectable()
-export class LinkedInStrategy extends PassportStrategy(Strategy, 'linkedin') {
+export class LinkedInStrategy extends PassportStrategy(LinkedInStrategyBase, 'linkedin') {
   constructor() {
-    if (!clientID || !clientSecret || !callbackURL) {
-      throw new Error('Faltan variables de entorno para LinkedIn OAuth');
-    }
+    const options: StrategyOption = {
+      clientID: process.env.LINKEDIN_CLIENT_ID || '',
+      clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+      callbackURL: process.env.LINKEDIN_CALLBACK_URL || '',
+      scope: ['openid', 'profile', 'email']// scopes correctos para linkedin
+    };
 
-    super({
-      authorizationURL: 'https://www.linkedin.com/oauth/v2/authorization',
-      tokenURL: 'https://www.linkedin.com/oauth/v2/accessToken',
-      clientID,
-      clientSecret,
-      callbackURL,
-      scope: ['openid', 'profile', 'email'],
-      state: true,
-    });
+    super(options);
   }
 
-  async validate(accessToken: string, _refreshToken: string, _profile: any, done: Function) {
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: Profile,
+    done: (error: any, user?: any) => void,
+  ) {
     try {
-      console.log('[LinkedInStrategy] Access Token:', accessToken);
-
-      const userInfoRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      console.log('[LinkedInStrategy] Response completa de /userinfo:');
-      console.dir(userInfoRes.data, { depth: null });
+      const email = profile.emails?.[0]?.value ?? null;
+      const photo = profile.photos?.[0]?.value ?? null;
+      const givenName = profile.name?.givenName ?? '';
+      const familyName = profile.name?.familyName ?? '';
+      const name = `${givenName} ${familyName}`.trim();
 
       const user = {
-        id: userInfoRes.data.sub,
-        name: userInfoRes.data.name,
-        email: userInfoRes.data.email,
-        picture: userInfoRes.data.picture,
+        id: profile.id,
+        email,
+        name,
+        photo,
         provider: 'linkedin',
-        accessToken,
+        accessToken, // opcional: puede ser útil para acceder a la API de LinkedIn después
       };
 
-      console.log('[LinkedInStrategy] Usuario final mapeado:', user);
-
       done(null, user);
-    } catch (err) {
-      console.error('[LinkedInStrategy] Error al obtener datos del userinfo:', err?.response?.data || err.message || err);
-      done(err, false);
+    } catch (error) {
+      console.error('[LinkedInStrategy] Error en validate:', error);
+      done(error, false);
     }
   }
 }
