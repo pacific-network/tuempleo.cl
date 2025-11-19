@@ -33,6 +33,9 @@ export class Planes {
     })
     priority: PlanPriority;
 
+    @Column({ type: 'int', default: 0 })
+    cupos: number;
+
     @CreateDateColumn({ type: 'datetime', nullable: false })
     fecha_creacion: Date;
 
