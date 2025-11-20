@@ -138,15 +138,31 @@ export class ProcesoSeleccionService {
         }));
     }
 
-    async cualificarPostulante(postulacionId: number, empleadorId: number) {
-        const postulacion = await this.postulacionRepo.findOne({ where: { id: postulacionId } });
-        if (!postulacion) throw new NotFoundException('Postulación no encontrada');
-        //validar que el empleador es dueno de la oferta
-        if (postulacion.oferta.empleador.id !== empleadorId) {
+    async cualificarPostulante(postulacionId: number, userId: number) {
+        const postulacion = await this.postulacionRepo.findOne({
+            where: { id: postulacionId },
+            relations: ['oferta', 'oferta.empleador', 'oferta.empleador.usuario', 'postulante'],
+        });
+
+        if (!postulacion) {
+            throw new NotFoundException('Postulación no encontrada');
+        }
+
+        // Aquí la validación correcta:
+        // El dueño de la oferta es el empleador.usuario.id
+        if (postulacion.oferta.empleador.usuario.id !== userId) {
             throw new BadRequestException('El empleador no es dueño de la oferta');
         }
+
         postulacion.estado = 'cualificado';
+
         return this.postulacionRepo.save(postulacion);
     }
+
+
+
+
+
+
 
 }
