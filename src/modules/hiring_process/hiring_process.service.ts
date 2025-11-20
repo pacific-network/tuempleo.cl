@@ -81,6 +81,8 @@ export class ProcesoSeleccionService {
         console.log('Fin gestionarSeleccion');
         return { success: true };
     }
+
+
     async listarProcesosDelPostulante(userId: number) {
         // Devuelve los procesos que tocan postulaciones cuyo postulante pertenece al usuario autenticado
         return this.procesoRepo
@@ -134,6 +136,17 @@ export class ProcesoSeleccionService {
                 },
             },
         }));
+    }
+
+    async cualificarPostulante(postulacionId: number, empleadorId: number) {
+        const postulacion = await this.postulacionRepo.findOne({ where: { id: postulacionId } });
+        if (!postulacion) throw new NotFoundException('Postulación no encontrada');
+        //validar que el empleador es dueno de la oferta
+        if (postulacion.oferta.empleador.id !== empleadorId) {
+            throw new BadRequestException('El empleador no es dueño de la oferta');
+        }
+        postulacion.estado = 'cualificado';
+        return this.postulacionRepo.save(postulacion);
     }
 
 }

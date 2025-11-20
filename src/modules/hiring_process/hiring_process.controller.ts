@@ -49,4 +49,16 @@ export class ProcesoSeleccionController {
         return this.seleccionService.listarPostulacionesPorEmpresa(Number(empresaId));
     }
 
+    @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/cualificar')
+    cualificar(
+        @Param('postulacionId', ParseIntPipe) postulacionId: number,
+        @Req() req,
+    ) {
+        const empleadorId = req.user.userId;
+        return this.seleccionService.cualificarPostulante(postulacionId, empleadorId);
+    }
+
+
+
 }

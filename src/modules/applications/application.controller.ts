@@ -9,7 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 @Controller('v1/postulaciones')
 export class PostulacionController {
-  constructor(private readonly postulacionService: PostulacionService) {}
+  constructor(private readonly postulacionService: PostulacionService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -26,13 +26,22 @@ export class PostulacionController {
   }
 
   // ✅ FIX: leer ofertaId desde el path param
+  // @Get('oferta/:ofertaId')
+  // @HttpCode(HttpStatus.OK)
+  // async obtenerPorOferta(
+  //   @Param('ofertaId', ParseIntPipe) ofertaId: number,
+  // ): Promise<Postulacion[]> {
+  //   return this.postulacionService.obtenerPostulacionesPorOferta(ofertaId);
+  // }
   @Get('oferta/:ofertaId')
   @HttpCode(HttpStatus.OK)
   async obtenerPorOferta(
     @Param('ofertaId', ParseIntPipe) ofertaId: number,
+    @Query('keywords') keywords?: string,  // 👈 filtro opcional
   ): Promise<Postulacion[]> {
-    return this.postulacionService.obtenerPostulacionesPorOferta(ofertaId);
+    return this.postulacionService.obtenerPostulacionesPorOferta(ofertaId, keywords);
   }
+
 
   // ✅ total de postulantes ÚNICOS para una oferta
   @Get('oferta/:ofertaId/count')

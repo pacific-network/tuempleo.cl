@@ -55,16 +55,74 @@ export class PostulacionService {
     });
   }
 
-  async obtenerPostulacionesPorOferta(ofertaId: number): Promise<Postulacion[]> {
+  async obtenerPostulacionesPorOferta(
+    ofertaId: number,
+    keywords?: string
+  ): Promise<Postulacion[]> {
+  
     const oferta = await this.ofertaRepository.findOne({ where: { id: ofertaId } });
     if (!oferta) throw new NotFoundException(`Oferta con ID ${ofertaId} no encontrada`);
-
-    return this.postulacionRepository.find({
+  
+    // 1. Obtener postulaciones con joins
+    const postulaciones = await this.postulacionRepository.find({
       where: { oferta: { id: ofertaId } },
       relations: ['postulante', 'postulante.usuario'],
       order: { fechaPostulacion: 'DESC' },
     });
+  
+    // 2. Si no hay keywords ⇒ retornar todo normal
+    if (!keywords || keywords.trim() === "") {
+      return postulaciones;
+    }
+  
+    // 3. Normalizar keywords
+    const keyword = keywords.toLowerCase();
+  
+    // 4. Filtrar a mano sobre los campos permitidos
+    const filtradas = postulaciones.filter((post) => {
+      const data = post.postulante.data;
+  
+      if (!data) return false;
+  
+      // EDUCACIÓN → título
+      const educacion = data.datos_personales?.educacion || [];
+      const matchTitulo = educacion.some(e =>
+        e.titulo?.toLowerCase().includes(keyword)
+      );
+  
+      // EXPERIENCIA → cargo + empresa
+      const experiencia = data.experiencias || [];
+      const matchExperiencia = experiencia.some(exp =>
+        exp.cargo?.toLowerCase().includes(keyword) ||
+        exp.empresa?.toLowerCase().includes(keyword)
+      );
+  
+      // IDIOMAS → idioma
+      const idiomas = data.idiomas || [];
+      const matchIdioma = idiomas.some(id =>
+        id.idioma?.toLowerCase().includes(keyword)
+      );
+  
+      // PREFERENCIAS → modalidad
+      const modalidad = data.preferencias?.modalidad?.toLowerCase() || "";
+      const matchModalidad = modalidad.includes(keyword);
+  
+      // PREFERENCIAS → categoría empleo
+      const categoria = data.preferencias?.categoria_empleo?.toLowerCase() || "";
+      const matchCategoria = categoria.includes(keyword);
+  
+      return (
+        matchTitulo ||
+        matchExperiencia ||
+        matchIdioma ||
+        matchModalidad ||
+        matchCategoria
+      );
+    });
+  
+    return filtradas;
   }
+  
 
   // ─────────────────────────────────────────────────────────
   //   NUEVO: conteo de postulantes ÚNICOS (COUNT DISTINCT)
