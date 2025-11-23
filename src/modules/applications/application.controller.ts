@@ -75,4 +75,16 @@ export class PostulacionController {
       .filter(n => Number.isFinite(n));
     return this.postulacionService.countDistinctByOfertaIds(ofertaIds);
   }
+
+  @Get('oferta/:id/cualificados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerCualificados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.obtenerPostulantesCualificados(ofertaId, userId);
+  }
+
 }

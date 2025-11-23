@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Postulacion } from '../../repository/applications/applications.entity';
@@ -69,9 +69,9 @@ export class PostulacionService {
       order: { fechaPostulacion: 'DESC' },
     });
 
-    // 🟦 NUEVO → manejar si la oferta existe pero no tiene postulaciones
+    // 🟦 CAMBIO → Si no hay postulaciones, devolver []
     if (postulaciones.length === 0) {
-      throw new NotFoundException(`La oferta con ID ${ofertaId} no tiene postulaciones`);
+      return [];
     }
 
     // Si no hay keywords: retornar todo
@@ -79,40 +79,25 @@ export class PostulacionService {
       return postulaciones;
     }
 
-    // 3. Normalizar keywords
     const keyword = keywords.toLowerCase();
 
-    // 4. Filtrar a mano sobre los campos permitidos
     const filtradas = postulaciones.filter((post) => {
       const data = post.postulante.data;
-
       if (!data) return false;
 
-      // EDUCACIÓN → título
       const educacion = data.datos_personales?.educacion || [];
-      const matchTitulo = educacion.some(e =>
-        e.titulo?.toLowerCase().includes(keyword)
-      );
-
-      // EXPERIENCIA → cargo + empresa
       const experiencia = data.experiencias || [];
+      const idiomas = data.idiomas || [];
+      const modalidad = data.preferencias?.modalidad?.toLowerCase() || "";
+      const categoria = data.preferencias?.categoria_empleo?.toLowerCase() || "";
+
+      const matchTitulo = educacion.some(e => e.titulo?.toLowerCase().includes(keyword));
       const matchExperiencia = experiencia.some(exp =>
         exp.cargo?.toLowerCase().includes(keyword) ||
         exp.empresa?.toLowerCase().includes(keyword)
       );
-
-      // IDIOMAS → idioma
-      const idiomas = data.idiomas || [];
-      const matchIdioma = idiomas.some(id =>
-        id.idioma?.toLowerCase().includes(keyword)
-      );
-
-      // PREFERENCIAS → modalidad
-      const modalidad = data.preferencias?.modalidad?.toLowerCase() || "";
+      const matchIdioma = idiomas.some(id => id.idioma?.toLowerCase().includes(keyword));
       const matchModalidad = modalidad.includes(keyword);
-
-      // PREFERENCIAS → categoría empleo
-      const categoria = data.preferencias?.categoria_empleo?.toLowerCase() || "";
       const matchCategoria = categoria.includes(keyword);
 
       return (
@@ -126,6 +111,7 @@ export class PostulacionService {
 
     return filtradas;
   }
+
 
 
   // ─────────────────────────────────────────────────────────
@@ -188,4 +174,33 @@ export class PostulacionService {
     rows.forEach(r => (map[Number(r.oferta_id)] = Number(r.total) || 0));
     return map;
   }
+
+  async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
+    // 1. Validamos que la oferta exista y sea del empleador
+    const oferta = await this.ofertaRepository.findOne({
+      where: { id: ofertaId },
+      relations: ['empleador', 'empleador.usuario'],
+    });
+
+    if (!oferta) {
+      throw new NotFoundException('La oferta no existe');
+    }
+
+    if (oferta.empleador.usuario.id !== userId) {
+      throw new BadRequestException('El empleador no es dueño de la oferta');
+    }
+
+    // 2. Obtenemos solo postulaciones en estado "cualificado"
+    const cualificados = await this.postulacionRepository.find({
+      where: {
+        oferta: { id: ofertaId },
+        estado: 'cualificado',
+      },
+      relations: ['postulante'],
+      order: { fechaPostulacion: 'DESC' },
+    });
+
+    return cualificados;
+  }
+
 }
