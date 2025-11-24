@@ -17,6 +17,16 @@ export class ProcesoSeleccionController {
     }
 
     @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/seleccionar')
+    seleccionar(
+        @Param('postulacionId', ParseIntPipe) postulacionId: number,
+        @Req() req,
+    ) {
+        const empleadorId = req.user.userId;  // cambio aquí: userId en vez de id
+        return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'seleccionado');
+    }
+
+    @UseGuards(AuthGuard('jwt'))
     @Patch(':postulacionId/descartar')
     descartar(
         @Param('postulacionId', ParseIntPipe) postulacionId: number,
@@ -59,7 +69,7 @@ export class ProcesoSeleccionController {
         return this.seleccionService.listarPostulacionesPorEmpresa(Number(empresaId));
     }
 
- 
+
 
 
 

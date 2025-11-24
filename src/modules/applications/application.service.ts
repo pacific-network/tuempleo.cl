@@ -175,6 +175,33 @@ export class PostulacionService {
     return map;
   }
 
+  // async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
+  //   // 1. Validamos que la oferta exista y sea del empleador
+  //   const oferta = await this.ofertaRepository.findOne({
+  //     where: { id: ofertaId },
+  //     relations: ['empleador', 'empleador.usuario'],
+  //   });
+
+  //   if (!oferta) {
+  //     throw new NotFoundException('La oferta no existe');
+  //   }
+
+  //   if (oferta.empleador.usuario.id !== userId) {
+  //     throw new BadRequestException('El empleador no es dueño de la oferta');
+  //   }
+
+  //   // 2. Obtenemos solo postulaciones en estado "cualificado"
+  //   const cualificados = await this.postulacionRepository.find({
+  //     where: {
+  //       oferta: { id: ofertaId },
+  //       estado: 'cualificado',
+  //     },
+  //     relations: ['postulante'],
+  //     order: { fechaPostulacion: 'DESC' },
+  //   });
+
+  //   return cualificados;
+  // }
   async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
     // 1. Validamos que la oferta exista y sea del empleador
     const oferta = await this.ofertaRepository.findOne({
@@ -190,17 +217,19 @@ export class PostulacionService {
       throw new BadRequestException('El empleador no es dueño de la oferta');
     }
 
-    // 2. Obtenemos solo postulaciones en estado "cualificado"
+    // 2. Obtenemos postulaciones con estado "cualificado"
+    // 🔥 Aquí está el cambio importante: agregamos postulante.usuario
     const cualificados = await this.postulacionRepository.find({
       where: {
         oferta: { id: ofertaId },
         estado: 'cualificado',
       },
-      relations: ['postulante'],
+      relations: ['postulante', 'postulante.usuario'],
       order: { fechaPostulacion: 'DESC' },
     });
 
     return cualificados;
   }
+
 
 }

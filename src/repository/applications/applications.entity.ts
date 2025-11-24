@@ -32,9 +32,9 @@ export class Postulacion {
 
   @Column({
     type: 'enum',
-    enum: ['enviada', 'vista', 'en_revision', 'cualificado','preseleccionado', 'no_seleccionado', 'cancelada', 'contratado'],
+    enum: ['enviada', 'vista', 'en_revision', 'cualificado', 'preseleccionado', 'seleccionado', 'no_seleccionado', 'cancelada', 'contratado'],
     default: 'enviada',
   })
-  estado: 'enviada' | 'vista' | 'en_revision' | 'cualificado'|'preseleccionado' | 'no_seleccionado' | 'cancelada' | 'contratado';
+  estado: 'enviada' | 'vista' | 'en_revision' | 'cualificado' | 'preseleccionado' | 'seleccionado' | 'no_seleccionado' | 'cancelada' | 'contratado';
 
 }

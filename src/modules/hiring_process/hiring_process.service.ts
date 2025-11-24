@@ -21,7 +21,7 @@ export class ProcesoSeleccionService {
     async gestionarSeleccion(
         postulacionId: number,
         empleadorId: number,
-        estado: 'preseleccionado' | 'descartado' | 'contratado',
+        estado: 'preseleccionado' | 'seleccionado' | 'descartado' | 'contratado',
         observaciones?: string,
     ) {
         console.log('Inicio gestionarSeleccion');
@@ -51,6 +51,9 @@ export class ProcesoSeleccionService {
         switch (estado) {
             case 'preseleccionado':
                 estadoPostulacion = 'preseleccionado';
+                break;
+            case 'seleccionado':
+                estadoPostulacion = 'seleccionado';
                 break;
             case 'descartado':
                 estadoPostulacion = 'no_seleccionado';
