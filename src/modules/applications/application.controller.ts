@@ -87,4 +87,15 @@ export class PostulacionController {
     return this.postulacionService.obtenerPostulantesCualificados(ofertaId, userId);
   }
 
+  @Get('oferta/:id/preseleccionados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerPreseleccionados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesPreseleccionados(ofertaId, userId);
+  }
+
 }

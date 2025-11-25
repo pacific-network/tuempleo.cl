@@ -231,5 +231,35 @@ export class PostulacionService {
     return cualificados;
   }
 
+  async ObtenerPostulantesPreseleccionados(ofertaId: number, userId: number) {
+    // 1. Validamos que la oferta exista y sea del empleador
+    const oferta = await this.ofertaRepository.findOne({
+      where: { id: ofertaId },
+      relations: ['empleador', 'empleador.usuario'],
+    });
+
+    if (!oferta) {
+      throw new NotFoundException('La oferta no existe');
+    }
+
+    if (oferta.empleador.usuario.id !== userId) {
+      throw new BadRequestException('El empleador no es dueño de la oferta');
+    }
+
+    // 2. Obtenemos postulaciones con estado "cualificado"
+    // 🔥 Aquí está el cambio importante: agregamos postulante.usuario
+    const preselecionados = await this.postulacionRepository.find({
+      where: {
+        oferta: { id: ofertaId },
+        estado: 'preseleccionado',
+      },
+      relations: ['postulante', 'postulante.usuario'],
+      order: { fechaPostulacion: 'DESC' },
+    });
+
+    return preselecionados;
+  }
+
+
 
 }
