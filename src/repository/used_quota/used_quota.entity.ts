@@ -10,13 +10,10 @@ export class CuposUsados {
     empresa_id: number;
 
     @Column({ type: 'int' })
-    plan_id: number;
-
-    @Column({ type: 'int' })
     oferta_id: number;
 
     @Column({ type: 'int' })
-    postulante_id: number;
+    usuario_id: number;
 
     @Column({ type: 'varchar', length: 20 })
     action: string; // view | download
