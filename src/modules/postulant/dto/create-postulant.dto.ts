@@ -1,72 +1,166 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+
+/* ============================
+   SUB-CLASES INTERNAS ROBUSTAS
+=============================== */
+
+class DatosPersonalesDto {
+  @IsOptional()
+  @IsString()
+  direccion?: string;
+
+  @IsString()
+  comuna: string;
+
+  @IsString()
+  genero: string;
+
+  @IsString()
+  region: string;
+
+  @IsString()
+  telefono: string;
+
+  @IsString()
+  estado_civil: string;
+
+  @IsString()
+  nacionalidad: string;
+
+  @IsString()
+  fecha_nacimiento: string;
+}
+
+class EducacionDto {
+  @IsString()
+  titulo: string;
+
+  @IsString()
+  institucion: string;
+
+  @IsString()
+  tipo_estudio: string;
+
+  @IsString()
+  estado: string;
+
+  @IsString()
+  anno_inicio: string;
+
+  @IsOptional()
+  @IsString()
+  anno_termino?: string;
+}
+
+class ExperienciaDto {
+  @IsString()
+  cargo: string;
+
+  @IsString()
+  empresa: string;
+
+  @IsString()
+  anno_inicio: string;
+
+  @IsString()
+  descripcion: string;
+
+  @IsOptional()
+  @IsString()
+  anno_termino?: string;
+
+  @IsString()
+  nivel_experiencia: string;
+}
+
+class IdiomaDto {
+  @IsString()
+  idioma: string;
+
+  @IsString()
+  nivel_oral: string;
+
+  @IsString()
+  nivel_escrito: string;
+}
+
+class PreferenciasDto {
+  @IsString()
+  modalidad: string;
+
+  @IsString()
+  categoria_empleo: string;
+
+  @IsNumber()
+  salario_esperado: number;
+
+  @IsOptional()
+  @IsString()
+  objetivo_laboral?: string;
+}
+
+class RedSocialDto {
+  @IsString()
+  url: string;
+
+  @IsString()
+  red_social: string;
+}
+
+/* ============================
+       DTO PRINCIPAL
+=============================== */
 
 export class PostulantDataDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DatosPersonalesDto)
+  datos_personales?: DatosPersonalesDto;
 
-    @IsOptional()
-    datos_personales?: {
-        comuna: string;
-        genero: string;
-        region: string;
-        telefono: string;
-        estado_civil: string;
-        nacionalidad: string;
-        fecha_nacimiento: string;
-    };
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => EducacionDto)
+  educacion?: EducacionDto[];
 
-    @IsOptional()
-    educacion?: {
-        titulo: string;
-        institucion: string;
-        tipo_estudio: string;
-        estado: string;
-        anno_inicio: string;
-        anno_termino?: string;
-    }[];
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ExperienciaDto)
+  experiencias?: ExperienciaDto[];
 
-    @IsOptional()
-    experiencias?: {
-        cargo: string;
-        empresa: string;
-        anno_inicio: string;
-        descripcion: string;
-        anno_termino?: string;
-        nivel_experiencia: string;
-    }[];
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => IdiomaDto)
+  idiomas?: IdiomaDto[];
 
-    @IsOptional()
-    idiomas?: {
-        idioma: string;
-        nivel_oral: string;
-        nivel_escrito: string;
-    }[];
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PreferenciasDto)
+  preferencias?: PreferenciasDto;
 
-    @IsOptional()
-    preferencias?: {
-        modalidad: string;
-        categoria_empleo: string;
-        salario_esperado: string;
-    };
-
-    @IsOptional()
-    redes_sociales?: {
-        url: string;
-        red_social: string;
-    }[];
-
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => RedSocialDto)
+  redes_sociales?: RedSocialDto[];
 }
 
 export class CreatePostulantDto {
+  @IsNotEmpty()
+  @IsString()
+  rut: string;
 
-    @IsNotEmpty()
-    @IsString()
-    rut: string;
+  @IsNotEmpty()
+  @IsNumber()
+  userId: number;
 
-    @IsNotEmpty()
-    @IsNumber()
-    userId: number;
-
-    @IsOptional()
-    @Type(() => PostulantDataDto)
-    data?: PostulantDataDto;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PostulantDataDto)
+  data?: PostulantDataDto;
 }

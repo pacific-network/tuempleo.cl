@@ -65,6 +65,17 @@ export class Oferta {
     // 🧮 Total acumulado de visitas únicas
     @Column({ type: 'int', default: 0, name: 'visits_total' })
     visitsTotal: number;
+    @Column({ type: 'int', default: 0 })
+    priority: number;
+
+    @Column({ type: 'int', default: 1 })
+    numero_vacantes: number;
+    @Column({
+        type: 'enum',
+        enum: ['publicada', 'en_proceso', 'completada', 'expirada', 'eliminada'],
+        default: 'publicada'
+    })
+    estado: 'publicada' | 'en_proceso' | 'completada' | 'expirada' | 'eliminada';
 
     @DeleteDateColumn({ name: 'fecha_eliminacion' })
     fecha_eliminacion: Date;

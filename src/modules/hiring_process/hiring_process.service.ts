@@ -21,7 +21,7 @@ export class ProcesoSeleccionService {
     async gestionarSeleccion(
         postulacionId: number,
         empleadorId: number,
-        estado: 'preseleccionado' | 'descartado' | 'contratado',
+        estado: 'preseleccionado' | 'seleccionado' | 'descartado' | 'contratado',
         observaciones?: string,
     ) {
         console.log('Inicio gestionarSeleccion');
@@ -52,6 +52,9 @@ export class ProcesoSeleccionService {
             case 'preseleccionado':
                 estadoPostulacion = 'preseleccionado';
                 break;
+            case 'seleccionado':
+                estadoPostulacion = 'seleccionado';
+                break;
             case 'descartado':
                 estadoPostulacion = 'no_seleccionado';
                 break;
@@ -81,6 +84,8 @@ export class ProcesoSeleccionService {
         console.log('Fin gestionarSeleccion');
         return { success: true };
     }
+
+
     async listarProcesosDelPostulante(userId: number) {
         // Devuelve los procesos que tocan postulaciones cuyo postulante pertenece al usuario autenticado
         return this.procesoRepo
@@ -135,5 +140,37 @@ export class ProcesoSeleccionService {
             },
         }));
     }
+
+    async cualificarPostulante(postulacionId: number, userId: number) {
+        const postulacion = await this.postulacionRepo.findOne({
+            where: { id: postulacionId },
+            relations: ['oferta', 'oferta.empleador', 'oferta.empleador.usuario', 'postulante'],
+        });
+
+        if (!postulacion) {
+            throw new NotFoundException('Postulación no encontrada');
+        }
+
+        // Aquí la validación correcta:
+        // El dueño de la oferta es el empleador.usuario.id
+        if (postulacion.oferta.empleador.usuario.id !== userId) {
+            throw new BadRequestException('El empleador no es dueño de la oferta');
+        }
+
+        postulacion.estado = 'cualificado';
+
+        return this.postulacionRepo.save(postulacion);
+    }
+
+
+
+
+
+
+
+
+
+
+
 
 }

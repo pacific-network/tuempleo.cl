@@ -17,6 +17,16 @@ export class ProcesoSeleccionController {
     }
 
     @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/seleccionar')
+    seleccionar(
+        @Param('postulacionId', ParseIntPipe) postulacionId: number,
+        @Req() req,
+    ) {
+        const empleadorId = req.user.userId;  // cambio aquí: userId en vez de id
+        return this.seleccionService.gestionarSeleccion(postulacionId, empleadorId, 'seleccionado');
+    }
+
+    @UseGuards(AuthGuard('jwt'))
     @Patch(':postulacionId/descartar')
     descartar(
         @Param('postulacionId', ParseIntPipe) postulacionId: number,
@@ -37,6 +47,16 @@ export class ProcesoSeleccionController {
     }
 
     @UseGuards(AuthGuard('jwt'))
+    @Patch(':postulacionId/cualificar')
+    cualificar(
+        @Param('postulacionId', ParseIntPipe) postulacionId: number,
+        @Req() req,
+    ) {
+        const empleadorId = req.user.userId;
+        return this.seleccionService.cualificarPostulante(postulacionId, empleadorId);
+    }
+
+    @UseGuards(AuthGuard('jwt'))
     @Get('mias')
     async misNotificaciones(@Req() req) {
         const userId = req.user.userId; // id del Usuario (postulante)
@@ -48,5 +68,9 @@ export class ProcesoSeleccionController {
     async listarPorEmpresa(@Param('empresaId') empresaId: number) {
         return this.seleccionService.listarPostulacionesPorEmpresa(Number(empresaId));
     }
+
+
+
+
 
 }

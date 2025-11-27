@@ -1,10 +1,11 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Postulacion } from '../../repository/applications/applications.entity';
 import { CreatePostulacionDto } from './dto/create-postulacion.dto';
 import { Postulante } from '../../repository/postulant/postulant.entity';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
+import { EstadoPostulacion } from './enum/states.enum';
 
 @Injectable()
 export class PostulacionService {
@@ -17,7 +18,7 @@ export class PostulacionService {
 
     @InjectRepository(Oferta)
     private readonly ofertaRepository: Repository<Oferta>,
-  ) {}
+  ) { }
 
   async crearPostulacion(dto: CreatePostulacionDto): Promise<Postulacion> {
     const postulante = await this.postulanteRepository.findOne({ where: { id: dto.postulante_id } });
@@ -55,16 +56,64 @@ export class PostulacionService {
     });
   }
 
-  async obtenerPostulacionesPorOferta(ofertaId: number): Promise<Postulacion[]> {
+  async obtenerPostulacionesPorOferta(
+    ofertaId: number,
+    keywords?: string
+  ): Promise<Postulacion[]> {
+
     const oferta = await this.ofertaRepository.findOne({ where: { id: ofertaId } });
     if (!oferta) throw new NotFoundException(`Oferta con ID ${ofertaId} no encontrada`);
 
-    return this.postulacionRepository.find({
+    const postulaciones = await this.postulacionRepository.find({
       where: { oferta: { id: ofertaId } },
       relations: ['postulante', 'postulante.usuario'],
       order: { fechaPostulacion: 'DESC' },
     });
+
+    // 🟦 CAMBIO → Si no hay postulaciones, devolver []
+    if (postulaciones.length === 0) {
+      return [];
+    }
+
+    // Si no hay keywords: retornar todo
+    if (!keywords || keywords.trim() === "") {
+      return postulaciones;
+    }
+
+    const keyword = keywords.toLowerCase();
+
+    const filtradas = postulaciones.filter((post) => {
+      const data = post.postulante.data;
+      if (!data) return false;
+
+      const educacion = data.datos_personales?.educacion || [];
+      const experiencia = data.experiencias || [];
+      const idiomas = data.idiomas || [];
+      const modalidad = data.preferencias?.modalidad?.toLowerCase() || "";
+      const categoria = data.preferencias?.categoria_empleo?.toLowerCase() || "";
+
+      const matchTitulo = educacion.some(e => e.titulo?.toLowerCase().includes(keyword));
+      const matchExperiencia = experiencia.some(exp =>
+        exp.cargo?.toLowerCase().includes(keyword) ||
+        exp.empresa?.toLowerCase().includes(keyword)
+      );
+      const matchIdioma = idiomas.some(id => id.idioma?.toLowerCase().includes(keyword));
+      const matchModalidad = modalidad.includes(keyword);
+      const matchCategoria = categoria.includes(keyword);
+
+      return (
+        matchTitulo ||
+        matchExperiencia ||
+        matchIdioma ||
+        matchModalidad ||
+        matchCategoria
+      );
+    });
+
+    return filtradas;
   }
+
+
 
   // ─────────────────────────────────────────────────────────
   //   NUEVO: conteo de postulantes ÚNICOS (COUNT DISTINCT)
@@ -126,4 +175,71 @@ export class PostulacionService {
     rows.forEach(r => (map[Number(r.oferta_id)] = Number(r.total) || 0));
     return map;
   }
+
+  private async obtenerPostulantesPorEstado(
+    ofertaId: number,
+    userId: number,
+    estado: EstadoPostulacion
+  ) {
+    const oferta = await this.ofertaRepository.findOne({
+      where: { id: ofertaId },
+      relations: ['empleador', 'empleador.usuario'],
+    });
+
+    if (!oferta) throw new NotFoundException('La oferta no existe');
+    if (oferta.empleador.usuario.id !== userId)
+      throw new BadRequestException('El empleador no es dueño de la oferta');
+
+    return await this.postulacionRepository.find({
+      where: {
+        oferta: { id: ofertaId },
+        estado, // ✔ ahora TypeScript lo acepta
+      },
+      relations: ['postulante', 'postulante.usuario'],
+      order: { fechaPostulacion: 'DESC' },
+    });
+  }
+
+  async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.CUALIFICADO,
+    );
+  }
+
+  async ObtenerPostulantesPreseleccionados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.PRESELECCIONADO,
+    );
+  }
+
+  async ObtenerPostulantesSeleccionados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.SELECCIONADO,
+    );
+  }
+
+  async ObtenerPostulantesContratados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.CONTRATADO,
+    );
+  }
+
+  async ObtenerPostulantesDescartados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.NO_SELECCIONADO,
+    );
+  }
+
+
+
 }

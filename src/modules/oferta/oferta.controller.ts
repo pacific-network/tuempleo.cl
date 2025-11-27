@@ -31,6 +31,12 @@ export class OfertaController {
     return this.ofertaService.findAllOfertas(pageOptionsDto, query);
   }
 
+
+  @Get('/prioridad')
+  async getJobs(@Query() pageOptionsDto: PageOptionsDto) {
+    return this.ofertaService.getJobsOffersPriority(pageOptionsDto);
+  }
+
   /** Listado por empleador (dashboard empresa) */
   @Get('empleador/:empleadorId')
   async obtenerOfertasPorEmpleador(
@@ -80,4 +86,5 @@ export class OfertaController {
   async obtenerPorEmpresa(@Param("empresaId", ParseIntPipe) empresaId: number) {
     return this.ofertaService.obtenerOfertasPorEmpresa(empresaId);
   }
+
 }

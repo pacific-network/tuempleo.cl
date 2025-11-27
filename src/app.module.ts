@@ -28,6 +28,7 @@ import { OauthModule } from './modules/oauth/oauth.module';
 import { PublicationModule } from './modules/publication/publication.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
+import { QuotaModule } from './modules/quota/quota.module';
 
 
 
@@ -75,7 +76,8 @@ import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
     CompanyReviewsModule,
     PublicationModule,
     TransactionsModule,
-    MercadoPagoModule
+    MercadoPagoModule,
+    QuotaModule
 
 
 

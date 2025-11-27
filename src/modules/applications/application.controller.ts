@@ -9,7 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 @Controller('v1/postulaciones')
 export class PostulacionController {
-  constructor(private readonly postulacionService: PostulacionService) {}
+  constructor(private readonly postulacionService: PostulacionService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -26,13 +26,22 @@ export class PostulacionController {
   }
 
   // ✅ FIX: leer ofertaId desde el path param
+  // @Get('oferta/:ofertaId')
+  // @HttpCode(HttpStatus.OK)
+  // async obtenerPorOferta(
+  //   @Param('ofertaId', ParseIntPipe) ofertaId: number,
+  // ): Promise<Postulacion[]> {
+  //   return this.postulacionService.obtenerPostulacionesPorOferta(ofertaId);
+  // }
   @Get('oferta/:ofertaId')
   @HttpCode(HttpStatus.OK)
   async obtenerPorOferta(
     @Param('ofertaId', ParseIntPipe) ofertaId: number,
+    @Query('keywords') keywords?: string,  // 👈 filtro opcional
   ): Promise<Postulacion[]> {
-    return this.postulacionService.obtenerPostulacionesPorOferta(ofertaId);
+    return this.postulacionService.obtenerPostulacionesPorOferta(ofertaId, keywords);
   }
+
 
   // ✅ total de postulantes ÚNICOS para una oferta
   @Get('oferta/:ofertaId/count')
@@ -66,4 +75,63 @@ export class PostulacionController {
       .filter(n => Number.isFinite(n));
     return this.postulacionService.countDistinctByOfertaIds(ofertaIds);
   }
+
+  @Get('oferta/:id/cualificados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerCualificados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.obtenerPostulantesCualificados(ofertaId, userId);
+  }
+
+  @Get('oferta/:id/preseleccionados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerPreseleccionados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesPreseleccionados(ofertaId, userId);
+  }
+
+  @Get('oferta/:id/seleccionados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerSeleccionados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesSeleccionados(ofertaId, userId);
+  }
+
+  @Get('oferta/:id/contratados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerContratados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesContratados(ofertaId, userId);
+  }
+
+  @Get('oferta/:id/descartados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerDescartados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesDescartados(ofertaId, userId);
+  }
+
+
+
+
 }

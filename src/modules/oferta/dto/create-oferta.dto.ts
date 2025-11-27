@@ -107,6 +107,11 @@ export class DataOfertaDto {
     })
     modalidad?: Modalidad;
 
+
+    @IsOptional()
+    @IsInt({ message: 'El campo "numero_vacantes" debe ser un número entero.' })
+    numero_vacantes?: number;
+
     // 9️⃣ Descripción del puesto
     @IsString()
     @IsNotEmpty({ message: 'La descripción del puesto es obligatoria.' })
@@ -158,6 +163,7 @@ export class DataOfertaDto {
     @IsArray({ message: 'Las preguntas deben ser una lista.' })
     @IsString({ each: true, message: 'Cada pregunta debe ser texto.' })
     preguntas_personalizadas?: string[];
+
 }
 
 // ======================================================
@@ -193,6 +199,10 @@ export class CreateOfertaDto {
     @IsOptional()
     @IsBoolean({ message: 'El campo "es_activa" debe ser booleano.' })
     es_activa?: boolean = true;
+
+    @IsString()
+    @IsNotEmpty({ message: 'El estado de la oferta es obligatorio.' })
+    estado: string;
 
     @IsOptional()
     @IsDateString({}, { message: 'La fecha de cierre debe tener formato ISO8601.' })
