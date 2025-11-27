@@ -68,6 +68,12 @@ export class Oferta {
     @Column({ type: 'int', default: 0 })
     priority: number;
 
+    @Column({ type: 'boolean', default: false })
+    vacante_unica: boolean;
+
+    @Column({ type: 'int', default: 1 })
+    numero_vacantes: number;
+
     @DeleteDateColumn({ name: 'fecha_eliminacion' })
     fecha_eliminacion: Date;
 

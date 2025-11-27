@@ -158,6 +158,13 @@ export class DataOfertaDto {
     @IsArray({ message: 'Las preguntas deben ser una lista.' })
     @IsString({ each: true, message: 'Cada pregunta debe ser texto.' })
     preguntas_personalizadas?: string[];
+
+    @IsBoolean({ message: 'El campo "vacante_unica" debe ser booleano.' })
+    vacante_unica: boolean;
+
+    @IsOptional()
+    @IsInt({ message: 'El campo "numero_vacantes" debe ser un número entero.' })
+    numero_vacantes?: number;
 }
 
 // ======================================================
