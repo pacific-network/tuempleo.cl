@@ -12,6 +12,7 @@ import { UpdateOfertaDto } from "./dto/updadte-oferta.dto";
 import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
 import { StockService } from "../stock/stock.service";
 import { jobOfferRepository } from "../../repository/job_offer/job-offer.repository";
+import { Order } from "src/shared/pagination/constants";
 
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
@@ -240,6 +241,21 @@ export class OfertaService {
   // ======================================================
   // 📋 OBTENER OFERTAS POR EMPLEADOR
   // ======================================================
+  // async obtenerOfertasPorEmpleador(
+  //   empleadorId: number,
+  //   pageOptions: PageOptionsDto
+  // ): Promise<PageDto<Oferta>> {
+  //   const qb = this.ofertaRepository.createQueryBuilder('oferta')
+  //     .leftJoinAndSelect('oferta.empresa', 'empresa')
+  //     .leftJoinAndSelect('oferta.empleador', 'empleador')
+  //     .where('empleador.id = :empleadorId', { empleadorId })
+  //     .skip(pageOptions.skip)
+  //     .take(pageOptions.take);
+
+  //   const [entities, itemCount] = await qb.getManyAndCount();
+  //   const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+  //   return new PageDto(entities, meta);
+  // }
   async obtenerOfertasPorEmpleador(
     empleadorId: number,
     pageOptions: PageOptionsDto
@@ -248,13 +264,17 @@ export class OfertaService {
       .leftJoinAndSelect('oferta.empresa', 'empresa')
       .leftJoinAndSelect('oferta.empleador', 'empleador')
       .where('empleador.id = :empleadorId', { empleadorId })
+      .orderBy('oferta.fecha_publicacion', Order.DESC)
       .skip(pageOptions.skip)
       .take(pageOptions.take);
 
     const [entities, itemCount] = await qb.getManyAndCount();
+
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+
     return new PageDto(entities, meta);
   }
+
 
   // ======================================================
   // ❌ ELIMINAR OFERTA
