@@ -98,4 +98,40 @@ export class PostulacionController {
     return this.postulacionService.ObtenerPostulantesPreseleccionados(ofertaId, userId);
   }
 
+  @Get('oferta/:id/seleccionados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerSeleccionados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesSeleccionados(ofertaId, userId);
+  }
+
+  @Get('oferta/:id/contratados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerContratados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesContratados(ofertaId, userId);
+  }
+
+  @Get('oferta/:id/descartados')
+  @UseGuards(AuthGuard('jwt'))
+  async obtenerDescartados(
+    @Param('id') ofertaId: number,
+    @Req() req
+  ) {
+    const userId = req.user.userId;
+
+    return this.postulacionService.ObtenerPostulantesDescartados(ofertaId, userId);
+  }
+
+
+
+
 }

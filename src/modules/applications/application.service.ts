@@ -5,6 +5,7 @@ import { Postulacion } from '../../repository/applications/applications.entity';
 import { CreatePostulacionDto } from './dto/create-postulacion.dto';
 import { Postulante } from '../../repository/postulant/postulant.entity';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
+import { EstadoPostulacion } from './enum/states.enum';
 
 @Injectable()
 export class PostulacionService {
@@ -175,89 +176,68 @@ export class PostulacionService {
     return map;
   }
 
-  // async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
-  //   // 1. Validamos que la oferta exista y sea del empleador
-  //   const oferta = await this.ofertaRepository.findOne({
-  //     where: { id: ofertaId },
-  //     relations: ['empleador', 'empleador.usuario'],
-  //   });
-
-  //   if (!oferta) {
-  //     throw new NotFoundException('La oferta no existe');
-  //   }
-
-  //   if (oferta.empleador.usuario.id !== userId) {
-  //     throw new BadRequestException('El empleador no es dueño de la oferta');
-  //   }
-
-  //   // 2. Obtenemos solo postulaciones en estado "cualificado"
-  //   const cualificados = await this.postulacionRepository.find({
-  //     where: {
-  //       oferta: { id: ofertaId },
-  //       estado: 'cualificado',
-  //     },
-  //     relations: ['postulante'],
-  //     order: { fechaPostulacion: 'DESC' },
-  //   });
-
-  //   return cualificados;
-  // }
-  async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
-    // 1. Validamos que la oferta exista y sea del empleador
+  private async obtenerPostulantesPorEstado(
+    ofertaId: number,
+    userId: number,
+    estado: EstadoPostulacion
+  ) {
     const oferta = await this.ofertaRepository.findOne({
       where: { id: ofertaId },
       relations: ['empleador', 'empleador.usuario'],
     });
 
-    if (!oferta) {
-      throw new NotFoundException('La oferta no existe');
-    }
-
-    if (oferta.empleador.usuario.id !== userId) {
+    if (!oferta) throw new NotFoundException('La oferta no existe');
+    if (oferta.empleador.usuario.id !== userId)
       throw new BadRequestException('El empleador no es dueño de la oferta');
-    }
 
-    // 2. Obtenemos postulaciones con estado "cualificado"
-    // 🔥 Aquí está el cambio importante: agregamos postulante.usuario
-    const cualificados = await this.postulacionRepository.find({
+    return await this.postulacionRepository.find({
       where: {
         oferta: { id: ofertaId },
-        estado: 'cualificado',
+        estado, // ✔ ahora TypeScript lo acepta
       },
       relations: ['postulante', 'postulante.usuario'],
       order: { fechaPostulacion: 'DESC' },
     });
+  }
 
-    return cualificados;
+  async obtenerPostulantesCualificados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.CUALIFICADO,
+    );
   }
 
   async ObtenerPostulantesPreseleccionados(ofertaId: number, userId: number) {
-    // 1. Validamos que la oferta exista y sea del empleador
-    const oferta = await this.ofertaRepository.findOne({
-      where: { id: ofertaId },
-      relations: ['empleador', 'empleador.usuario'],
-    });
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.PRESELECCIONADO,
+    );
+  }
 
-    if (!oferta) {
-      throw new NotFoundException('La oferta no existe');
-    }
+  async ObtenerPostulantesSeleccionados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.SELECCIONADO,
+    );
+  }
 
-    if (oferta.empleador.usuario.id !== userId) {
-      throw new BadRequestException('El empleador no es dueño de la oferta');
-    }
+  async ObtenerPostulantesContratados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.CONTRATADO,
+    );
+  }
 
-    // 2. Obtenemos postulaciones con estado "cualificado"
-    // 🔥 Aquí está el cambio importante: agregamos postulante.usuario
-    const preselecionados = await this.postulacionRepository.find({
-      where: {
-        oferta: { id: ofertaId },
-        estado: 'preseleccionado',
-      },
-      relations: ['postulante', 'postulante.usuario'],
-      order: { fechaPostulacion: 'DESC' },
-    });
-
-    return preselecionados;
+  async ObtenerPostulantesDescartados(ofertaId: number, userId: number) {
+    return this.obtenerPostulantesPorEstado(
+      ofertaId,
+      userId,
+      EstadoPostulacion.NO_SELECCIONADO,
+    );
   }
 
 
