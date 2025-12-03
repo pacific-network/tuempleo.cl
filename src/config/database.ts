@@ -24,6 +24,7 @@ import { Stock } from 'src/repository/stock/stock.entity';
 import { PaymentIntent } from 'src/modules/publication/entities/payment-intent.entity';
 import { CountVisit } from 'src/repository/count_visits/count-visits.entity';
 import { CuposUsados } from 'src/repository/used_quota/used_quota.entity';
+import { StockGratis } from 'src/repository/free_stock/free-stock.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -37,7 +38,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis],
     // logging: true,
     synchronize: process.env.DB_SYNCHRONIZE === 'false',
 

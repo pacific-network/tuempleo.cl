@@ -3,15 +3,24 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Stock } from 'src/repository/stock/stock.entity';
 import { StockService } from './stock.service';
-import { WebpayService } from '../webpay+/webpay.service';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { TransactionItem } from 'src/repository/transaction_items/transaction-items.entity';
 import { StockController } from './stock.controller';
+import { StockGratis } from 'src/repository/free_stock/free-stock.entity';
+import { FreeStockService } from 'src/modules/stock/free-stock.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Stock, Transaction, TransactionItem])],
-    providers: [StockService],
+    imports: [
+        TypeOrmModule.forFeature([Stock, Transaction, TransactionItem, StockGratis]),
+    ],
+    providers: [
+        StockService,
+        FreeStockService,
+    ],
     controllers: [StockController],
-    exports: [StockService], // 👈 importante para que otros módulos lo usen
+    exports: [
+        StockService,
+        FreeStockService,   // 👈 AGREGA ESTO
+    ],
 })
 export class StockModule { }

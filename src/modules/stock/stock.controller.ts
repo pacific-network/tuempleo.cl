@@ -9,15 +9,30 @@ export class StockController {
     // 🔍 Obtener créditos disponibles por empresa
     @Get('empresa/:empresaId')
     @UseGuards(AuthGuard('jwt'))
+    @Get('empresa/:empresaId')
+    @UseGuards(AuthGuard('jwt'))
     async getStockByEmpresa(@Param('empresaId') empresaId: number) {
-        const stock = await this.stockService.getAvailability(empresaId);
+        const fullStock = await this.stockService.getFullAvailability(empresaId);
 
         return {
             empresaId,
-            stock: stock.map((s) => ({
+            gratis: fullStock.gratis,
+            pagados: fullStock.pagados.map((s) => ({
                 tipoAviso: s.tipoAviso,
                 cantidad_disponible: s.cantidad_disponible,
             })),
         };
     }
+
+    // async getStockByEmpresa(@Param('empresaId') empresaId: number) {
+    //     const stock = await this.stockService.getAvailability(empresaId);
+
+    //     return {
+    //         empresaId,
+    //         stock: stock.map((s) => ({
+    //             tipoAviso: s.tipoAviso,
+    //             cantidad_disponible: s.cantidad_disponible,
+    //         })),
+    //     };
+    // }
 }
