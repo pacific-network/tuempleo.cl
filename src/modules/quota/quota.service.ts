@@ -113,5 +113,66 @@ export class QuotaService {
         };
     }
 
+    async isUnlocked(empresa_id: number, oferta_id: number, usuario_id: number) {
+        // Validar existencia de empresa, oferta y usuario (opcional)
+        const empresa = await this.empresaRepo.findOne({ where: { id: empresa_id } });
+        if (!empresa) throw new BadRequestException('Empresa no encontrada');
+
+        const oferta = await this.ofertaRepo.findOne({ where: { id: oferta_id }, relations: ['empresa'] });
+        if (!oferta) throw new BadRequestException('Oferta no encontrada');
+        if (oferta.empresa.id !== empresa_id)
+            throw new BadRequestException('La oferta no pertenece a esta empresa');
+
+        const usuario = await this.usuarioRepo.findOne({ where: { id: usuario_id } });
+        if (!usuario) throw new BadRequestException('Usuario no encontrado');
+
+        // Buscar si ya existe un registro de consumo "unlock"
+        const registro = await this.quotaRepo.findOne({
+            where: { empresa_id, oferta_id, usuario_id, action: 'unlock' },
+        });
+
+        return {
+            isUnlocked: !!registro,
+            used: await this.quotaRepo.count({ where: { empresa_id, oferta_id } }),
+            total: oferta ? this.getTotalCupos(oferta.tipo_aviso) : 0,
+        };
+    }
+
+    // ================================
+    // Función auxiliar para total de cupos según tipo de aviso
+    // ================================
+    private getTotalCupos(tipo_aviso: string) {
+        const cuposPorTipo = {
+            GRATIS: 10,
+            BASICO: 25,
+            ESTANDAR: 50,
+            PREMIUM: 100,
+        };
+        return cuposPorTipo[tipo_aviso] || 0;
+    }
+
+    async getRemainingCupos(empresa_id: number, oferta_id: number) {
+        // 1️⃣ Buscar oferta
+        const oferta = await this.ofertaRepo.findOne({ where: { id: oferta_id }, relations: ['empresa'] });
+        if (!oferta) throw new BadRequestException('Oferta no encontrada');
+        if (oferta.empresa.id !== empresa_id) throw new BadRequestException('La oferta no pertenece a esta empresa');
+
+        // 2️⃣ Total cupos según tipo de aviso
+        const cuposPorTipo = { GRATIS: 10, BASICO: 25, ESTANDAR: 50, PREMIUM: 100 };
+        const totalCupos = cuposPorTipo[oferta.tipo_aviso] || 0;
+
+        // 3️⃣ Contar cupos usados
+        const usados = await this.quotaRepo.count({ where: { empresa_id, oferta_id } });
+
+        return {
+            total: totalCupos,
+            used: usados,
+            remaining: totalCupos - usados
+        };
+    }
+
+
+
+
 }
 
