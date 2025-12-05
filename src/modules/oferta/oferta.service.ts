@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Oferta } from "../../repository/job_offer/job-offer.entity";
@@ -13,6 +13,7 @@ import { FilterOfertasDto } from "./dto/filter-ofertas.dto";
 import { StockService } from "../stock/stock.service";
 import { jobOfferRepository } from "../../repository/job_offer/job-offer.repository";
 import { Order } from "src/shared/pagination/constants";
+import { FreeStockService } from "../stock/free-stock.service";
 
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
@@ -32,6 +33,8 @@ export class OfertaService {
     private readonly empresaRepository: Repository<Empresa>,
     private readonly StockService: StockService,
     private readonly jobOfferRepository: jobOfferRepository,
+    private readonly freeStockService: FreeStockService
+
   ) { }
 
   // ======================================================
@@ -103,9 +106,7 @@ export class OfertaService {
     return new PageDto(entities, meta);
   }
 
-  // ======================================================
-  // 🟩 CREAR OFERTA
-  // ======================================================
+
   // async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
   //   // 1️⃣ Empleador
   //   const empleador = await this.empleadorRepository.findOne({
@@ -137,17 +138,21 @@ export class OfertaService {
   //     ? new Date(data.fecha_cierre)
   //     : new Date(publicacion.getTime() + duracion * 24 * 60 * 60 * 1000);
 
-  //   // 5️⃣ Crear la oferta
+  //   // 5️⃣ Determinar PRIORIDAD automática
+  //   const prioridad = priorityMap[data.tipo_aviso];
+
+  //   // 6️⃣ Crear la oferta
   //   const nuevaOferta: Partial<Oferta> = {
   //     titulo: data.titulo,
-  //     tipo_aviso: data.tipo_aviso as any,
+  //     tipo_aviso: data.tipo_aviso,
   //     empresa,
   //     empleador,
   //     fecha_publicacion: publicacion,
   //     duracion_publicacion: duracion,
   //     fecha_cierre,
   //     es_activa: data.es_activa ?? true,
-  //     data: JSON.stringify(data.data), // 👈 CORREGIDO
+  //     data: JSON.stringify(data.data),
+  //     priority: prioridad,  // 👈 AQUI QUEDA LA PRIORIDAD AUTOMÁTICA
   //   };
 
   //   const oferta = this.ofertaRepository.create(nuevaOferta);
@@ -177,15 +182,21 @@ export class OfertaService {
     if (!empresa)
       throw new NotFoundException(`Empresa con ID ${data.empresa_id} no encontrada`);
 
-    // 3️⃣ Verificar crédito si NO es GRATIS
-    if (data.tipo_aviso !== 'GRATIS') {
+    // 3️⃣ Verificar crédito o stock gratis
+    if (data.tipo_aviso === 'GRATIS') {
+      const result = await this.freeStockService.useMonthlyFreeStock(data.empresa_id);
+
+      if (!result.disponible) {
+        throw new BadRequestException(result.mensaje);
+      }
+    } else {
       await this.StockService.useCredit(
         data.empresa_id,
         data.tipo_aviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM'
       );
     }
 
-    // 4️⃣ Calcular fechas seguras
+    // 4️⃣ Calcular fechas
     const publicacion = data.fecha_publicacion ? new Date(data.fecha_publicacion) : new Date();
     const duracion = data.duracion_publicacion ?? 30;
 
@@ -193,10 +204,10 @@ export class OfertaService {
       ? new Date(data.fecha_cierre)
       : new Date(publicacion.getTime() + duracion * 24 * 60 * 60 * 1000);
 
-    // 5️⃣ Determinar PRIORIDAD automática
+    // 5️⃣ Prioridad automática
     const prioridad = priorityMap[data.tipo_aviso];
 
-    // 6️⃣ Crear la oferta
+    // 6️⃣ Crear oferta
     const nuevaOferta: Partial<Oferta> = {
       titulo: data.titulo,
       tipo_aviso: data.tipo_aviso,
@@ -207,7 +218,7 @@ export class OfertaService {
       fecha_cierre,
       es_activa: data.es_activa ?? true,
       data: JSON.stringify(data.data),
-      priority: prioridad,  // 👈 AQUI QUEDA LA PRIORIDAD AUTOMÁTICA
+      priority: prioridad,
     };
 
     const oferta = this.ofertaRepository.create(nuevaOferta);
@@ -216,12 +227,13 @@ export class OfertaService {
     console.log(
       `🧾 Oferta creada correctamente: ${saved.titulo} (Empresa ${empresa.id})` +
       (data.tipo_aviso === 'GRATIS'
-        ? ' - Aviso gratuito (no descuenta stock)'
+        ? ' - Aviso GRATUITO (stock restado)'
         : ` - Crédito descontado (${data.tipo_aviso})`)
     );
 
     return saved;
   }
+
 
 
 

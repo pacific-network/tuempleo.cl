@@ -29,6 +29,7 @@ import { PublicationModule } from './modules/publication/publication.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
 import { QuotaModule } from './modules/quota/quota.module';
+import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
 
 
 
@@ -77,7 +78,8 @@ import { QuotaModule } from './modules/quota/quota.module';
     PublicationModule,
     TransactionsModule,
     MercadoPagoModule,
-    QuotaModule
+    QuotaModule,
+    CvGeneratorModule
 
 
 

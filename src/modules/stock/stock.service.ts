@@ -5,7 +5,8 @@ import { Repository } from 'typeorm';
 import { Stock } from '../../repository/stock/stock.entity';
 import { Transaction } from '../../repository/transaction/transaction.entity';
 import { TransactionItem } from '../../repository/transaction_items/transaction-items.entity';
-
+import { StockGratis } from 'src/repository/free_stock/free-stock.entity';
+import { FreeStockService } from 'src/modules/stock/free-stock.service';
 @Injectable()
 export class StockService {
     constructor(
@@ -17,6 +18,8 @@ export class StockService {
 
         @InjectRepository(TransactionItem)
         private readonly itemRepo: Repository<TransactionItem>,
+
+        public readonly freeStockService: FreeStockService,
     ) { }
 
     /**
@@ -80,8 +83,23 @@ export class StockService {
      */
     async useCredit(
         empresaId: number,
-        tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+        tipoAviso: 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM',
     ) {
+        tipoAviso = tipoAviso.toUpperCase() as any;
+
+        // 📌 1) Si el aviso es GRATIS → usar lógica de stock gratuito
+        if (tipoAviso === 'GRATIS') {
+            console.log('🎁 Usando crédito gratuito mensual');
+            const result = await this.freeStockService.useMonthlyFreeStock(empresaId);
+
+            if (!result.disponible) {
+                throw new Error(result.mensaje);
+            }
+
+            return result.stock;
+        }
+
+        // 📌 2) Avisos pagados → lógica actual (NO se toca)
         const stock = await this.stockRepo.findOne({
             where: { empresa: { id: empresaId }, tipoAviso },
         });
@@ -98,21 +116,12 @@ export class StockService {
             );
         }
 
-        console.log(
-            `🧮 Antes de descontar: Empresa ${empresaId}, Tipo ${tipoAviso}, Cantidad actual ${stock.cantidad_disponible}`,
-        );
-
-        // 🔹 Descontar crédito
-        stock.cantidad_disponible = stock.cantidad_disponible - 1;
-
+        stock.cantidad_disponible -= 1;
         const saved = await this.stockRepo.save(stock);
-
-        console.log(
-            `✅ Crédito usado: Empresa ${empresaId}, Tipo ${tipoAviso}, Nuevo stock ${saved.cantidad_disponible}`,
-        );
 
         return saved;
     }
+
 
 
     /**
@@ -125,7 +134,15 @@ export class StockService {
         });
     }
 
+    /**
+   * Combina pagados + gratuitos
+   */
+    async getFullAvailability(empresaId: number) {
+        const pagados = await this.getAvailability(empresaId);
+        const gratis = await this.freeStockService.getMonthlyFreeStock(empresaId);
 
+        return { gratis, pagados };
+    }
 }
 
 

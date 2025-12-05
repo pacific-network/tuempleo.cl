@@ -19,14 +19,15 @@ export class BlockBrowserMiddleware implements NestMiddleware {
       '/v1/oauth/linkedin/callback',
       '/v1/webpay/return',
       '/uploads',
-      '/v1/uploads/'
+      '/v1/uploads/',
+      'v1/curriculum/'
 
     ];
 
     // Verifica si la URL coincide con alguna ruta exenta
-    const isExempted = exemptedRoutes.some((route) =>
+    const isExempted = exemptedRoutes.some(route =>
       req.originalUrl.startsWith(route)
-    );
+    ) || req.originalUrl.match(/^\/v1\/curriculum\/.+\/view$/);
 
     if (isExempted) {
       return next(); // no bloquear si está permitido
