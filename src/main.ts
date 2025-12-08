@@ -5,6 +5,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as passport from 'passport';
 import * as session from 'express-session'; // Importar express-session
 import * as dotenv from 'dotenv';
+import * as express from 'express';
+import { join } from 'path';
 
 dotenv.config();
 
@@ -54,6 +56,8 @@ async function bootstrap() {
   app.use(passport.session());
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  app.use('/upload', express.static(join(__dirname, '..', 'upload')));
 
 
   // swagger config

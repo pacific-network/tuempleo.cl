@@ -13,7 +13,7 @@ export class UserService {
         private readonly registroRepository: Repository<Registro>,
         @InjectRepository(Usuario)
         private readonly userRepository: Repository<Usuario>,
-    ) {}
+    ) { }
 
     // ---------------------------------------------------------
     // 📌 SUBIR FOTO DE PERFIL
@@ -23,35 +23,40 @@ export class UserService {
             throw new BadRequestException('No se recibió ningún archivo');
         }
 
-        // Ruta física donde se guardará el archivo
-        const uploadDir = '';
-
-        // Asegurar que la carpeta existe (por si acaso)
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+        // Obtener usuario
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new BadRequestException('Usuario no encontrado');
         }
 
-        // Crear nombre único
+        // Validación: si ya tiene foto
+        if (user.perfil_foto) {
+            throw new BadRequestException('El usuario ya tiene una foto de perfil. No se puede subir otra.');
+        }
+
+        // Carpeta de uploads
+        const uploadPath = path.join(__dirname, '..', '..', 'upload');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+
+        // Guardar archivo
         const ext = path.extname(file.originalname);
         const fileName = `profile-photo-${userId}-${Date.now()}${ext}`;
-        const filePath = path.join(uploadDir, fileName);
-
-        // Guardar archivo físicamente
+        const filePath = path.join(uploadPath, fileName);
         fs.writeFileSync(filePath, file.buffer);
 
-        // Crear la URL pública
-        const publicUrl = `/uploads/${fileName}`;
+        const publicUrl = `/upload/${fileName}`;
 
-        // Actualizar registro del usuario
-        await this.userRepository.update(userId, {
-            perfil_foto: publicUrl,
-        });
+        // Actualizar usuario
+        await this.userRepository.update({ id: userId }, { perfil_foto: publicUrl });
 
         return {
             message: 'Foto de perfil actualizada',
             url: publicUrl,
         };
     }
+
 
     // ---------------------------------------------------------
     // TUS MÉTODOS ORIGINALES (NO TOCO NADA)

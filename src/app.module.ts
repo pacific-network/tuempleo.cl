@@ -37,8 +37,8 @@ import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
   imports: [
 
     ServeStaticModule.forRoot({
-      rootPath: '/var/www/html/uploads', // Ruta absoluta en el servidor
-      serveRoot: '/uploads', // Ruta pública para acceder a los archivos
+      rootPath: process.env.UPLOAD_PATH || join(__dirname, '..', 'upload'), // flexible
+      serveRoot: '/upload',
     }),
 
     ConfigModule.forRoot({
