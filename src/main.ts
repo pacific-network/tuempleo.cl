@@ -55,6 +55,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
+
   // swagger config
   const config = new DocumentBuilder()
     .setTitle('API TUEMPLEO.CL')
