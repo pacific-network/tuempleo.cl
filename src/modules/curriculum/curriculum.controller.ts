@@ -22,7 +22,7 @@ import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 
 @Controller('v1/curriculum')
 export class CurriculumController {
-  constructor(private readonly curriculumService: CurriculumService) {}
+  constructor(private readonly curriculumService: CurriculumService) { }
 
   // Si quieres, deja esta constante para otros usos
   // (no se usa en las rutas de abajo)
@@ -147,10 +147,10 @@ export class CurriculumController {
       ext === '.pdf'
         ? 'application/pdf'
         : ext === '.doc'
-        ? 'application/msword'
-        : ext === '.docx'
-        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        : 'application/octet-stream';
+          ? 'application/msword'
+          : ext === '.docx'
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            : 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
     return res.sendFile(filePath);
