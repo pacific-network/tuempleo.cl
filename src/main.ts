@@ -18,9 +18,8 @@ async function bootstrap() {
       const allowedOrigins = [
         'https://tuempleo.cl',
         'https://www.tuempleo.cl',
-        'https://104.21.14.12',
-        'https://172.67.133.188',
-        'http://127.0.0.1:5501',
+        'http://localhost:5173'
+
       ];
 
       if (!origin || allowedOrigins.includes(origin)) {
@@ -54,6 +53,11 @@ async function bootstrap() {
   // Inicializar passport y passport session
   app.use(passport.initialize());
   app.use(passport.session());
+  app.use((req, res, next) => {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups')
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none')
+    next()
+  })
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 

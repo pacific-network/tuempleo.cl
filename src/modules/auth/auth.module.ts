@@ -14,10 +14,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { Postulante } from 'src/repository/postulant/postulant.entity';
+import { Empleador } from 'src/repository/employer/employer.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Registro, Usuario, Rol]),
+    TypeOrmModule.forFeature([Registro, Usuario, Rol, Postulante, Empleador]),
     EncryptModule,
     PassportModule.register({ session: false }),
     // Si ya hiciste ConfigModule.forRoot({ isGlobal: true }) en AppModule, aquí basta con:
@@ -40,4 +42,4 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   ],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

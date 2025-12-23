@@ -14,7 +14,7 @@ import { OauthController } from './oauth.controller';
 import { OauthService } from './oauth.service';
 
 import { GoogleStrategy } from 'src/modules/auth/strategies/google.strategy';
-import { LinkedInStrategy } from 'src/modules/auth/strategies/linkedin.strategy';
+
 import { JwtStrategy } from 'src/modules/auth/strategies/jwt.strategy';
 
 @Module({
@@ -38,10 +38,9 @@ import { JwtStrategy } from 'src/modules/auth/strategies/jwt.strategy';
     OauthService,
     // Estrategias usadas durante el flujo de OAuth:
     GoogleStrategy,
-    LinkedInStrategy,
     // También exponemos JwtStrategy porque este módulo expone rutas protegidas (/oauth/user-by-email):
     JwtStrategy,
   ],
   exports: [OauthService],
 })
-export class OauthModule {}
+export class OauthModule { }
