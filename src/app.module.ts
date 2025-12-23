@@ -72,7 +72,7 @@ import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
     ApplicationModule,
     SiiModule,
     HiringProcessModule,
-    //OauthModule,
+    OauthModule,
     GuardadosModule,
     CompanyReviewsModule,
     PublicationModule,
