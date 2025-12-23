@@ -11,7 +11,7 @@ import { AuthGuard } from '@nestjs/passport'
 import { Request, Response } from 'express'
 import { OauthService } from './oauth.service'
 import { GoogleOAuthGuard } from './guards/google-oauth.guard'
-import { LinkedinOAuthGuard } from './guards/linkedin-oauth.guard'
+import axios from 'axios'
 
 type Audience = 'candidate' | 'employer'
 
@@ -84,61 +84,38 @@ export class OauthController {
     return { origin, audience: aud }
   }
 
-  private sendPopupHtml(
-    res: Response,
-    payload: Record<string, any>,
-    origin: string,
-  ) {
-    console.log('[OAuth] sendPopupHtml → payload:', payload)
-    console.log('[OAuth] sendPopupHtml → origin:', origin)
-
+  private sendPopupHtml(res: Response, payload: any, origin: string) {
     const safeJson = JSON.stringify(payload).replace(/</g, '\\u003c')
 
-    return res
-      .status(200)
-      .set({
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-        'Cross-Origin-Embedder-Policy': 'unsafe-none',
-      })
-      .send(`
-<!doctype html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body>
-<script>
-console.log('[OAuth popup] HTML loaded');
-(function () {
-  var response = ${safeJson};
-  console.log('[OAuth popup] payload:', response);
-
-  try {
-    if (window.opener && !window.opener.closed) {
-      console.log('[OAuth popup] postMessage → opener');
-      window.opener.postMessage(response, '${origin}');
-    }
-
-    if ('BroadcastChannel' in window) {
-      console.log('[OAuth popup] BroadcastChannel send');
-      const bc = new BroadcastChannel('oauth_channel');
-      bc.postMessage(response);
-      bc.close();
-    }
-  } catch (e) {
-    console.error('[OAuth popup] error', e);
+    res.type('html').send(`
+      <html>
+        <body>
+          <script>
+            (function () {
+              const data = JSON.parse('${safeJson}');
+  
+              try {
+                // 🔑 CANAL PRINCIPAL (localStorage)
+                localStorage.setItem('oauth_result', JSON.stringify(data));
+              } catch (e) {
+                console.error('localStorage error', e);
+              }
+  
+              try {
+                // 🔁 Fallback: postMessage si opener existe
+                if (window.opener) {
+                  window.opener.postMessage(data, '${origin}');
+                }
+              } catch (e) {}
+  
+              window.close();
+            })();
+          </script>
+        </body>
+      </html>
+    `)
   }
 
-  setTimeout(function () {
-    console.log('[OAuth popup] closing');
-    window.close();
-  }, 300);
-})();
-</script>
-OAuth OK
-</body>
-</html>
-`)
-  }
 
   // =========================================================
   // Google OAuth
@@ -159,21 +136,18 @@ OAuth OK
     console.log('[OAuth] req.user:', oauthUser)
 
     if (!oauthUser) {
-      console.error('[OAuth] ❌ req.user missing')
       throw new BadRequestException('OAuth user missing')
     }
 
     const { origin, audience } = this.readStateFromQuery(req)
 
     const email = (oauthUser.email || '').trim().toLowerCase()
-    console.log('[OAuth] email:', email)
-
-    if (!email) throw new BadRequestException('OAuth email missing')
+    if (!email) {
+      throw new BadRequestException('OAuth email missing')
+    }
 
     const fullName = (oauthUser.name || '').trim()
     const rolId = audience === 'employer' ? 2 : 1
-
-    console.log('[OAuth] rolId:', rolId)
 
     const { usuario, token, requiereEmpresa, requierePostulante } =
       await this.oauthService.validateOAuthUser({
@@ -184,79 +158,97 @@ OAuth OK
         rolId,
       })
 
-    console.log('[OAuth] token generado:', token)
+    // 🔑 CIERRE CORRECTO DEL FLUJO
+    const redirectUrl =
+      `${origin}/oauth/callback` +
+      `?token=${encodeURIComponent(token)}` +
+      `&rolId=${rolId}` +
+      `&requiereEmpresa=${requiereEmpresa ?? ''}` +
+      `&requierePostulante=${requierePostulante ?? ''}`
 
-    return this.sendPopupHtml(
-      res,
-      {
-        token,
-        userId: usuario.id,
-        rolId,
-        requiereEmpresa,
-        requierePostulante,
-      },
-      origin,
-    )
+    console.log('[OAuth] redirect →', redirectUrl)
+
+    return res.redirect(redirectUrl)
   }
+
 
   // =========================================================
   // LinkedIn OAuth
   // =========================================================
 
   @Get('linkedin')
-  @UseGuards(LinkedinOAuthGuard)
-  linkedinAuth() {
-    console.log('[OAuth] /linkedin hit')
-  }
+  redirectToLinkedIn(@Req() req: Request, @Res() res: Response) {
+    const state = req.query.state as string
 
-  @Get('linkedin/callback')
-  @UseGuards(AuthGuard('linkedin'))
-  async linkedinCallback(@Req() req: Request, @Res() res: Response) {
-    console.log('[OAuth] /linkedin/callback HIT')
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: process.env.LINKEDIN_CLIENT_ID!,
+      redirect_uri: process.env.LINKEDIN_CALLBACK_URL!,
+      scope: 'openid profile email',
+      state,
+    })
 
-    const oauthUser = (req as any).user
-    console.log('[OAuth] req.user:', oauthUser)
-
-    if (!oauthUser) {
-      console.error('[OAuth] ❌ req.user missing')
-      throw new BadRequestException('OAuth user missing')
-    }
-
-    const { origin, audience } = this.readStateFromQuery(req)
-
-    const email = (oauthUser.email || '').trim().toLowerCase()
-    console.log('[OAuth] email:', email)
-
-    if (!email) throw new BadRequestException('OAuth email missing')
-
-    const fullName = (oauthUser.name || '').trim()
-    const rolId = audience === 'employer' ? 2 : 1
-
-    console.log('[OAuth] rolId:', rolId)
-
-    const { usuario, token, requiereEmpresa, requierePostulante } =
-      await this.oauthService.validateOAuthUser({
-        email,
-        name: fullName,
-        picture: oauthUser.picture || null,
-        provider: 'linkedin',
-        rolId,
-      })
-
-    console.log('[OAuth] token generado:', token)
-
-    return this.sendPopupHtml(
-      res,
-      {
-        token,
-        userId: usuario.id,
-        rolId,
-        requiereEmpresa,
-        requierePostulante,
-      },
-      origin,
+    res.redirect(
+      `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
     )
   }
+
+
+  @Get('linkedin/callback')
+  async linkedinCallback(@Req() req: Request, @Res() res: Response) {
+    const { code, state } = req.query
+
+    if (!code || !state) {
+      throw new BadRequestException('Missing OAuth code/state')
+    }
+
+    // 1️⃣ exchange code → token
+    const tokenResp = await axios.post(
+      'https://www.linkedin.com/oauth/v2/accessToken',
+      new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code as string,
+        redirect_uri: process.env.LINKEDIN_CALLBACK_URL!,
+        client_id: process.env.LINKEDIN_CLIENT_ID!,
+        client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    )
+
+    const { access_token } = tokenResp.data
+
+    // 2️⃣ get userinfo
+    const userinfoResp = await axios.get(
+      'https://api.linkedin.com/v2/userinfo',
+      {
+        headers: { Authorization: `Bearer ${access_token}` },
+      }
+    )
+
+    const profile = userinfoResp.data
+
+    // 3️⃣ parse state
+    const { origin, audience } = JSON.parse(
+      decodeURIComponent(state as string)
+    )
+
+    const rolId = audience === 'employer' ? 2 : 1
+
+    const { token } = await this.oauthService.validateOAuthUser({
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture,
+      provider: 'linkedin',
+      rolId,
+    })
+
+    // 4️⃣ redirect frontend
+    res.redirect(
+      `${origin}/oauth/callback?token=${encodeURIComponent(token)}`
+    )
+  }
+
+
 
   // =========================================================
   // Utilidades protegidas

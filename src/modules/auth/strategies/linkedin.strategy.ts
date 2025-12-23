@@ -1,58 +1,59 @@
-// src/modules/auth/strategies/linkedin.strategy.ts
-import { PassportStrategy } from '@nestjs/passport'
 import { Injectable } from '@nestjs/common'
-import {
-  Strategy as LinkedInStrategyBase,
-  StrategyOptionWithRequest,
-} from 'passport-linkedin-oauth2'
-import { Profile } from 'passport'
+import { PassportStrategy } from '@nestjs/passport'
+import { Strategy } from 'passport-openidconnect'
 import { Request } from 'express'
 
 @Injectable()
-export class LinkedInStrategy extends PassportStrategy(
-  LinkedInStrategyBase,
-  'linkedin',
+export class LinkedInOidcStrategy extends PassportStrategy(
+  Strategy,
+  'linkedin-oidc',
 ) {
   constructor() {
-    const options: StrategyOptionWithRequest = {
-      clientID: process.env.LINKEDIN_CLIENT_ID || '',
-      clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
-      callbackURL: process.env.LINKEDIN_CALLBACK_URL || '',
-      scope: ['openid', 'profile', 'email'],
-      passReqToCallback: true, // ✅ ÚNICO FLAG NECESARIO
-    }
+    super({
+      issuer: 'https://www.linkedin.com',
+      authorizationURL: 'https://www.linkedin.com/oauth/v2/authorization',
+      tokenURL: 'https://www.linkedin.com/oauth/v2/accessToken',
+      userInfoURL: 'https://api.linkedin.com/v2/userinfo',
 
-    super(options)
+      clientID: process.env.LINKEDIN_CLIENT_ID!,
+      clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
+      callbackURL: process.env.LINKEDIN_CALLBACK_URL!,
+
+      scope: 'openid profile email',
+      passReqToCallback: true,
+    })
   }
 
   async validate(
     req: Request,
+    issuer: string,
+    profile: any,
+    context: any,
+    idToken: string,
     accessToken: string,
     refreshToken: string,
-    profile: Profile,
-    done: (error: any, user?: any) => void,
+    done: Function,
   ) {
     try {
-      const email = profile.emails?.[0]?.value ?? null
-      const photo = profile.photos?.[0]?.value ?? null
-      const givenName = profile.name?.givenName ?? ''
-      const familyName = profile.name?.familyName ?? ''
-      const name = `${givenName} ${familyName}`.trim()
-
+      /**
+       * profile viene desde /v2/userinfo
+       * https://api.linkedin.com/v2/userinfo
+       */
       const user = {
-        id: profile.id,
-        email,
-        name,
-        photo,
+        sub: profile.sub,
+        email: profile.email ?? null,
+        name: profile.name ?? '',
+        picture: profile.picture ?? null,
+
         provider: 'linkedin',
         accessToken,
-        oauthState: req.query.state, // ✅ STATE LLEGA IGUAL
+        idToken,
+        oauthState: req.query.state,
       }
 
       done(null, user)
-    } catch (error) {
-      console.error('[LinkedInStrategy] Error en validate:', error)
-      done(error, false)
+    } catch (err) {
+      done(err, false)
     }
   }
 }
