@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { SmsService } from './sms.service'
 import { SmsController } from './sms.controller'
 import { Sms } from '../../repository/sms/sms.entity'
+import { PacificSmsProvider } from './providers/sms-provider'
 
 @Module({
     imports: [
@@ -15,7 +16,18 @@ import { Sms } from '../../repository/sms/sms.entity'
         TypeOrmModule.forFeature([Sms]),
     ],
     controllers: [SmsController],
-    providers: [SmsService],
+    providers: [
+        SmsService,
+
+        // 🔌 Provider real
+        PacificSmsProvider,
+
+        // 🧠 Alias por contrato
+        {
+            provide: 'SmsProvider',
+            useExisting: PacificSmsProvider,
+        },
+    ],
     exports: [SmsService],
 })
 export class SmsModule { }
