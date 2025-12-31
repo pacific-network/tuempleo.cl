@@ -24,8 +24,6 @@ export class OauthController {
   // =========================================================
 
   private isAllowedOrigin(origin?: string): boolean {
-    console.log('[OAuth] isAllowedOrigin →', origin)
-
     if (!origin) return false
 
     const allowList = new Set<string>([
@@ -46,76 +44,34 @@ export class OauthController {
       /^https:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i,
     ]
 
-    const allowed = allowList.has(origin) || regexes.some(r => r.test(origin))
-    console.log('[OAuth] origin allowed?', allowed)
-
-    return allowed
+    return allowList.has(origin) || regexes.some(r => r.test(origin))
   }
 
-  private readStateFromQuery(req: Request): { origin: string; audience: Audience } {
-    console.log('[OAuth] readStateFromQuery → query:', req.query)
-
+  private readStateFromQuery(req: Request): {
+    origin: string
+    audience: Audience
+  } {
     const state = req.query.state as string | undefined
     if (!state) {
-      console.error('[OAuth] ❌ Missing state')
       throw new BadRequestException('Missing OAuth state')
     }
 
     let parsed: any
     try {
       parsed = JSON.parse(decodeURIComponent(state))
-    } catch (e) {
-      console.error('[OAuth] ❌ Invalid state JSON', e)
+    } catch {
       throw new BadRequestException('Invalid OAuth state')
     }
-
-    console.log('[OAuth] parsed state:', parsed)
 
     const { origin, audience } = parsed || {}
 
     if (!this.isAllowedOrigin(origin)) {
-      console.error('[OAuth] ❌ Invalid origin:', origin)
       throw new BadRequestException('Invalid OAuth origin')
     }
 
     const aud: Audience = audience === 'employer' ? 'employer' : 'candidate'
-    console.log('[OAuth] audience resolved:', aud)
-
     return { origin, audience: aud }
   }
-
-  private sendPopupHtml(res: Response, payload: any, origin: string) {
-    const safeJson = JSON.stringify(payload).replace(/</g, '\\u003c')
-
-    res.type('html').send(`
-      <html>
-        <body>
-          <script>
-            (function () {
-              const data = JSON.parse('${safeJson}');
-  
-              try {
-                // 🔑 CANAL PRINCIPAL (localStorage)
-                localStorage.setItem('oauth_result', JSON.stringify(data));
-              } catch (e) {
-                console.error('localStorage error', e);
-              }
-  
-              try {
-                // 🔁 Fallback: postMessage si opener existe
-                if (window.opener) {
-                  window.opener.postMessage(data, '${origin}');
-                }
-              } catch (e) {}
-  
-              window.close();
-            })();
-          </script>
-        </body>
-      </html>
-    `)
-  }
-
 
   // =========================================================
   // Google OAuth
@@ -123,17 +79,12 @@ export class OauthController {
 
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
-  googleAuth() {
-    console.log('[OAuth] /google hit')
-  }
+  googleAuth() { }
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
-    console.log('[OAuth] /google/callback HIT')
-
     const oauthUser = (req as any).user
-    console.log('[OAuth] req.user:', oauthUser)
 
     if (!oauthUser) {
       throw new BadRequestException('OAuth user missing')
@@ -149,7 +100,7 @@ export class OauthController {
     const fullName = (oauthUser.name || '').trim()
     const rolId = audience === 'employer' ? 2 : 1
 
-    const { usuario, token, requiereEmpresa, requierePostulante } =
+    const { token, requiereEmpresa, requierePostulante } =
       await this.oauthService.validateOAuthUser({
         email,
         name: fullName,
@@ -158,7 +109,6 @@ export class OauthController {
         rolId,
       })
 
-    // 🔑 CIERRE CORRECTO DEL FLUJO
     const redirectUrl =
       `${origin}/oauth/callback` +
       `?token=${encodeURIComponent(token)}` +
@@ -166,11 +116,8 @@ export class OauthController {
       `&requiereEmpresa=${requiereEmpresa ?? ''}` +
       `&requierePostulante=${requierePostulante ?? ''}`
 
-    console.log('[OAuth] redirect →', redirectUrl)
-
     return res.redirect(redirectUrl)
   }
-
 
   // =========================================================
   // LinkedIn OAuth
@@ -192,7 +139,6 @@ export class OauthController {
       `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
     )
   }
-
 
   @Get('linkedin/callback')
   async linkedinCallback(@Req() req: Request, @Res() res: Response) {
@@ -248,8 +194,6 @@ export class OauthController {
     )
   }
 
-
-
   // =========================================================
   // Utilidades protegidas
   // =========================================================
@@ -258,7 +202,6 @@ export class OauthController {
   @UseGuards(AuthGuard('jwt'))
   async getUserByEmail(@Req() req: Request) {
     const email = (req.query.email as string | undefined)?.trim()
-    console.log('[OAuth] user-by-email:', email)
 
     if (!email) throw new BadRequestException('Email requerido')
 
