@@ -30,6 +30,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
 import { QuotaModule } from './modules/quota/quota.module';
 import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
+import { SmsModule } from './modules/sms-generator/sms.module';
 
 
 
@@ -79,7 +80,8 @@ import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
     TransactionsModule,
     MercadoPagoModule,
     QuotaModule,
-    CvGeneratorModule
+    CvGeneratorModule,
+    SmsModule
 
 
 

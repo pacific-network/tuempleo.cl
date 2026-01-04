@@ -42,10 +42,21 @@ export class StockService {
 
         console.log(`🧾 Procesando stock desde transacción ${transactionId}`);
 
-        // 2️⃣ Iterar sobre los ítems y actualizar stock
         for (const item of transaction.items) {
-            await this.addCreditsByTransaction(empresaId, item.tipoAviso, item.cantidad);
+
+            // 🎁 Avisos GRATIS NO generan stock pagado
+            if (item.tipoAviso === 'GRATIS') {
+                console.log('🎁 Aviso GRATIS no genera stock pagado');
+                continue;
+            }
+
+            await this.addCreditsByTransaction(
+                empresaId,
+                item.tipoAviso, // ahora TS sabe que NO es GRATIS
+                item.cantidad
+            );
         }
+
 
         console.log(`✅ Stock generado/actualizado para empresa ${empresaId}`);
     }

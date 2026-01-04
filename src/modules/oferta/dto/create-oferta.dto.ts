@@ -150,7 +150,7 @@ export class DataOfertaDto {
     @IsOptional()
     @IsArray({ message: 'Las herramientas deben ser una lista.' })
     @IsString({ each: true, message: 'Cada herramienta debe ser texto.' })
-    herramientas_basicas?: string[];
+    herramientas_BASICOs?: string[];
 
 
     @IsOptional()
