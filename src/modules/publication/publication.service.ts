@@ -7,7 +7,7 @@ import { OfferProfileView } from './entities/offer-profile-view.entity';
 import { PaymentIntent } from './entities/payment-intent.entity';
 import { PaymentTxn } from './entities/payment-txn.entity';
 
-export type PlanKey = 'FREE' | 'BASICA' | 'ESTANDAR' | 'PREMIUM';
+export type PlanKey = 'FREE' | 'BASICO' | 'ESTANDAR' | 'PREMIUM';
 
 export interface PlanPolicy {
   planKey: PlanKey;
@@ -29,15 +29,15 @@ export class PublicationService {
     @InjectRepository(OfferProfileView) private readonly viewRepo: Repository<OfferProfileView>,
     @InjectRepository(PaymentIntent) private readonly intentRepo: Repository<PaymentIntent>,
     @InjectRepository(PaymentTxn) private readonly txnRepo: Repository<PaymentTxn>,
-  ) {}
+  ) { }
 
   // ===== Catálogo =====
   getPolicyFor(planKey: PlanKey): PlanPolicy {
     const map: Record<PlanKey, PlanPolicy> = {
-      FREE:     { planKey: 'FREE',     price: 0,      durationDays: 30, reviewHours: 48, requireSalary: true,  questionPriority: null, profilesLimit: 5,        profileRecommendations: false, freeMonthlyQuota: 3 },
-      BASICA:   { planKey: 'BASICA',   price: 80000,  durationDays: 45, reviewHours: 0,  requireSalary: true,  questionPriority: 3,    profilesLimit: null,     profileRecommendations: false },
-      ESTANDAR: { planKey: 'ESTANDAR', price: 140000, durationDays: 45, reviewHours: 0,  requireSalary: false, questionPriority: 2,    profilesLimit: null,     profileRecommendations: true  },
-      PREMIUM:  { planKey: 'PREMIUM',  price: 180000, durationDays: 60, reviewHours: 0,  requireSalary: false, questionPriority: 1,    profilesLimit: null,     profileRecommendations: true  },
+      FREE: { planKey: 'FREE', price: 0, durationDays: 30, reviewHours: 48, requireSalary: true, questionPriority: null, profilesLimit: 5, profileRecommendations: false, freeMonthlyQuota: 3 },
+      BASICO: { planKey: 'BASICO', price: 80000, durationDays: 45, reviewHours: 0, requireSalary: true, questionPriority: 3, profilesLimit: null, profileRecommendations: false },
+      ESTANDAR: { planKey: 'ESTANDAR', price: 140000, durationDays: 45, reviewHours: 0, requireSalary: false, questionPriority: 2, profilesLimit: null, profileRecommendations: true },
+      PREMIUM: { planKey: 'PREMIUM', price: 180000, durationDays: 60, reviewHours: 0, requireSalary: false, questionPriority: 1, profilesLimit: null, profileRecommendations: true },
     };
     return map[planKey];
   }
@@ -66,8 +66,8 @@ export class PublicationService {
   }
 
   private normalizePlanName(nombre?: string): PlanKey | null {
-    const n = (nombre||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toUpperCase();
-    if (n.includes('BASICA')) return 'BASICA';
+    const n = (nombre || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toUpperCase();
+    if (n.includes('BASICO')) return 'BASICO';
     if (n.includes('ESTANDAR')) return 'ESTANDAR';
     if (n.includes('PREMIUM')) return 'PREMIUM';
     if (n.includes('FREE') || n.includes('GRATIS')) return 'FREE';
@@ -95,7 +95,7 @@ export class PublicationService {
     const ledgers = await this.ledgerRepo.find({
       where: { employerId, ofertaId: IsNull(), status: In(['RESERVED']) },
     });
-    const PAID = { BASICA: { ledgerIds: [] as number[] }, ESTANDAR: { ledgerIds: [] as number[] }, PREMIUM: { ledgerIds: [] as number[] } };
+    const PAID = { BASICO: { ledgerIds: [] as number[] }, ESTANDAR: { ledgerIds: [] as number[] }, PREMIUM: { ledgerIds: [] as number[] } };
     ledgers.forEach(l => { const k = l.planKey as PlanKey; if (PAID[k]) PAID[k].ledgerIds.push(l.id); });
 
     // Órdenes AUTHORIZED conocidas y no usadas (desde employer_plan_ledger)
@@ -112,7 +112,7 @@ export class PublicationService {
         WHERE pi.empresa_id = ? AND pi.status='AUTHORIZED'`,
       [empresaId],
     );
-    const AUTHORIZED: Record<'BASICA'|'ESTANDAR'|'PREMIUM', string[]> = { BASICA:[], ESTANDAR:[], PREMIUM:[] };
+    const AUTHORIZED: Record<'BASICO' | 'ESTANDAR' | 'PREMIUM', string[]> = { BASICO: [], ESTANDAR: [], PREMIUM: [] };
     intents.forEach((it: any) => {
       const k = this.normalizePlanName(it.plan_name);
       const oid = String(it.orderId || '');
@@ -120,7 +120,7 @@ export class PublicationService {
     });
 
     // Fallback: AUTHORIZED en transactions por usuarios de la empresa (usa orderId/sessionId)
-    const haveAuth = AUTHORIZED.BASICA.length + AUTHORIZED.ESTANDAR.length + AUTHORIZED.PREMIUM.length > 0;
+    const haveAuth = AUTHORIZED.BASICO.length + AUTHORIZED.ESTANDAR.length + AUTHORIZED.PREMIUM.length > 0;
     if (!haveAuth) {
       const usuarios = await this.getUsuariosIdsByEmpresa(empresaId);
       const also = await this.getUsuarioIdByEmployer(employerId);
@@ -130,9 +130,9 @@ export class PublicationService {
         // mapear precios -> plan
         const prices = await this.ledgerRepo.query(`SELECT nombre, precio FROM planes`);
         const priceToKey = new Map<number, PlanKey>();
-        prices.forEach((p: any)=>{ const k = this.normalizePlanName(p.nombre); if (k && k !== 'FREE') priceToKey.set(Number(p.precio), k); });
+        prices.forEach((p: any) => { const k = this.normalizePlanName(p.nombre); if (k && k !== 'FREE') priceToKey.set(Number(p.precio), k); });
 
-        const ph = usuarios.map(()=> '?').join(',');
+        const ph = usuarios.map(() => '?').join(',');
         const tx = await this.txnRepo.query(
           `SELECT orderId, amount, status, sessionId
              FROM transactions
@@ -155,7 +155,7 @@ export class PublicationService {
     const empresaId = await this.getEmpresaIdByEmployer(employerId);
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
     const employers = await this.getEmployersByEmpresa(empresaId);
     if (!employers.length) return { quota: 3, used: 0, remaining: 3 };
@@ -227,7 +227,7 @@ export class PublicationService {
           // Fallback: buscar en transactions (orderId/sessionId)
           const usuarios = await this.getUsuariosIdsByEmpresa(empresaOwner);
           if (usuarios.length) {
-            const ph = usuarios.map(()=>'?').join(',');
+            const ph = usuarios.map(() => '?').join(',');
             const tx = await this.txnRepo.query(
               `SELECT orderId, status, sessionId FROM transactions
                 WHERE orderId = ? AND status='AUTHORIZED' AND sessionId IN (${ph}) LIMIT 1`,
@@ -294,13 +294,13 @@ export class PublicationService {
   // ===== Publicación directa (orquesta FREE/ledger/order) =====
   async publishOffer(body: any) {
     const employerId = Number(body?.employerId);
-    const empresaId  = Number(body?.empresaId);
-    const selection  = body?.selection || {};
-    const oferta     = body?.oferta || {};
+    const empresaId = Number(body?.empresaId);
+    const selection = body?.selection || {};
+    const oferta = body?.oferta || {};
     const planKey = String(selection?.planKey || '').toUpperCase() as PlanKey;
 
     if (!employerId || !empresaId) throw new BadRequestException('employerId/empresaId requeridos');
-    if (!['FREE','BASICA','ESTANDAR','PREMIUM'].includes(planKey)) throw new BadRequestException('Plan inválido');
+    if (!['FREE', 'BASICO', 'ESTANDAR', 'PREMIUM'].includes(planKey)) throw new BadRequestException('Plan inválido');
     if (!oferta?.titulo) throw new BadRequestException('Falta título');
 
     // FREE por empresa
@@ -310,7 +310,7 @@ export class PublicationService {
     }
 
     const ledgerId = selection?.ledgerId ? Number(selection.ledgerId) : null;
-    const orderId  = selection?.orderId ? String(selection.orderId) : null;
+    const orderId = selection?.orderId ? String(selection.orderId) : null;
     if (planKey !== 'FREE' && !ledgerId && !orderId) {
       throw new BadRequestException('Falta ledgerId u orderId autorizado');
     }
@@ -333,9 +333,9 @@ export class PublicationService {
 
         const prices = await this.ledgerRepo.query(`SELECT nombre, precio FROM planes`);
         const priceToKey = new Map<number, PlanKey>();
-        prices.forEach((p: any)=>{ const k = this.normalizePlanName(p.nombre); if (k && k !== 'FREE') priceToKey.set(Number(p.precio), k); });
+        prices.forEach((p: any) => { const k = this.normalizePlanName(p.nombre); if (k && k !== 'FREE') priceToKey.set(Number(p.precio), k); });
 
-        const ph = usuarios.map(()=>'?').join(',');
+        const ph = usuarios.map(() => '?').join(',');
         const tx = await this.txnRepo.query(
           `SELECT orderId, amount, status, sessionId
              FROM transactions
@@ -357,8 +357,8 @@ export class PublicationService {
     // Crear oferta
     const rules = this.getPolicyFor(planKey);
     const now = new Date();
-    const expires = new Date(now.getTime() + rules.durationDays*24*3600*1000);
-    const reviewUntil = rules.reviewHours ? new Date(now.getTime() + rules.reviewHours*3600*1000) : null;
+    const expires = new Date(now.getTime() + rules.durationDays * 24 * 3600 * 1000);
+    const reviewUntil = rules.reviewHours ? new Date(now.getTime() + rules.reviewHours * 3600 * 1000) : null;
 
     const res = await this.ledgerRepo.query(
       `INSERT INTO oferta
@@ -367,9 +367,9 @@ export class PublicationService {
         prioridad_busqueda, recomendacion_perfiles, restricciones_json)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        String(oferta.titulo).slice(0,255),
+        String(oferta.titulo).slice(0, 255),
         now, rules.durationDays, 1, expires,
-        JSON.stringify(oferta.data||{}),
+        JSON.stringify(oferta.data || {}),
         empresaId, employerId,
         'published',
         reviewUntil, expires,

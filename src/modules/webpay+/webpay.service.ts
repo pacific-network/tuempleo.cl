@@ -170,7 +170,17 @@ export class WebpayService {
     // 3️⃣ Buscar transacción por token
     // ==============================================================
     async findTransactionByToken(token: string) {
-        return this.transactionRepository.findOne({ where: { token } })
+        const transaction = await this.transactionRepository.findOne({
+            where: { token },
+            relations: ['items'], // 👈 CLAVE
+        })
+
+        if (!transaction) {
+            throw new NotFoundException('Transacción no encontrada')
+        }
+
+        return transaction
     }
+
 }
 

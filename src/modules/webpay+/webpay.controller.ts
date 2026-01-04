@@ -115,15 +115,16 @@ export class WebpayController {
         const transaction =
             await this.webpayService.findTransactionByToken(token)
 
-        if (!transaction) {
-            throw new NotFoundException('Transacción no encontrada')
-        }
-
         return {
+            id: transaction.id,
             orderId: transaction.orderId,
+            sessionId: transaction.sessionId,
             amount: transaction.amount,
             status: transaction.status,
-            response_data: transaction.response_data,
+            origen: transaction.origen,
+            items: transaction.items,
+            responseData: transaction.response_data,
         }
     }
+
 }

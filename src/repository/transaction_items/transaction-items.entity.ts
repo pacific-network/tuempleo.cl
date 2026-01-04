@@ -18,8 +18,13 @@ export class TransactionItem {
     @JoinColumn({ name: 'transaction_id' })
     transaction: Transaction;
 
-    @Column({ type: 'enum', enum: ['BASICO', 'ESTANDAR', 'PREMIUM'], nullable: false })
-    tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+    @Column({
+        type: 'enum',
+        enum: ['GRATIS', 'BASICO', 'ESTANDAR', 'PREMIUM'],
+        nullable: false,
+    })
+    tipoAviso: 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+
 
     @Column({ type: 'int', default: 1 })
     cantidad: number;

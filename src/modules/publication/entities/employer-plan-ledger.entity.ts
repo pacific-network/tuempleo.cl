@@ -15,7 +15,7 @@ export class EmployerPlanLedger {
 
   @Index()
   @Column({ name: 'plan_key', type: 'varchar', length: 20 })
-  planKey: string; // FREE | BASICA | ESTANDAR | PREMIUM
+  planKey: string; // FREE | BASICO | ESTANDAR | PREMIUM
 
   @Column({ name: 'qty', type: 'int', default: 1 })
   qty: number;
