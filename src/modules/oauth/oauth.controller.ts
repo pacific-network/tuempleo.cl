@@ -13,7 +13,7 @@ import { OauthService } from './oauth.service'
 import { GoogleOAuthGuard } from './guards/google-oauth.guard'
 import axios from 'axios'
 
-type Audience = 'candidate' | 'employer'
+type Audience = 'postulante' | 'empleador'
 
 @Controller('v1/oauth')
 export class OauthController {
@@ -47,11 +47,10 @@ export class OauthController {
     return allowList.has(origin) || regexes.some(r => r.test(origin))
   }
 
-  private readStateFromQuery(req: Request): {
+  private readState(state?: string): {
     origin: string
     audience: Audience
   } {
-    const state = req.query.state as string | undefined
     if (!state) {
       throw new BadRequestException('Missing OAuth state')
     }
@@ -69,7 +68,9 @@ export class OauthController {
       throw new BadRequestException('Invalid OAuth origin')
     }
 
-    const aud: Audience = audience === 'employer' ? 'employer' : 'candidate'
+    const aud: Audience =
+      audience === 'empleador' ? 'empleador' : 'postulante'
+
     return { origin, audience: aud }
   }
 
@@ -85,38 +86,33 @@ export class OauthController {
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     const oauthUser = (req as any).user
-
     if (!oauthUser) {
       throw new BadRequestException('OAuth user missing')
     }
 
-    const { origin, audience } = this.readStateFromQuery(req)
+    const { origin, audience } = this.readState(
+      req.query.state as string | undefined,
+    )
 
     const email = (oauthUser.email || '').trim().toLowerCase()
     if (!email) {
       throw new BadRequestException('OAuth email missing')
     }
 
-    const fullName = (oauthUser.name || '').trim()
-    const rolId = audience === 'employer' ? 2 : 1
+    const rolId = audience === 'empleador' ? 2 : 1
 
-    const { token, requiereEmpresa, requierePostulante } =
-      await this.oauthService.validateOAuthUser({
-        email,
-        name: fullName,
-        picture: oauthUser.picture || null,
-        provider: 'google',
-        rolId,
-      })
+    const { token } = await this.oauthService.validateOAuthUser({
+      email,
+      name: (oauthUser.name || '').trim(),
+      picture: oauthUser.picture || null,
+      provider: 'google',
+      rolId,
+    })
 
-    const redirectUrl =
-      `${origin}/oauth/callback` +
-      `?token=${encodeURIComponent(token)}` +
-      `&rolId=${rolId}` +
-      `&requiereEmpresa=${requiereEmpresa ?? ''}` +
-      `&requierePostulante=${requierePostulante ?? ''}`
-
-    return res.redirect(redirectUrl)
+    // 🔐 Redirect MINIMAL: solo token
+    return res.redirect(
+      `${origin}/oauth/callback?token=${encodeURIComponent(token)}`,
+    )
   }
 
   // =========================================================
@@ -125,7 +121,10 @@ export class OauthController {
 
   @Get('linkedin')
   redirectToLinkedIn(@Req() req: Request, @Res() res: Response) {
-    const state = req.query.state as string
+    const state = req.query.state as string | undefined
+    if (!state) {
+      throw new BadRequestException('Missing OAuth state')
+    }
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -136,7 +135,7 @@ export class OauthController {
     })
 
     res.redirect(
-      `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
+      `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`,
     )
   }
 
@@ -148,7 +147,7 @@ export class OauthController {
       throw new BadRequestException('Missing OAuth code/state')
     }
 
-    // 1️⃣ exchange code → token
+    // 1️⃣ Exchange code → access token
     const tokenResp = await axios.post(
       'https://www.linkedin.com/oauth/v2/accessToken',
       new URLSearchParams({
@@ -158,39 +157,37 @@ export class OauthController {
         client_id: process.env.LINKEDIN_CLIENT_ID!,
         client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
       }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
     )
 
     const { access_token } = tokenResp.data
 
-    // 2️⃣ get userinfo
+    // 2️⃣ Get user info
     const userinfoResp = await axios.get(
       'https://api.linkedin.com/v2/userinfo',
       {
         headers: { Authorization: `Bearer ${access_token}` },
-      }
+      },
     )
 
     const profile = userinfoResp.data
 
-    // 3️⃣ parse state
-    const { origin, audience } = JSON.parse(
-      decodeURIComponent(state as string)
-    )
+    // 3️⃣ Parse & validate state
+    const { origin, audience } = this.readState(state as string)
 
-    const rolId = audience === 'employer' ? 2 : 1
+    const rolId = audience === 'empleador' ? 2 : 1
 
     const { token } = await this.oauthService.validateOAuthUser({
-      email: profile.email,
+      email: (profile.email || '').trim().toLowerCase(),
       name: profile.name,
       picture: profile.picture,
       provider: 'linkedin',
       rolId,
     })
 
-    // 4️⃣ redirect frontend
-    res.redirect(
-      `${origin}/oauth/callback?token=${encodeURIComponent(token)}`
+    // 4️⃣ Redirect frontend (MINIMAL)
+    return res.redirect(
+      `${origin}/oauth/callback?token=${encodeURIComponent(token)}`,
     )
   }
 
