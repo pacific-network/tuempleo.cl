@@ -99,6 +99,7 @@ export class OauthController {
       throw new BadRequestException('OAuth email missing')
     }
 
+    // 🔑 CONTEXTO EXPLÍCITO
     const rolId = audience === 'empleador' ? 2 : 1
 
     const { token } = await this.oauthService.validateOAuthUser({
@@ -109,9 +110,11 @@ export class OauthController {
       rolId,
     })
 
-    // 🔐 Redirect MINIMAL: solo token
+    // ✅ OPCIÓN A: REDIRECT CON rolId
     return res.redirect(
-      `${origin}/oauth/callback?token=${encodeURIComponent(token)}`,
+      `${origin}/oauth/callback` +
+      `?token=${encodeURIComponent(token)}` +
+      `&rolId=${rolId}`,
     )
   }
 
@@ -172,7 +175,7 @@ export class OauthController {
 
     const profile = userinfoResp.data
 
-    // 3️⃣ Parse & validate state
+    // 3️⃣ Parse state
     const { origin, audience } = this.readState(state as string)
 
     const rolId = audience === 'empleador' ? 2 : 1
@@ -185,9 +188,11 @@ export class OauthController {
       rolId,
     })
 
-    // 4️⃣ Redirect frontend (MINIMAL)
+    // ✅ OPCIÓN A: REDIRECT CON rolId
     return res.redirect(
-      `${origin}/oauth/callback?token=${encodeURIComponent(token)}`,
+      `${origin}/oauth/callback` +
+      `?token=${encodeURIComponent(token)}` +
+      `&rolId=${rolId}`,
     )
   }
 
