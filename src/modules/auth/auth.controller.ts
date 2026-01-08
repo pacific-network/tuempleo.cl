@@ -174,16 +174,13 @@ export class AuthController {
       throw new UnauthorizedException('Token inválido o expirado')
     }
 
-    // --- identidad ---
     const subNum = Number(payload?.sub)
     if (!Number.isFinite(subNum)) {
       throw new UnauthorizedException('Token sin sub')
     }
 
-    // buscar usuario
     let user = await this.authService.findUserFullById(subNum)
 
-    // crear si viene desde OAuth y no existe
     if (!user && payload?.email) {
       user = await this.authService.ensureUserFromJwt(payload)
     }
@@ -192,7 +189,6 @@ export class AuthController {
       throw new UnauthorizedException('Usuario no encontrado')
     }
 
-    // --- estado derivado ---
     const isPostulante = await this.postulanteRepo.exist({
       where: { usuario: { id: user.id } },
     })
@@ -206,10 +202,16 @@ export class AuthController {
       email: user.email,
       nombres: user.nombres,
       apellidos: user.apellidos,
+
+      rut: user.rut ?? null,
+
       isPostulante,
       isEmpleador,
+
+      hasCompletedProfile: Boolean(user.rut),
     }
   }
+
 
   // ---------- login ----------
   // endpoints se mantienen por UX, pero auth NO recibe rol
