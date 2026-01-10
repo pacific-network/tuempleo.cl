@@ -284,14 +284,18 @@ export class AuthService {
   }
 
   // ---------- login clásico (REFactor) ----------
-  async login(data: IniciarSesionDto) {
+  async login(data: IniciarSesionDto, rolId: number) {
     const email = this.norm(data.email)
 
     const registro = await this.registroRepo.findOne({ where: { email } })
-    if (!registro) throw new UnauthorizedException('Usuario no encontrado')
+    if (!registro) {
+      throw new UnauthorizedException('Usuario no encontrado')
+    }
 
     const ok = await this.encrypt.compare(data.password, registro.password)
-    if (!ok) throw new UnauthorizedException('Contraseña incorrecta')
+    if (!ok) {
+      throw new UnauthorizedException('Contraseña incorrecta')
+    }
 
     // activar registro
     if (!registro.es_activo) {
@@ -299,10 +303,14 @@ export class AuthService {
       await this.registroRepo.save(registro)
     }
 
-    // asegurar usuario (NO rol)
-    let user = await this.usuarioRepo.findOne({ where: { email } })
+    // asegurar usuario
+    let user = await this.usuarioRepo.findOne({
+      where: { email },
+    })
+
     if (!user) {
       const parts = (registro.nombre_completo || '').trim().split(/\s+/)
+
       user = this.usuarioRepo.create({
         email,
         nombres: parts[0] || '',
@@ -310,22 +318,42 @@ export class AuthService {
         password: registro.password,
         is_activo: true,
       })
-      await this.usuarioRepo.save(user)
     }
 
-    // JWT minimal y estable
+    // ===============================
+    // 🔑 ASIGNAR ROL ACTIVO (1 ó 2)
+    // ===============================
+    user.rol = { id: rolId } as any
+    await this.usuarioRepo.save(user)
+
+    // ===============================
+    // JWT
+    // ===============================
     const token = this.jwt.sign({
       sub: Number(user.id),
       email: user.email,
+      rolId,
     })
 
-    return { message: 'Login exitoso', token }
+    return {
+      message: 'Login exitoso',
+      token,
+    }
   }
+
+
 
   // ---------- me / update ----------
   async findUserFullById(id: number) {
-    const user = await this.usuarioRepo.findOne({ where: { id } })
-    if (!user) throw new UnauthorizedException('Usuario no encontrado')
+    const user = await this.usuarioRepo.findOne({
+      where: { id },
+      relations: ['rol'], // 👈 CLAVE
+    })
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado')
+    }
+
     return user
   }
 

@@ -163,7 +163,9 @@ export class AuthController {
         ? header.slice(7)
         : null
 
-    if (!token) throw new UnauthorizedException('Token requerido')
+    if (!token) {
+      throw new UnauthorizedException('Token requerido')
+    }
 
     let payload: any
     try {
@@ -179,6 +181,11 @@ export class AuthController {
       throw new UnauthorizedException('Token sin sub')
     }
 
+    const activeRole =
+      payload?.rolId === 2
+        ? 'empleador'
+        : 'postulante' // default seguro
+
     let user = await this.authService.findUserFullById(subNum)
 
     if (!user && payload?.email) {
@@ -189,6 +196,7 @@ export class AuthController {
       throw new UnauthorizedException('Usuario no encontrado')
     }
 
+    // 🔍 Estado REAL de datos (no contexto)
     const isPostulante = await this.postulanteRepo.exist({
       where: { usuario: { id: user.id } },
     })
@@ -205,26 +213,34 @@ export class AuthController {
 
       rut: user.rut ?? null,
 
+      // 🔑 CONTEXTO DE SESIÓN
+      activeRole,
+
+      // 📊 ESTADO DE DATOS
       isPostulante,
       isEmpleador,
 
-      hasCompletedProfile: Boolean(user.rut),
+      // onboarding depende del contexto + data
+      hasCompletedProfile:
+        activeRole === 'empleador'
+          ? Boolean(isEmpleador && user.rut)
+          : Boolean(isPostulante),
     }
   }
+
+
 
 
   // ---------- login ----------
   // endpoints se mantienen por UX, pero auth NO recibe rol
   @Post('login-postulante')
-  @HttpCode(HttpStatus.OK)
-  async loginPostulante(@Body() loginData: IniciarSesionDto) {
-    return this.authService.login(loginData)
+  loginPostulante(@Body() dto: IniciarSesionDto) {
+    return this.authService.login(dto, 1)
   }
 
   @Post('login-empleador')
-  @HttpCode(HttpStatus.OK)
-  async loginEmpleador(@Body() loginData: IniciarSesionDto) {
-    return this.authService.login(loginData)
+  loginEmpleador(@Body() dto: IniciarSesionDto) {
+    return this.authService.login(dto, 2)
   }
 
   // ---------- update me ----------
