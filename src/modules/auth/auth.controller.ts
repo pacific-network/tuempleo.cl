@@ -1,125 +1,3 @@
-// import {
-//   Controller, Post, Get, Req, Body, HttpCode, HttpStatus,
-//   Patch, UnauthorizedException
-// } from '@nestjs/common';
-// import { AuthService } from './auth.service';
-// import { RegistrarUsuarioDto } from './dto/register';
-// import { Request } from 'express';
-// import { IniciarSesionDto } from '../oauth/dto/login';
-// import { UpdateMeDto } from './dto/update-me';
-// import { JwtService } from '@nestjs/jwt';
-
-// // Nota: NO usamos AuthGuard en /auth/me para poder crear el usuario on-the-fly con el token OAuth.
-// @Controller('v1/auth')
-// export class AuthController {
-//   constructor(
-//     private readonly authService: AuthService,
-//     private readonly jwtService: JwtService,
-//   ) {}
-
-//   @Post('register')
-//   async register(@Body() dto: RegistrarUsuarioDto) {
-//     return this.authService.register(dto);
-//   }
-
-//   @Get('me')
-//   async getMe(@Req() req: Request) {
-//     const header = req.headers['authorization'];
-//     const token =
-//       typeof header === 'string' && header.startsWith('Bearer ')
-//         ? header.slice(7)
-//         : null;
-
-//     if (!token) throw new UnauthorizedException('Token requerido');
-
-//     let payload: any;
-//     try {
-//       payload = this.jwtService.verify(token, {
-//         secret: process.env.JWT_SECRET || 'pacificNetwork2024',
-//       });
-//     } catch {
-//       throw new UnauthorizedException('Token inválido o expirado');
-//     }
-
-//     // --- 1) Intentar por sub ---
-//     const subNum = Number(payload?.sub);
-//     if (Number.isFinite(subNum)) {
-//       const bySub = await this.authService.findUserFullByIdSafe(subNum);
-//       if (bySub) {
-//         return {
-//           id: bySub.id,
-//           email: bySub.email,
-//           nombres: bySub.nombres,
-//           apellidos: bySub.apellidos,
-//           rol: bySub.rol ? { id: bySub.rol.id, nombre: bySub.rol.nombre } : null,
-//         };
-//       }
-//     }
-
-//     // --- 2) Intentar por email ---
-//     const email = (payload?.email || '').trim().toLowerCase();
-//     if (email) {
-//       const byEmail = await this.authService.findUserByEmailSafe(email);
-//       if (byEmail) {
-//         return {
-//           id: byEmail.id,
-//           email: byEmail.email,
-//           nombres: byEmail.nombres,
-//           apellidos: byEmail.apellidos,
-//           rol: byEmail.rol ? { id: byEmail.rol.id, nombre: byEmail.rol.nombre } : null,
-//         };
-//       }
-//     }
-
-//     // --- 3) Crear si no existe (OAuth) ---
-//     const created = await this.authService.ensureUserFromJwt(payload);
-//     return {
-//       id: created.id,
-//       email: created.email,
-//       nombres: created.nombres,
-//       apellidos: created.apellidos,
-//       rol: created.rol ? { id: created.rol.id, nombre: created.rol.nombre } : null,
-//     };
-//   }
-
-//   @Post('login-postulante')
-//   @HttpCode(HttpStatus.OK)
-//   async loginPostulante(@Body() loginData: IniciarSesionDto) {
-//     return this.authService.login(loginData, 1);
-//   }
-
-//   @Post('login-empleador')
-//   @HttpCode(HttpStatus.OK)
-//   async loginEmpleador(@Body() loginData: IniciarSesionDto) {
-//     return this.authService.login(loginData, 2);
-//   }
-
-//   @Patch('me')
-//   async updateMe(@Req() req: any, @Body() dto: UpdateMeDto) {
-//     const header = req.headers['authorization'];
-//     const token =
-//       typeof header === 'string' && header.startsWith('Bearer ')
-//         ? header.slice(7)
-//         : null;
-//     if (!token) throw new UnauthorizedException('Token requerido');
-
-//     let payload: any;
-//     try {
-//       payload = this.jwtService.verify(token, {
-//         secret: process.env.JWT_SECRET || 'pacificNetwork2024',
-//       });
-//     } catch {
-//       throw new UnauthorizedException('Token inválido o expirado');
-//     }
-
-//     const subNum = Number(payload?.sub);
-//     if (!Number.isFinite(subNum)) {
-//       throw new UnauthorizedException('Token sin sub');
-//     }
-
-//     return this.authService.updateMe(subNum, dto);
-//   }
-// }
 import {
   Controller, Post, Get, Req, Body, HttpCode, HttpStatus,
   Patch, UnauthorizedException
@@ -148,13 +26,30 @@ export class AuthController {
     private readonly empleadorRepo: Repository<Empleador>,
   ) { }
 
-  // ---------- register ----------
+  // -------------------------
+  // Register
+  // -------------------------
   @Post('register')
   async register(@Body() dto: RegistrarUsuarioDto) {
     return this.authService.register(dto)
   }
 
-  // ---------- me ----------
+  // -------------------------
+  // Login (UX contexts)
+  // -------------------------
+  @Post('login-postulante')
+  loginPostulante(@Body() dto: IniciarSesionDto) {
+    return this.authService.login(dto, 'postulante')
+  }
+
+  @Post('login-empleador')
+  loginEmpleador(@Body() dto: IniciarSesionDto) {
+    return this.authService.login(dto, 'empleador')
+  }
+
+  // -------------------------
+  // Me (FUENTE DE VERDAD)
+  // -------------------------
   @Get('me')
   async getMe(@Req() req: Request) {
     const header = req.headers['authorization']
@@ -176,17 +71,19 @@ export class AuthController {
       throw new UnauthorizedException('Token inválido o expirado')
     }
 
-    const subNum = Number(payload?.sub)
-    if (!Number.isFinite(subNum)) {
+    const userId = Number(payload?.sub)
+    if (!Number.isFinite(userId)) {
       throw new UnauthorizedException('Token sin sub')
     }
 
-    const activeRole =
-      payload?.rolId === 2
+    // 👇 CONTEXTO UX (NO SEGURIDAD)
+    let context: 'postulante' | 'empleador' =
+      payload?.context === 'empleador'
         ? 'empleador'
-        : 'postulante' // default seguro
+        : 'postulante'
 
-    let user = await this.authService.findUserFullById(subNum)
+    // asegurar usuario
+    let user = await this.authService.findUserFullById(userId)
 
     if (!user && payload?.email) {
       user = await this.authService.ensureUserFromJwt(payload)
@@ -196,7 +93,9 @@ export class AuthController {
       throw new UnauthorizedException('Usuario no encontrado')
     }
 
-    // 🔍 Estado REAL de datos (no contexto)
+    // -------------------------
+    // Estado REAL en DB
+    // -------------------------
     const isPostulante = await this.postulanteRepo.exist({
       where: { usuario: { id: user.id } },
     })
@@ -205,54 +104,55 @@ export class AuthController {
       where: { usuario: { id: user.id } },
     })
 
+    // -------------------------
+    // Blindaje de coherencia
+    // -------------------------
+    if (context === 'empleador' && !isEmpleador) {
+      // onboarding no completo → mantener contexto, pero marcar incompleto
+    }
+
+    if (context === 'postulante' && !isPostulante) {
+      // onboarding no completo
+    }
+
+    const hasCompletedProfile =
+      context === 'empleador'
+        ? Boolean(isEmpleador && user.rut)
+        : Boolean(isPostulante)
+
     return {
       id: user.id,
       email: user.email,
       nombres: user.nombres,
       apellidos: user.apellidos,
-
       rut: user.rut ?? null,
 
-      // 🔑 CONTEXTO DE SESIÓN
-      activeRole,
+      // UX
+      activeRole: context,
 
-      // 📊 ESTADO DE DATOS
+      // Estado real
       isPostulante,
       isEmpleador,
 
-      // onboarding depende del contexto + data
-      hasCompletedProfile:
-        activeRole === 'empleador'
-          ? Boolean(isEmpleador && user.rut)
-          : Boolean(isPostulante),
+      // onboarding
+      hasCompletedProfile,
     }
   }
 
-
-
-
-  // ---------- login ----------
-  // endpoints se mantienen por UX, pero auth NO recibe rol
-  @Post('login-postulante')
-  loginPostulante(@Body() dto: IniciarSesionDto) {
-    return this.authService.login(dto, 1)
-  }
-
-  @Post('login-empleador')
-  loginEmpleador(@Body() dto: IniciarSesionDto) {
-    return this.authService.login(dto, 2)
-  }
-
-  // ---------- update me ----------
+  // -------------------------
+  // Update me
+  // -------------------------
   @Patch('me')
-  async updateMe(@Req() req: any, @Body() dto: UpdateMeDto) {
+  async updateMe(@Req() req: Request, @Body() dto: UpdateMeDto) {
     const header = req.headers['authorization']
     const token =
       typeof header === 'string' && header.startsWith('Bearer ')
         ? header.slice(7)
         : null
 
-    if (!token) throw new UnauthorizedException('Token requerido')
+    if (!token) {
+      throw new UnauthorizedException('Token requerido')
+    }
 
     let payload: any
     try {
@@ -263,11 +163,11 @@ export class AuthController {
       throw new UnauthorizedException('Token inválido o expirado')
     }
 
-    const subNum = Number(payload?.sub)
-    if (!Number.isFinite(subNum)) {
+    const userId = Number(payload?.sub)
+    if (!Number.isFinite(userId)) {
       throw new UnauthorizedException('Token sin sub')
     }
 
-    return this.authService.updateMe(subNum, dto)
+    return this.authService.updateMe(userId, dto)
   }
 }

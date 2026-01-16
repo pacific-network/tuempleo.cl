@@ -28,6 +28,11 @@ export class Usuario {
     @Column({ type: 'boolean', default: true })
     is_activo: boolean;
 
+    /**
+ * ⚠️ LEGACY
+ * Este campo NO debe usarse para autorización ni contexto.
+ * Se mantiene solo por compatibilidad y migración.
+ */
     @ManyToOne(() => Rol, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'rol_id' })
     rol: Rol;
