@@ -4,6 +4,7 @@ import {
     Param,
     ParseIntPipe,
     ParseEnumPipe,
+    Query,
 } from '@nestjs/common'
 
 import { CatalogService } from './catalog.service'
@@ -75,8 +76,8 @@ export class CatalogController {
     // Áreas de Trabajo
     // =====================
 
-    @Get('job-areas')
-    getJobAreas() {
-        return this.catalogService.getJobAreas()
+    @Get('work-areas')
+    getWorkAreas(@Query('search') search?: string) {
+        return this.catalogService.getWorkAreas(search)
     }
 }

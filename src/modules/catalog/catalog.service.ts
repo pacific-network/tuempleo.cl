@@ -94,10 +94,20 @@ export class CatalogService {
     // =====================
     // Areas de Trabajo
     // =====================
-    async getJobAreas() {
-        return this.jobAreaRepo.find({
-            where: { activo: true },
-            order: { nombre: 'ASC' },
-        })
+    async getWorkAreas(search?: string) {
+        const qb = this.jobAreaRepo
+            .createQueryBuilder('wa')
+            .where('wa.activo = :activo', { activo: true })
+
+        if (search) {
+            qb.andWhere('wa.nombre LIKE :search', {
+                search: `%${search}%`,
+            })
+        }
+
+        return qb
+            .orderBy('wa.nombre', 'ASC')
+            .getMany()
     }
+
 }
