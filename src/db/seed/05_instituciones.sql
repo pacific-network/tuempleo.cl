@@ -1,12 +1,13 @@
 -- ======================================================
--- Seed: Educational Institutions (Chile + Internacional)
+-- Seed: Instituciones Educacionales (Chile + Internacional)
+-- Compatible MySQL
 -- ======================================================
 
-INSERT INTO educational_institution (nombre, tipo)
-VALUES
--- ======================
--- Universidades
--- ======================
+INSERT IGNORE INTO institucion_educacional (nombre, tipo) VALUES
+
+-- ======================================================
+-- UNIVERSIDADES
+-- ======================================================
 ('Pontificia Universidad Catolica de Chile', 'universidad'),
 ('Universidad de Chile', 'universidad'),
 ('Universidad de Santiago de Chile', 'universidad'),
@@ -41,9 +42,16 @@ VALUES
 ('Universidad de OHiggins', 'universidad'),
 ('Universidad de Aysen', 'universidad'),
 
--- ======================
--- Institutos Profesionales
--- ======================
+-- Universidades adicionales
+('Universidad Academia de Humanismo Cristiano', 'universidad'),
+('Universidad Gabriela Mistral', 'universidad'),
+('Universidad Miguel de Cervantes', 'universidad'),
+('Universidad Iberoamericana de Ciencias y Tecnologia', 'universidad'),
+('Universidad Bolivariana', 'universidad'),
+
+-- ======================================================
+-- INSTITUTOS PROFESIONALES (IP)
+-- ======================================================
 ('IP Chile', 'instituto_profesional'),
 ('IP Arcos', 'instituto_profesional'),
 ('IP Carlos Casanueva', 'instituto_profesional'),
@@ -59,16 +67,24 @@ VALUES
 ('IP Santo Tomas', 'instituto_profesional'),
 ('IP Virginia OHiggins', 'instituto_profesional'),
 
--- ======================
--- CFT
--- ======================
+-- IP faltantes relevantes
+('IP Esucomex', 'instituto_profesional'),
+('IP ICCE', 'instituto_profesional'),
+('IP Providencia', 'instituto_profesional'),
+('IP IACC', 'instituto_profesional'),
+('IP Latinoamericano de Comercio Exterior', 'instituto_profesional'),
+('IP Instituto Nacional del Futbol INAF', 'instituto_profesional'),
+
+-- ======================================================
+-- CENTROS DE FORMACION TECNICA (CFT)
+-- ======================================================
 ('CFT CEDUC UCN', 'cft'),
 ('CFT Cruz Roja', 'cft'),
 ('CFT ENAC', 'cft'),
 ('CFT Maule', 'cft'),
 ('CFT San Agustin', 'cft'),
 ('CFT UCE', 'cft'),
-('CFT Inacap', 'cft'),
+('CFT INACAP', 'cft'),
 ('CFT Laprida', 'cft'),
 ('CFT Virtual', 'cft'),
 ('CFT Estatal', 'cft'),
@@ -76,16 +92,30 @@ VALUES
 ('CFT Teknos', 'cft'),
 ('CFT Valle Grande', 'cft'),
 
--- ======================
--- Internacionales / Otras
--- ======================
+-- CFT Estatales por región
+('CFT Estatal de Arica y Parinacota', 'cft'),
+('CFT Estatal de Tarapaca', 'cft'),
+('CFT Estatal de Antofagasta', 'cft'),
+('CFT Estatal de Atacama', 'cft'),
+('CFT Estatal de Coquimbo', 'cft'),
+('CFT Estatal de Valparaiso', 'cft'),
+('CFT Estatal Metropolitano', 'cft'),
+('CFT Estatal del Maule', 'cft'),
+('CFT Estatal del Biobio', 'cft'),
+('CFT Estatal de La Araucania', 'cft'),
+('CFT Estatal de Los Rios', 'cft'),
+('CFT Estatal de Los Lagos', 'cft'),
+('CFT Estatal de Aysen', 'cft'),
+('CFT Estatal de Magallanes', 'cft'),
+
+-- ======================================================
+-- INTERNACIONALES / OTRAS
+-- ======================================================
 ('UNEFA Venezuela', 'internacional'),
 ('Universidad de Barcelona Espana', 'internacional'),
 ('UNAM Mexico', 'internacional'),
-('Otra', 'otra')
-
-ON CONFLICT (nombre) DO NOTHING;
+('Otra', 'otra');
 
 -- ======================================================
--- Fin seed educational institutions
+-- Fin seed instituciones educacionales
 -- ======================================================

@@ -1,11 +1,12 @@
 -- ======================================================
 -- Seed: Job Areas (Areas de Trabajo)
+-- Compatible MySQL
 -- ======================================================
 
-INSERT INTO job_area (nombre)
-VALUES
+INSERT IGNORE INTO area_trabajo (nombre) VALUES
+
 -- =========================
--- Administracion / Gestion
+-- Administración / Gestión
 -- =========================
 ('Administracion General'),
 ('Contabilidad'),
@@ -13,6 +14,7 @@ VALUES
 ('Auditoria'),
 ('Control de Gestion'),
 ('Gerencia y Direccion'),
+('Planificacion Estrategica'),
 
 -- =========================
 -- Comercial / Ventas
@@ -23,6 +25,8 @@ VALUES
 ('Customer Success'),
 ('Atencion al Cliente'),
 ('Call Center y Telemarketing'),
+('Key Account Manager'),
+('Postventa'),
 
 -- =========================
 -- Marketing / Comunicaciones
@@ -33,6 +37,8 @@ VALUES
 ('Comunicaciones'),
 ('Relaciones Publicas'),
 ('Branding y Contenidos'),
+('SEO / SEM'),
+('Social Media'),
 
 -- =========================
 -- Recursos Humanos
@@ -41,16 +47,22 @@ VALUES
 ('Reclutamiento y Seleccion'),
 ('Capacitacion y Desarrollo'),
 ('Compensaciones y Beneficios'),
+('People Analytics'),
+('Gestion del Talento'),
 
 -- =========================
 -- Tecnologia / Sistemas
 -- =========================
 ('Tecnologias de la Informacion'),
 ('Desarrollo de Software'),
+('Arquitectura de Software'),
 ('Infraestructura y Redes'),
 ('Soporte Tecnico'),
 ('Ciberseguridad'),
 ('Data y Analitica'),
+('Inteligencia Artificial'),
+('QA y Testing'),
+('DevOps'),
 
 -- =========================
 -- Ingenieria / Produccion
@@ -61,6 +73,7 @@ VALUES
 ('Manufactura'),
 ('Calidad'),
 ('Mantenimiento'),
+('Prevencion de Riesgos'),
 
 -- =========================
 -- Logistica / Operaciones
@@ -70,6 +83,8 @@ VALUES
 ('Operaciones'),
 ('Comercio Exterior'),
 ('Aduanas'),
+('Supply Chain'),
+('Planificacion Operacional'),
 
 -- =========================
 -- Salud / Educacion
@@ -78,6 +93,8 @@ VALUES
 ('Enfermeria'),
 ('Medicina'),
 ('Farmacia'),
+('Kinesiologia'),
+('Psicologia'),
 ('Educacion y Docencia'),
 ('Investigacion'),
 
@@ -86,6 +103,8 @@ VALUES
 -- =========================
 ('Legal'),
 ('Compliance'),
+('Derecho Laboral'),
+('Derecho Corporativo'),
 ('Sociologia y Trabajo Social'),
 
 -- =========================
@@ -94,6 +113,14 @@ VALUES
 ('Gastronomia'),
 ('Hoteleria'),
 ('Turismo'),
+('Eventos y Produccion'),
+
+-- =========================
+-- Finanzas / Riesgo
+-- =========================
+('Riesgo y Cumplimiento'),
+('Tesoreria'),
+('Inversiones'),
 
 -- =========================
 -- Otros
@@ -102,9 +129,9 @@ VALUES
 ('Seguros'),
 ('Administracion Publica'),
 ('Oficios'),
-('Otros')
-
-ON CONFLICT (nombre) DO NOTHING;
+('Arte y Cultura'),
+('Deporte y Recreacion'),
+('Otros');
 
 -- ======================================================
 -- Fin seed job areas

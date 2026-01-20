@@ -1,9 +1,9 @@
 -- ======================================================
 -- Seed: Company Activities (Business Industry)
+-- Compatible MySQL
 -- ======================================================
 
-INSERT INTO company_activity (nombre)
-VALUES
+INSERT IGNORE INTO actividad_empresa (nombre) VALUES
 ('AFJP'),
 ('Administracion'),
 ('Agro Industrial'),
@@ -76,9 +76,7 @@ VALUES
 ('Textil'),
 ('Transportadora'),
 ('Transporte'),
-('Turismo')
-
-ON CONFLICT (nombre) DO NOTHING;
+('Turismo');
 
 -- ======================================================
 -- Fin seed company activities
