@@ -31,6 +31,7 @@ import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
 import { QuotaModule } from './modules/quota/quota.module';
 import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
 import { SmsModule } from './modules/sms-generator/sms.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 
 
 
@@ -81,7 +82,8 @@ import { SmsModule } from './modules/sms-generator/sms.module';
     MercadoPagoModule,
     QuotaModule,
     CvGeneratorModule,
-    SmsModule
+    SmsModule,
+    CatalogModule
 
 
 
