@@ -59,111 +59,151 @@ export enum NivelExperiencia {
 // 🧩 DTO anidado: DataOfertaDto
 // ======================================================
 export class DataOfertaDto {
-    // 1️⃣ Área de trabajo
+    // 1️⃣ Área de trabajo (SIEMPRE obligatoria)
     @IsString()
     @IsNotEmpty({ message: 'El área de trabajo es obligatoria.' })
-    area_trabajo: string;
+    area_trabajo: string
 
-    // 2️⃣ Nivel de experiencia
-    @IsOptional()
+    // 2️⃣ Nivel de experiencia (SIEMPRE obligatorio)
     @IsEnum(NivelExperiencia, {
         message:
             'Nivel de experiencia no válido. Use: sin_experiencia, junior, semi_senior, senior o experto.',
     })
-    nivel_experiencia?: NivelExperiencia;
+    nivel_experiencia: NivelExperiencia
 
-    // 3️⃣ Años de experiencia (opcional)
+    // 3️⃣ Años de experiencia (condicional por nivel)
     @IsOptional()
-    @IsInt({ message: 'Los años de experiencia deben ser un número entero.' })
-    anios_experiencia?: number;
+    @IsInt({
+        message: 'Los años de experiencia deben ser un número entero.',
+    })
+    anios_experiencia?: number
 
-    // 4️⃣ Dirección del trabajo (opcional)
-    @IsOptional()
-    @IsString({ message: 'La dirección del trabajo debe ser texto.' })
-    direccion_trabajo?: string;
+    // 4️⃣ Modalidad (SIEMPRE obligatoria)
+    @IsEnum(Modalidad, {
+        message: 'Modalidad no válida. Use: presencial, remoto o hibrido.',
+    })
+    modalidad: Modalidad
 
-    // 5️⃣ Región (opcional)
+    // 5️⃣ Ubicación física (CONDICIONAL: no aplica a remoto)
     @IsOptional()
     @IsString({ message: 'La región debe ser texto.' })
-    region?: string;
+    region?: string
 
-    // 6️⃣ Educación requerida
     @IsOptional()
-    @IsString({ message: 'La educación requerida debe ser texto.' })
-    educacion_requerida?: string;
+    @IsString({ message: 'La comuna debe ser texto.' })
+    comuna?: string
 
-    // 7️⃣ Tipo de contrato
     @IsOptional()
+    @IsString({
+        message: 'La dirección del trabajo debe ser texto.',
+    })
+    direccion_trabajo?: string
+
+    // 6️⃣ Educación requerida (depende del cargo)
+    @IsOptional()
+    @IsString({
+        message: 'La educación requerida debe ser texto.',
+    })
+    educacion_requerida?: string
+
+    // 7️⃣ Tipo de contrato (SIEMPRE obligatorio)
     @IsEnum(TipoContrato, {
         message:
             'Tipo de contrato no válido. Use: plazo_fijo, indefinido, temporal, practica, reemplazo u otro_tipo_de_contrato.',
     })
-    tipo_contrato?: TipoContrato;
+    tipo_contrato: TipoContrato
 
-    // 8️⃣ Modalidad
-    @IsOptional()
-    @IsEnum(Modalidad, {
-        message: 'Modalidad no válida. Use: presencial, remoto o hibrido.',
+    // 8️⃣ Número de vacantes (SIEMPRE obligatorio)
+    @IsInt({
+        message: 'El campo "numero_vacantes" debe ser un número entero.',
     })
-    modalidad?: Modalidad;
+    numero_vacantes: number
 
-
-    @IsOptional()
-    @IsInt({ message: 'El campo "numero_vacantes" debe ser un número entero.' })
-    numero_vacantes?: number;
-
-    // 9️⃣ Descripción del puesto
+    // 9️⃣ Descripción del puesto (SIEMPRE obligatoria)
     @IsString()
-    @IsNotEmpty({ message: 'La descripción del puesto es obligatoria.' })
-    descripcion_puesto: string;
+    @IsNotEmpty({
+        message: 'La descripción del puesto es obligatoria.',
+    })
+    descripcion_puesto: string
 
-    // 🔟 Responsabilidades
+    // 🔟 Responsabilidades (opcional pero recomendado)
     @IsOptional()
-    @IsArray({ message: 'Las responsabilidades deben ser una lista.' })
-    @IsString({ each: true, message: 'Cada responsabilidad debe ser texto.' })
-    responsabilidades?: string[];
+    @IsArray({
+        message: 'Las responsabilidades deben ser una lista.',
+    })
+    @IsString({
+        each: true,
+        message: 'Cada responsabilidad debe ser texto.',
+    })
+    responsabilidades?: string[]
 
-    // 11️⃣ Requisitos mínimos
+    // 11️⃣ Requisitos mínimos (opcional, pero habitual)
     @IsOptional()
-    @IsArray({ message: 'Los requisitos mínimos deben ser una lista.' })
-    @IsString({ each: true, message: 'Cada requisito debe ser texto.' })
-    requisitos_minimos?: string[];
+    @IsArray({
+        message: 'Los requisitos mínimos deben ser una lista.',
+    })
+    @IsString({
+        each: true,
+        message: 'Cada requisito debe ser texto.',
+    })
+    requisitos_minimos?: string[]
 
     // 12️⃣ Beneficios
     @IsOptional()
-    @IsArray({ message: 'Los beneficios deben ser una lista.' })
-    @IsString({ each: true, message: 'Cada beneficio debe ser texto.' })
-    beneficios?: string[];
+    @IsArray({
+        message: 'Los beneficios deben ser una lista.',
+    })
+    @IsString({
+        each: true,
+        message: 'Cada beneficio debe ser texto.',
+    })
+    beneficios?: string[]
 
-    // 13️⃣ Acepta personas con discapacidad
-    @IsOptional()
-    @IsBoolean({ message: 'El campo "acepta_discapacitados" debe ser booleano.' })
-    acepta_discapacitados?: boolean;
+    // 13️⃣ Inclusión / discapacidad
+    @IsBoolean({
+        message:
+            'El campo "acepta_discapacitados" debe ser booleano.',
+    })
+    acepta_discapacitados: boolean
 
-    // 14️⃣ Renta salarial
+    // 14️⃣ Renta salarial (CONDICIONAL)
     @IsOptional()
     @ValidateNested()
     @Type(() => RentaSalarialDto)
-    renta_salarial?: RentaSalarialDto;
+    renta_salarial?: RentaSalarialDto
 
     // 15️⃣ Herramientas básicas
     @IsOptional()
-    @IsArray({ message: 'Las herramientas deben ser una lista.' })
-    @IsString({ each: true, message: 'Cada herramienta debe ser texto.' })
-    herramientas_BASICOs?: string[];
+    @IsArray({
+        message: 'Las herramientas deben ser una lista.',
+    })
+    @IsString({
+        each: true,
+        message: 'Cada herramienta debe ser texto.',
+    })
+    herramientas_basicas?: string[]
 
-
+    // 16️⃣ Otras herramientas
     @IsOptional()
-    @IsArray({ message: 'Las herramientas deben ser una lista.' })
-    @IsString({ each: true, message: 'Cada herramienta debe ser texto.' })
+    @IsArray({
+        message: 'Las herramientas deben ser una lista.',
+    })
+    @IsString({
+        each: true,
+        message: 'Cada herramienta debe ser texto.',
+    })
     otras_herramientas?: string[]
 
-    // 16️⃣ Preguntas personalizadas
+    // 17️⃣ Preguntas personalizadas
     @IsOptional()
-    @IsArray({ message: 'Las preguntas deben ser una lista.' })
-    @IsString({ each: true, message: 'Cada pregunta debe ser texto.' })
-    preguntas_personalizadas?: string[];
-
+    @IsArray({
+        message: 'Las preguntas deben ser una lista.',
+    })
+    @IsString({
+        each: true,
+        message: 'Cada pregunta debe ser texto.',
+    })
+    preguntas_personalizadas?: string[]
 }
 
 // ======================================================
