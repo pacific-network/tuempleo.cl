@@ -53,9 +53,9 @@ export class CreateEmployerDto {
     @IsString()
     rut: string;
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsNumber()
-    userId: number;
+    userId?: number
 
     @IsOptional()
     @IsNumber()

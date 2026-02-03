@@ -26,6 +26,12 @@ import { CountVisit } from 'src/repository/count_visits/count-visits.entity';
 import { CuposUsados } from 'src/repository/used_quota/used_quota.entity';
 import { StockGratis } from 'src/repository/free_stock/free-stock.entity';
 import { Sms } from 'src/repository/sms/sms.entity';
+import { Region } from 'src/repository/catalog/region.entity';
+import { Comuna } from 'src/repository/catalog/commune.entity';
+import { WorkArea } from 'src/repository/catalog/work-area.entity';
+import { InstitucionEducacional } from 'src/repository/catalog/educational-institution.entity';
+import { BusinessActivity } from 'src/repository/catalog/company_activity';
+import { Mail } from 'src/repository/mail/mail.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -39,7 +45,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail],
     // logging: true,
     synchronize: process.env.DB_SYNCHRONIZE === 'false',
 

@@ -1,8 +1,11 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { RegisterBusinessEmployerDto } from './dto/register-business-employer.dto';
-import { EmpresaService } from '../business/business.service';
-import { EmpleadorService } from '../employer/employer.service';
-import { create } from 'domain';
+import {
+    ConflictException,
+    Injectable,
+    InternalServerErrorException,
+} from '@nestjs/common'
+import { RegisterBusinessEmployerDto } from './dto/register-business-employer.dto'
+import { EmpresaService } from '../business/business.service'
+import { EmpleadorService } from '../employer/employer.service'
 
 @Injectable()
 export class FormsService {
@@ -11,46 +14,105 @@ export class FormsService {
         private readonly empleadorService: EmpleadorService,
     ) { }
 
-    async registerBusinessAndEmployer(dto: RegisterBusinessEmployerDto) {
+    async registerBusinessAndEmployer(
+        dto: RegisterBusinessEmployerDto,
+        userId: number, // 🔐 viene desde JWT
+    ) {
+        console.log('🟢 [FORMS] Inicio onboarding', {
+            userId,
+            rutEmpresa: dto.business.rut,
+            rutEmpleador: dto.employer.rut,
+        })
+
         try {
-            // 1. Crear empresa
-            const createdBusiness = await this.businessService.createBusiness(dto.business);
+            // ===============================
+            // 1️⃣ CREAR EMPRESA
+            // ===============================
+            console.log('🟡 [FORMS] Creando empresa...', dto.business)
+
+            const createdBusiness =
+                await this.businessService.createBusiness(dto.business)
+
+            console.log('✅ [FORMS] Empresa creada', {
+                empresaId: createdBusiness.id,
+                rut: createdBusiness.rut,
+            })
 
             try {
-                // 2. Crear empleador
-                const createdEmployer = await this.empleadorService.createEmployerWithCompany(
-                    dto.employer,
-                    createdBusiness.id,
-                );
+                // ===============================
+                // 2️⃣ CREAR EMPLEADOR
+                // ===============================
+                console.log('🟡 [FORMS] Creando empleador...', {
+                    rut: dto.employer.rut,
+                    userId,
+                    empresaId: createdBusiness.id,
+                })
 
-                //3.Actualizar usuario con el id de la empresa
-                await this.empleadorService.updateCompanyId(createdEmployer.id, createdBusiness.id);
+                const createdEmployer =
+                    await this.empleadorService.createEmployerWithCompany(
+                        {
+                            ...dto.employer,
+                            userId, // 🔑 identidad backend
+                        },
+                        createdBusiness.id,
+                    )
+
+                console.log('✅ [FORMS] Empleador creado', {
+                    empleadorId: createdEmployer.id,
+                    userId,
+                })
+
+                // ===============================
+                // 3️⃣ ACTUALIZAR USUARIO
+                // ===============================
+                console.log('🟡 [FORMS] Asociando empresa al usuario...', {
+                    userId,
+                    empresaId: createdBusiness.id,
+                })
+
+                await this.empleadorService.updateCompanyId(
+                    userId,
+                    createdBusiness.id,
+                )
+
+                console.log('✅ [FORMS] Usuario actualizado correctamente')
 
                 return {
                     business: createdBusiness,
                     employer: createdEmployer,
-                };
-            } catch (err) {
-                // Si falla la creación del empleador, borramos la empresa creada
-                await this.businessService.deleteBusinessById(createdBusiness.rut);
-
-                if (err.code === 'ER_DUP_ENTRY') {
-                    throw new ConflictException('El empleador ya existe');
                 }
 
-                throw new InternalServerErrorException('No se pudo crear el empleador');
-            }
-        } catch (err) {
-            if (err.code === 'ER_DUP_ENTRY') {
-                throw new ConflictException('La empresa ya existe');
+            } catch (err) {
+                console.error('❌ [FORMS] Error creando empleador', err)
+
+                // 🔥 rollback empresa
+                await this.businessService.deleteBusinessById(
+                    createdBusiness.rut,
+                )
+
+                if (err?.code === 'ER_DUP_ENTRY') {
+                    throw new ConflictException(
+                        'El empleador ya existe',
+                    )
+                }
+
+                throw new InternalServerErrorException(
+                    'No se pudo crear el empleador',
+                )
             }
 
-            throw new InternalServerErrorException('No se pudo registrar la empresa y el empleador');
+        } catch (err) {
+            console.error('❌ [FORMS] Error creando empresa', err)
+
+            if (err?.code === 'ER_DUP_ENTRY') {
+                throw new ConflictException(
+                    'La empresa ya existe',
+                )
+            }
+
+            throw new InternalServerErrorException(
+                'No se pudo registrar la empresa y el empleador',
+            )
         }
     }
-
-
-
-
-
 }

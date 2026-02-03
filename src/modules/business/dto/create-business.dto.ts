@@ -63,7 +63,7 @@ export class BusinessDataDto {
     @IsNotEmpty()
     @IsString()
     descripcion: string;
-    
+
 }
 
 export class CreateBusinessDto {
@@ -84,9 +84,6 @@ export class CreateBusinessDto {
 
     @ApiProperty({ example: 1 })
 
-    @IsOptional()
-    @IsNumber()
-    plan_id: number;
 
     @ApiProperty({ type: BusinessDataDto })
     @IsNotEmpty()
