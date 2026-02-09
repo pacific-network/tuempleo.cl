@@ -8,17 +8,11 @@
 INSERT IGNORE INTO comuna (nombre, region_id, activo, orden)
 SELECT c.nombre, r.id, 1, c.orden
 FROM (
-    -- =========================
-    -- Arica y Parinacota
-    -- =========================
-    SELECT 'Arica', 'Arica y Parinacota', 1
+    SELECT 'Arica' AS nombre, 'Arica y Parinacota' AS region_nombre, 1 AS orden
     UNION ALL SELECT 'Camarones', 'Arica y Parinacota', 2
     UNION ALL SELECT 'Putre', 'Arica y Parinacota', 3
     UNION ALL SELECT 'General Lagos', 'Arica y Parinacota', 4
 
-    -- =========================
-    -- Tarapacá
-    -- =========================
     UNION ALL SELECT 'Iquique', 'Tarapacá', 1
     UNION ALL SELECT 'Alto Hospicio', 'Tarapacá', 2
     UNION ALL SELECT 'Pozo Almonte', 'Tarapacá', 3
@@ -27,9 +21,6 @@ FROM (
     UNION ALL SELECT 'Huara', 'Tarapacá', 6
     UNION ALL SELECT 'Pica', 'Tarapacá', 7
 
-    -- =========================
-    -- Antofagasta
-    -- =========================
     UNION ALL SELECT 'Antofagasta', 'Antofagasta', 1
     UNION ALL SELECT 'Mejillones', 'Antofagasta', 2
     UNION ALL SELECT 'Sierra Gorda', 'Antofagasta', 3
@@ -40,9 +31,6 @@ FROM (
     UNION ALL SELECT 'Tocopilla', 'Antofagasta', 8
     UNION ALL SELECT 'María Elena', 'Antofagasta', 9
 
-    -- =========================
-    -- Atacama
-    -- =========================
     UNION ALL SELECT 'Copiapó', 'Atacama', 1
     UNION ALL SELECT 'Caldera', 'Atacama', 2
     UNION ALL SELECT 'Tierra Amarilla', 'Atacama', 3
@@ -53,9 +41,6 @@ FROM (
     UNION ALL SELECT 'Freirina', 'Atacama', 8
     UNION ALL SELECT 'Huasco', 'Atacama', 9
 
-    -- =========================
-    -- Coquimbo
-    -- =========================
     UNION ALL SELECT 'La Serena', 'Coquimbo', 1
     UNION ALL SELECT 'Coquimbo', 'Coquimbo', 2
     UNION ALL SELECT 'Andacollo', 'Coquimbo', 3
@@ -72,9 +57,6 @@ FROM (
     UNION ALL SELECT 'Punitaqui', 'Coquimbo', 14
     UNION ALL SELECT 'Río Hurtado', 'Coquimbo', 15
 
-    -- =========================
-    -- Valparaíso
-    -- =========================
     UNION ALL SELECT 'Valparaíso', 'Valparaíso', 1
     UNION ALL SELECT 'Casablanca', 'Valparaíso', 2
     UNION ALL SELECT 'Concón', 'Valparaíso', 3
@@ -114,9 +96,6 @@ FROM (
     UNION ALL SELECT 'Olmué', 'Valparaíso', 37
     UNION ALL SELECT 'Villa Alemana', 'Valparaíso', 38
 
-    -- =========================
-    -- Metropolitana de Santiago
-    -- =========================
     UNION ALL SELECT 'Santiago', 'Metropolitana de Santiago', 1
     UNION ALL SELECT 'Cerrillos', 'Metropolitana de Santiago', 2
     UNION ALL SELECT 'Cerro Navia', 'Metropolitana de Santiago', 3
@@ -148,9 +127,6 @@ FROM (
     UNION ALL SELECT 'San Ramón', 'Metropolitana de Santiago', 29
     UNION ALL SELECT 'Vitacura', 'Metropolitana de Santiago', 30
 
-    -- =========================
-    -- Biobío
-    -- =========================
     UNION ALL SELECT 'Concepción', 'Biobío', 1
     UNION ALL SELECT 'Coronel', 'Biobío', 2
     UNION ALL SELECT 'Chiguayante', 'Biobío', 3
@@ -162,9 +138,6 @@ FROM (
     UNION ALL SELECT 'Talcahuano', 'Biobío', 9
     UNION ALL SELECT 'Tomé', 'Biobío', 10
 
-    -- =========================
-    -- La Araucanía
-    -- =========================
     UNION ALL SELECT 'Temuco', 'La Araucanía', 1
     UNION ALL SELECT 'Padre las Casas', 'La Araucanía', 2
     UNION ALL SELECT 'Villarrica', 'La Araucanía', 3
@@ -172,35 +145,23 @@ FROM (
     UNION ALL SELECT 'Angol', 'La Araucanía', 5
     UNION ALL SELECT 'Victoria', 'La Araucanía', 6
 
-    -- =========================
-    -- Los Ríos
-    -- =========================
     UNION ALL SELECT 'Valdivia', 'Los Ríos', 1
     UNION ALL SELECT 'Corral', 'Los Ríos', 2
     UNION ALL SELECT 'Panguipulli', 'Los Ríos', 3
     UNION ALL SELECT 'La Unión', 'Los Ríos', 4
 
-    -- =========================
-    -- Los Lagos
-    -- =========================
     UNION ALL SELECT 'Puerto Montt', 'Los Lagos', 1
     UNION ALL SELECT 'Puerto Varas', 'Los Lagos', 2
     UNION ALL SELECT 'Castro', 'Los Lagos', 3
     UNION ALL SELECT 'Ancud', 'Los Lagos', 4
     UNION ALL SELECT 'Osorno', 'Los Lagos', 5
 
-    -- =========================
-    -- Aysén
-    -- =========================
     UNION ALL SELECT 'Coyhaique', 'Aysén del General Carlos Ibáñez del Campo', 1
     UNION ALL SELECT 'Aysén', 'Aysén del General Carlos Ibáñez del Campo', 2
 
-    -- =========================
-    -- Magallanes
-    -- =========================
     UNION ALL SELECT 'Punta Arenas', 'Magallanes y la Antártica Chilena', 1
     UNION ALL SELECT 'Puerto Natales', 'Magallanes y la Antártica Chilena', 2
-) AS c(nombre, region_nombre, orden)
+) AS c
 JOIN region r ON r.nombre = c.region_nombre;
 
 -- ======================================================
