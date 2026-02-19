@@ -16,7 +16,6 @@ import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 import { TrabajoGuardado } from 'src/repository/saved-job/saved-job.entity';
 import { CompanyReview } from 'src/modules/company-reviews/entities/company-review.entity';
-import { of } from 'rxjs';
 import { EmployerPlanLedger } from 'src/modules/publication/entities/employer-plan-ledger.entity';
 import { OfferPolicy } from 'src/modules/publication/entities/offer-policy.entity';
 import { TransactionItem } from 'src/repository/transaction_items/transaction-items.entity';
