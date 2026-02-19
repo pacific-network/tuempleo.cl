@@ -70,10 +70,10 @@ async function main() {
 
   // 2. Usuario (tabla con isAdmin)
   await conn.execute(`
-    INSERT INTO usuario (nombres, apellidos, email, password, is_activo, is_admin)
+    INSERT INTO usuario (nombres, apellidos, email, password, is_activo, isAdmin)
     VALUES (?, ?, ?, ?, true, true)
     ON DUPLICATE KEY UPDATE
-      is_admin  = true,
+      isAdmin   = true,
       is_activo = true,
       password  = VALUES(password)
   `, ['Admin', 'tuempleo', ADMIN_EMAIL, passwordEncryptado]);
