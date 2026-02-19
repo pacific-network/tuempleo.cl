@@ -1,4 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, PrimaryGeneratedColumn } from 'typeorm'
+import { Exclude } from 'class-transformer'
 
 @Entity('registro')
 export class Registro {
@@ -8,6 +9,7 @@ export class Registro {
     @Column({ type: 'varchar', length: 255, nullable: false })
     nombre_completo: string;
 
+    @Exclude()
     @Column({ type: 'varchar', length: 255, nullable: false })
     password: string;
 
