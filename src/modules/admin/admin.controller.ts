@@ -1,12 +1,14 @@
 import {
   Controller, Get, Delete, Patch,
   Param, Query, ParseIntPipe, UseGuards,
+  UseInterceptors, ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { AdminService } from './admin.service';
 import { User } from 'src/shared/decorators/user.decorator';
 
 @UseGuards(AdminGuard)
+@UseInterceptors(ClassSerializerInterceptor)
 @Controller('v1/admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}

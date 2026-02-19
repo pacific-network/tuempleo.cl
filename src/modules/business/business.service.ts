@@ -28,6 +28,12 @@ export class EmpresaService {
         return business;
     }
 
+    public async getBusinessById(id: number): Promise<Empresa> {
+        const business = await this.businessRepository.findOne({ where: { id }, relations: ['plan'] });
+        if (!business) throw new NotFoundException('Empresa no encontrada');
+        return business;
+    }
+
     public createBusiness(createBusinessDto: CreateBusinessDto): Promise<Empresa> {
 
 

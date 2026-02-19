@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, BadRequestException, Patch, UseInterceptors, UploadedFile } from "@nestjs/common";
+import { Controller, Post, Get, Param, Body, BadRequestException, Patch, UseInterceptors, UploadedFile, ParseIntPipe } from "@nestjs/common";
 import { EmpresaService } from "./business.service";
 import { Empresa } from "../../repository/business/business.entity";
 import { CreateBusinessDto } from "./dto/create-business.dto";
@@ -13,6 +13,11 @@ export class EmpresaController {
     @Get()
     public async getAllBusinesses(): Promise<Empresa[]> {
         return this.businessService.getAllBusinesses();
+    }
+
+    @Get('id/:id')
+    public async getBusinessById(@Param('id', ParseIntPipe) id: number): Promise<Empresa> {
+        return this.businessService.getBusinessById(id);
     }
 
     @Get(':rut')
