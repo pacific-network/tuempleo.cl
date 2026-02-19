@@ -133,6 +133,7 @@ export class AuthController {
       // Estado real
       isPostulante,
       isEmpleador,
+      isAdmin: user.isAdmin ?? false,
 
       // onboarding
       hasCompletedProfile,

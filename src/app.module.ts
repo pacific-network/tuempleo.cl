@@ -34,6 +34,7 @@ import { SmsModule } from './modules/sms-generator/sms.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 
 
@@ -87,7 +88,8 @@ import { AlertasModule } from './modules/alertas/alertas.module';
     SmsModule,
     CatalogModule,
     MailerModule,
-    AlertasModule
+    AlertasModule,
+    AdminModule
 
 
 

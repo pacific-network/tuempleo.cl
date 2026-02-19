@@ -179,7 +179,8 @@ export class AuthService {
     const token = this.jwt.sign({
       sub: user.id,
       email: user.email,
-      context, // 👈 CONTEXTO UX
+      context,
+      isAdmin: user.isAdmin ?? false,
     })
 
     return {
