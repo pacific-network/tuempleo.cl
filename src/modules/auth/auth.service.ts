@@ -181,6 +181,7 @@ export class AuthService {
       email: user.email,
       context,
       isAdmin: user.isAdmin ?? false,
+      context, // 👈 CONTEXTO UX
     })
 
     return {
