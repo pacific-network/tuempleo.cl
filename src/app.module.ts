@@ -33,6 +33,8 @@ import { CvGeneratorModule } from './modules/cv-geneneator/cv-generator.module';
 import { SmsModule } from './modules/sms-generator/sms.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { MailerModule } from './modules/mailer/mailer.module';
+import { AlertasModule } from './modules/alertas/alertas.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 
 
@@ -84,6 +86,10 @@ import { MailerModule } from './modules/mailer/mailer.module';
     QuotaModule,
     CvGeneratorModule,
     SmsModule,
+    CatalogModule,
+    MailerModule,
+    AlertasModule,
+    AdminModule
     CatalogModule, 
     MailerModule
 

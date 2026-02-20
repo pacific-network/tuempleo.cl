@@ -6,6 +6,7 @@ import { PostulacionService } from '../../modules/applications/application.servi
 import { CreatePostulacionDto } from './dto/create-postulacion.dto';
 import { Postulacion } from '../../repository/applications/applications.entity';
 import { AuthGuard } from '@nestjs/passport';
+import { AuthGuard as CustomAuthGuard } from '../auth/guards/auth.guards';
 
 @Controller('v1/postulaciones')
 export class PostulacionController {

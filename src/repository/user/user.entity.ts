@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Rol } from 'src/repository/role/role.entity';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 
@@ -16,6 +17,7 @@ export class Usuario {
     @Column({ type: 'varchar', length: 255, nullable: false })
     apellidos: string;
 
+    @Exclude()
     @Column({ type: 'varchar', length: 255, nullable: false })
     password: string;
 
@@ -27,6 +29,9 @@ export class Usuario {
 
     @Column({ type: 'boolean', default: true })
     is_activo: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    isAdmin: boolean;
 
     /**
  * ⚠️ LEGACY

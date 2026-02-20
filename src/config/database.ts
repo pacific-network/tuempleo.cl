@@ -16,7 +16,6 @@ import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 import { TrabajoGuardado } from 'src/repository/saved-job/saved-job.entity';
 import { CompanyReview } from 'src/modules/company-reviews/entities/company-review.entity';
-import { of } from 'rxjs';
 import { EmployerPlanLedger } from 'src/modules/publication/entities/employer-plan-ledger.entity';
 import { OfferPolicy } from 'src/modules/publication/entities/offer-policy.entity';
 import { TransactionItem } from 'src/repository/transaction_items/transaction-items.entity';
@@ -32,6 +31,7 @@ import { WorkArea } from 'src/repository/catalog/work-area.entity';
 import { InstitucionEducacional } from 'src/repository/catalog/educational-institution.entity';
 import { BusinessActivity } from 'src/repository/catalog/company_activity';
 import { Mail } from 'src/repository/mail/mail.entity';
+import { AlertaEmpleo } from 'src/repository/alerta-empleo/alerta-empleo.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -45,6 +45,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo],
         Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail],
     // logging: true,
     synchronize: process.env.DB_SYNCHRONIZE === 'false',
