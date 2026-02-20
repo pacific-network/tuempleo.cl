@@ -89,10 +89,7 @@ import { AdminModule } from './modules/admin/admin.module';
     CatalogModule,
     MailerModule,
     AlertasModule,
-    AdminModule
-    CatalogModule, 
-    MailerModule
-
+    AdminModule,
 
 
 
