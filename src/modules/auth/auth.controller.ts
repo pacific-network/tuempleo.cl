@@ -115,10 +115,7 @@ export class AuthController {
       // onboarding no completo
     }
 
-    const hasCompletedProfile =
-      context === 'empleador'
-        ? Boolean(isEmpleador && user.rut)
-        : Boolean(isPostulante)
+    const hasCompletedProfile = Boolean(user.rut)
 
     return {
       id: user.id,
