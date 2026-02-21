@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { PostulantDataDto } from '../../postulant/dto/create-postulant.dto';
 
 export class RegisterPostulantDto {
   @IsNotEmpty()
@@ -6,5 +8,7 @@ export class RegisterPostulantDto {
   rut: string;
 
   @IsOptional()
-  data?: Record<string, any>;
+  @ValidateNested()
+  @Type(() => PostulantDataDto)
+  data?: PostulantDataDto;
 }
