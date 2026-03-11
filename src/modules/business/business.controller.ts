@@ -42,16 +42,23 @@ export class EmpresaController {
     @UseInterceptors(
         FileInterceptor('logo', {
             storage: diskStorage({
-                destination: './logos_empresas',
+                destination: (req, file, cb) => {
+                    const uploadBase = process.env.UPLOAD_PATH || './upload';
+                    const dest = `${uploadBase}/logos`;
+                    const fs = require('fs');
+                    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+                    cb(null, dest);
+                },
                 filename: (req, file, callback) => {
                     const rut = req.params.rut;
-                    const filename = `logo_empresa_${rut}.png`;
-                    callback(null, filename);
+                    const ext = extname(file.originalname) || '.png';
+                    callback(null, `logo_empresa_${rut}${ext}`);
                 },
             }),
             fileFilter: (req, file, callback) => {
-                if (file.mimetype !== 'image/png') {
-                    return callback(new BadRequestException('Solo se permiten archivos PNG'), false);
+                const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+                if (!allowed.includes(file.mimetype)) {
+                    return callback(new BadRequestException('Solo se permiten archivos PNG, JPG o WebP'), false);
                 }
                 callback(null, true);
             },
@@ -65,8 +72,6 @@ export class EmpresaController {
             throw new BadRequestException('Archivo no encontrado o formato no permitido');
         }
 
-        const business = await this.businessService.uploadBusinessLogo(rut, file);
-
-        return business;
+        return this.businessService.uploadBusinessLogo(rut, file);
     }
 }

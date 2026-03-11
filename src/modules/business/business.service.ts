@@ -13,9 +13,6 @@ export class EmpresaService {
         private readonly businessRepository: Repository<Empresa>,
     ) { }
 
-    private readonly LOGOS_PATH = path.join(__dirname, '../../../logos_empresas');
-
-
     public async getAllBusinesses(): Promise<Empresa[]> {
         return this.businessRepository.find();
     }
@@ -49,22 +46,20 @@ export class EmpresaService {
 
     public async uploadBusinessLogo(rut: string, file: Express.Multer.File): Promise<Empresa> {
         const business = await this.businessRepository.findOne({ where: { rut } });
-
         if (!business) {
             throw new NotFoundException('Empresa no encontrada');
         }
 
-        if (file.mimetype !== 'image/png') {
-            throw new Error('El formato del archivo debe ser PNG');
+        // Eliminar logo anterior si existe
+        if (business.logo_url) {
+            const uploadBase = process.env.UPLOAD_PATH || path.join(__dirname, '..', '..', '..', 'upload');
+            const oldFile = path.join(uploadBase, business.logo_url.replace('/upload/', ''));
+            if (fs.existsSync(oldFile)) {
+                fs.unlinkSync(oldFile);
+            }
         }
 
-        const newFileName = `logo_empresa_${rut}.png`;
-        const filePath = path.join(this.LOGOS_PATH, newFileName);
-
-        // Mover el archivo subido al destino con el nombre estandarizado
-        fs.renameSync(file.path, filePath);
-
-        const logoUrl = `/logos_empresas/${newFileName}`;
+        const logoUrl = `/upload/logos/${file.filename}`;
         business.logo_url = logoUrl;
 
         return await this.businessRepository.save(business);
