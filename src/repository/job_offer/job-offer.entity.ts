@@ -23,6 +23,9 @@ export class Oferta {
     @Column({ type: 'varchar', length: 255 })
     titulo: string;
 
+    @Column({ type: 'varchar', length: 300, unique: true, nullable: true })
+    slug: string;
+
     @ManyToOne(() => Empresa, (empresa) => empresa.ofertas, { eager: false })
     @JoinColumn({ name: 'empresa_id' })
     empresa: Empresa;

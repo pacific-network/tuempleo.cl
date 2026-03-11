@@ -15,6 +15,16 @@ import { jobOfferRepository } from "../../repository/job_offer/job-offer.reposit
 import { Order } from "src/shared/pagination/constants";
 import { FreeStockService } from "../stock/free-stock.service";
 
+function generateSlug(text: string): string {
+  return text
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar tildes
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')  // solo alfanumericos y espacios
+    .trim()
+    .replace(/\s+/g, '-')          // espacios a guiones
+    .replace(/-+/g, '-');           // multiples guiones a uno
+}
+
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
   BASICO: 1,
@@ -207,9 +217,22 @@ export class OfertaService {
     // 5️⃣ Prioridad automática
     const prioridad = priorityMap[data.tipo_aviso];
 
-    // 6️⃣ Crear oferta
+    // 6️⃣ Generar slug unico
+    const ubicacion = data.data?.comuna || data.data?.region || '';
+    const baseSlug = generateSlug(
+      ubicacion ? `${data.titulo} ${ubicacion}` : data.titulo,
+    );
+    let slug = baseSlug;
+    let suffix = 1;
+    while (await this.ofertaRepository.existsBy({ slug })) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
+
+    // 7️⃣ Crear oferta
     const nuevaOferta: Partial<Oferta> = {
       titulo: data.titulo,
+      slug,
       tipo_aviso: data.tipo_aviso,
       empresa,
       empleador,
@@ -247,6 +270,52 @@ export class OfertaService {
     });
     if (!oferta)
       throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
+    return oferta;
+  }
+
+  // ======================================================
+  // 🔗 OBTENER OFERTA POR SLUG
+  // ======================================================
+  // Migrar slugs para ofertas existentes (ejecutar una sola vez)
+  async migrarSlugs(): Promise<{ migradas: number }> {
+    const ofertas = await this.ofertaRepository.find({
+      where: { slug: '' as any },
+    });
+
+    // Incluir tambien ofertas con slug null
+    const sinSlug = await this.ofertaRepository
+      .createQueryBuilder('o')
+      .where('o.slug IS NULL OR o.slug = :empty', { empty: '' })
+      .getMany();
+
+    let migradas = 0;
+    for (const oferta of sinSlug) {
+      let dataObj: any = {};
+      try { dataObj = JSON.parse(oferta.data || '{}'); } catch { }
+      const ubicacion = dataObj?.comuna || dataObj?.region || '';
+      const baseSlug = generateSlug(
+        ubicacion ? `${oferta.titulo} ${ubicacion}` : oferta.titulo,
+      );
+      let slug = baseSlug;
+      let suffix = 1;
+      while (await this.ofertaRepository.existsBy({ slug })) {
+        slug = `${baseSlug}-${suffix}`;
+        suffix++;
+      }
+      oferta.slug = slug;
+      await this.ofertaRepository.save(oferta);
+      migradas++;
+    }
+    return { migradas };
+  }
+
+  async obtenerOfertaPorSlug(slug: string): Promise<Oferta> {
+    const oferta = await this.ofertaRepository.findOne({
+      where: { slug },
+      relations: ['empresa', 'empleador'],
+    });
+    if (!oferta)
+      throw new NotFoundException(`Oferta con slug "${slug}" no encontrada`);
     return oferta;
   }
 
