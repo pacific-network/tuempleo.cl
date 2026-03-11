@@ -4,6 +4,8 @@ import { Repository } from "typeorm";
 import { Empresa } from "src/repository/business/business.entity";
 import { Usuario } from "src/repository/user/user.entity";
 import { Empleador } from "src/repository/employer/employer.entity";
+import { Oferta } from "src/repository/job_offer/job-offer.entity";
+import { Postulacion } from "src/repository/applications/applications.entity";
 import { CreateEmployerDto } from "../employer/dto/create-employer.dto";
 import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
 import { UpdateBusinessDto } from "../business/dto/update-business.dto";
@@ -11,6 +13,7 @@ import { UpdateEmployerDto } from "./dto/update-employer.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
+import { StockService } from "../stock/stock.service";
 
 @Injectable()
 export class EmpleadorService {
@@ -22,6 +25,11 @@ export class EmpleadorService {
         private readonly usuarioRepository: Repository<Usuario>,
         @InjectRepository(Empresa)
         private readonly empresaRepository: Repository<Empresa>,
+        @InjectRepository(Oferta)
+        private readonly ofertaRepository: Repository<Oferta>,
+        @InjectRepository(Postulacion)
+        private readonly postulacionRepository: Repository<Postulacion>,
+        private readonly stockService: StockService,
     ) { }
 
     async createEmployerWithCompany(
@@ -157,6 +165,45 @@ export class EmpleadorService {
 
     async updateCompanyId(usuarioId: number, empresaId: number): Promise<void> {
         await this.usuarioRepository.update(usuarioId, { id_empresa: empresaId });
+    }
+
+    async getEstadisticas(userId: number) {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+        });
+
+        if (!empleador) {
+            throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
+        }
+
+        const ofertasActivas = await this.ofertaRepository.count({
+            where: {
+                empleador: { id: empleador.id },
+                es_activa: true,
+            },
+        });
+
+        const totalPostulaciones = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .innerJoin('p.oferta', 'o')
+            .where('o.empleador_id = :empleadorId', { empleadorId: empleador.id })
+            .getCount();
+
+        const empresaId = empleador.empresa?.id;
+        let avisosDisponibles = 0;
+
+        if (empresaId) {
+            const { gratis, pagados } = await this.stockService.getFullAvailability(empresaId);
+            avisosDisponibles = (gratis?.cantidad_disponible ?? 0)
+                + pagados.reduce((sum, s) => sum + (s.cantidad_disponible ?? 0), 0);
+        }
+
+        return {
+            ofertasActivas,
+            totalPostulaciones,
+            avisosDisponibles,
+        };
     }
 
     async findAllEmployers(

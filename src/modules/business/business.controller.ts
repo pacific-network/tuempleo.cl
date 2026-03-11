@@ -15,12 +15,12 @@ export class EmpresaController {
         return this.businessService.getAllBusinesses();
     }
 
-    @Get('id/:id')
+    @Get(':id')
     public async getBusinessById(@Param('id', ParseIntPipe) id: number): Promise<Empresa> {
         return this.businessService.getBusinessById(id);
     }
 
-    @Get(':rut')
+    @Get('rut/:rut')
     public async getBusinessByRut(@Param('rut') rut: string): Promise<Empresa> {
         const business = await this.businessService.getBusinessByRut(rut);
         if (!business) {

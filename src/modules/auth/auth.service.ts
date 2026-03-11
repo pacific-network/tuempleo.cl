@@ -202,6 +202,23 @@ export class AuthService {
     return user
   }
 
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const ok = this.encrypt.compare(currentPassword, user.password);
+    if (!ok) throw new BadRequestException('La contrasena actual es incorrecta');
+
+    user.password = this.encrypt.encrypt(newPassword);
+    await this.usuarioRepo.save(user);
+
+    return { message: 'Contrasena actualizada correctamente' };
+  }
+
   async updateMe(
     userId: number,
     dto: UpdateMeDto
