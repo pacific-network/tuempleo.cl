@@ -367,6 +367,36 @@ export class OfertaService {
     return this.jobOfferRepository.getJobsOffersPriority(pageOptionsDto);
   }
 
+  // ======================================================
+  // 🔒 CERRAR OFERTA MANUALMENTE
+  // ======================================================
+  async cerrarOferta(id: number, userId: number): Promise<Oferta> {
+    const oferta = await this.ofertaRepository.findOne({
+      where: { id },
+      relations: ['empleador'],
+    });
+    if (!oferta)
+      throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
 
+    const empleador = await this.empleadorRepository.findOne({
+      where: { usuario: { id: userId } },
+      relations: ['usuario'],
+    });
+    if (!empleador)
+      throw new NotFoundException(`Empleador con usuario_id ${userId} no encontrado`);
+
+    if (oferta.empleador.id !== empleador.id)
+      throw new ForbiddenException('No tienes permisos para cerrar esta oferta');
+
+    if (!oferta.es_activa)
+      throw new BadRequestException('La oferta ya se encuentra cerrada');
+
+    oferta.es_activa = false;
+    oferta.estado = 'completada';
+    oferta.fecha_cierre = new Date();
+    oferta.modificada_por = empleador;
+
+    return this.ofertaRepository.save(oferta);
+  }
 
 }

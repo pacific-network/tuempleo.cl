@@ -4,15 +4,22 @@ import {
     InternalServerErrorException,
 } from '@nestjs/common'
 import { RegisterBusinessEmployerDto } from './dto/register-business-employer.dto'
+import { RegisterPostulantDto } from './dto/register-postulant.dto'
 import { EmpresaService } from '../business/business.service'
 import { EmpleadorService } from '../employer/employer.service'
+import { PostulanteService } from '../postulant/postulant.service'
 
 @Injectable()
 export class FormsService {
     constructor(
         private readonly businessService: EmpresaService,
         private readonly empleadorService: EmpleadorService,
+        private readonly postulanteService: PostulanteService,
     ) { }
+
+    async registerPostulant(dto: RegisterPostulantDto, userId: number) {
+        return this.postulanteService.crearPostulante(userId, dto.rut, dto.data ?? {})
+    }
 
     async registerBusinessAndEmployer(
         dto: RegisterBusinessEmployerDto,

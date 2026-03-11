@@ -22,7 +22,7 @@ export class OfertaController {
     return this.ofertaService.crearOferta(dto);
   }
 
-  /** Listado público con filtros/búsqueda/paginación */
+  /** Listado publico con filtros/busqueda/paginacion */
   @Get()
   async listarOfertas(
     @Query() pageOptionsDto: PageOptionsDto,
@@ -60,6 +60,16 @@ export class OfertaController {
     @User() user: any
   ): Promise<{ message: string }> {
     return this.ofertaService.eliminarOferta(id, user.sub);
+  }
+
+  /** Cerrar oferta manualmente */
+  @UseGuards(AuthGuard)
+  @Patch(':id/cerrar')
+  async cerrarOferta(
+    @Param('id', ParseIntPipe) id: number,
+    @User() user: any,
+  ): Promise<Oferta> {
+    return this.ofertaService.cerrarOferta(id, user.sub);
   }
 
   /** Update parcial */

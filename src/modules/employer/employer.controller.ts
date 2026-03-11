@@ -65,6 +65,12 @@ export class EmpleadorController {
     return this.empleadorService.updateEmployerData(userId, dto);
   }
 
+  @Get('estadisticas/:userId')
+  @UseGuards(AuthGuard('jwt'))
+  async getEstadisticas(@Param('userId') userId: number) {
+    return this.empleadorService.getEstadisticas(userId);
+  }
+
   @Get()
   @UseGuards(AuthGuard('jwt'))
   async getAllEmployers(

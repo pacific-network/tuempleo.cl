@@ -1,17 +1,20 @@
 import {
   Controller, Post, Get, Req, Body, HttpCode, HttpStatus,
-  Patch, UnauthorizedException
+  Patch, UnauthorizedException, UseGuards
 } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { RegistrarUsuarioDto } from './dto/register'
 import { Request } from 'express'
 import { IniciarSesionDto } from '../oauth/dto/login'
 import { UpdateMeDto } from './dto/update-me'
+import { ChangePasswordDto } from './dto/change-password.dto'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { Postulante } from 'src/repository/postulant/postulant.entity'
 import { Empleador } from 'src/repository/employer/employer.entity'
+import { AuthGuard } from './guards/auth.guards'
+import { User } from 'src/shared/decorators/user.decorator'
 
 @Controller('v1/auth')
 export class AuthController {
@@ -115,10 +118,7 @@ export class AuthController {
       // onboarding no completo
     }
 
-    const hasCompletedProfile =
-      context === 'empleador'
-        ? Boolean(isEmpleador && user.rut)
-        : Boolean(isPostulante)
+    const hasCompletedProfile = Boolean(user.rut)
 
     return {
       id: user.id,
@@ -170,5 +170,17 @@ export class AuthController {
     }
 
     return this.authService.updateMe(userId, dto)
+  }
+
+  // -------------------------
+  // Change password
+  // -------------------------
+  @UseGuards(AuthGuard)
+  @Patch('change-password')
+  async changePassword(
+    @User() user: any,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.sub, dto.currentPassword, dto.newPassword)
   }
 }
