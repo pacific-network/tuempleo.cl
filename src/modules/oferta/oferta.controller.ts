@@ -46,19 +46,7 @@ export class OfertaController {
     return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto);
   }
 
-  /** Migrar slugs de ofertas existentes (ejecutar una sola vez) */
-  @Post('migrar-slugs')
-  async migrarSlugs() {
-    return this.ofertaService.migrarSlugs();
-  }
-
-  /** Detalle de oferta por slug */
-  @Get('slug/:slug')
-  async obtenerOfertaPorSlug(@Param('slug') slug: string) {
-    return this.ofertaService.obtenerOfertaPorSlug(slug);
-  }
-
-  /** Detalle de oferta por ID */
+  /** Detalle de oferta */
   @Get(':id')
   async obtenerOfertaPorId(@Param('id', ParseIntPipe) id: number) {
     return this.ofertaService.obtenerOfertaPorId(id);
