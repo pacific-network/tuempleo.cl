@@ -14,6 +14,7 @@ import { Postulacion } from 'src/repository/applications/applications.entity';
 import { InvitacionEmpleador } from 'src/repository/invitacion-empleador/invitacion-empleador.entity';
 import { StockModule } from '../stock/stock.module';
 import { SmsModule } from '../sms-generator/sms.module';
+import { MailerModule } from '../mailer/mailer.module';
 import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
 
 
@@ -24,6 +25,7 @@ import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
     UserModule,
     StockModule,
     SmsModule,
+    MailerModule,
     EncryptModule,
   ],
   controllers: [EmpleadorController],

@@ -97,7 +97,7 @@ export class EmpleadorController {
     @Body() dto: InvitarEmpleadorDto,
   ) {
     const userId = req.user.userId;
-    return this.invitacionService.invitar(userId, dto.telefono);
+    return this.invitacionService.invitar(userId, dto.telefono, dto.email);
   }
 
   /** Validar codigo de invitacion (sin consumirlo) */

@@ -8,6 +8,7 @@ import { Request } from 'express'
 import { IniciarSesionDto } from '../oauth/dto/login'
 import { UpdateMeDto } from './dto/update-me'
 import { ChangePasswordDto } from './dto/change-password.dto'
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot-password.dto'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
@@ -170,6 +171,21 @@ export class AuthController {
     }
 
     return this.authService.updateMe(userId, dto)
+  }
+
+  // -------------------------
+  // Forgot / Reset password
+  // -------------------------
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email)
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword)
   }
 
   // -------------------------

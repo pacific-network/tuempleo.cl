@@ -11,6 +11,7 @@ import { Empleador } from 'src/repository/employer/employer.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 import { SmsService } from '../sms-generator/sms.service';
 import { SmsTipo } from '../sms-generator/dto/sms.dto';
+import { MailerService } from '../mailer/mailer.service';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { AceptarInvitacionDto } from './dto/invitar-empleador.dto';
 
@@ -27,6 +28,7 @@ export class InvitacionService {
     private readonly usuarioRepo: Repository<Usuario>,
 
     private readonly smsService: SmsService,
+    private readonly mailerService: MailerService,
     private readonly encryptService: EncryptService,
   ) {}
 
@@ -38,7 +40,7 @@ export class InvitacionService {
   // ======================================================
   // INVITAR MIEMBRO
   // ======================================================
-  async invitar(userId: number, telefono: string) {
+  async invitar(userId: number, telefono: string, email?: string) {
     // Verificar que el empleador es admin
     const empleador = await this.empleadorRepo.findOne({
       where: { usuario: { id: userId } },
@@ -88,20 +90,34 @@ export class InvitacionService {
 
     await this.invitacionRepo.save(invitacion);
 
-    // Enviar SMS
     const nombreAdmin = empleador.usuario.nombres;
     const nombreEmpresa = empleador.empresa.nombre_fantasia
       || empleador.empresa.razon_social
       || 'tu empresa';
 
+    const frontendUrl = process.env.FRONTEND_URL || 'https://tuempleo.cl';
+    const linkInvitacion = `${frontendUrl}/invitacion?codigo=${codigo}`;
+
+    // Enviar SMS
     await this.smsService.sendIndividualSms({
       number: telefono,
       content: `${nombreAdmin} te invito a ser miembro de ${nombreEmpresa} en TuEmpleo.cl. Tu codigo es: ${codigo}`,
       tipo: SmsTipo.TRANSACCIONAL,
     });
 
+    // Enviar email si se proporciona
+    if (email) {
+      await this.mailerService.sendTemplateMail({
+        dest_email: email,
+        message_id: process.env.PACIFIC_TEMPLATE_INVITACION || '96274',
+        NombreInvitado: nombreAdmin,
+        NombreEmpresa: nombreEmpresa,
+        LinkInvitacion: linkInvitacion,
+      });
+    }
+
     return {
-      message: 'Invitacion enviada por SMS',
+      message: email ? 'Invitacion enviada por SMS y Email' : 'Invitacion enviada por SMS',
       expiraEn,
     };
   }

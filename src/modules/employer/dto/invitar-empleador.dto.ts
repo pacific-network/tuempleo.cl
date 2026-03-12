@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches } from 'class-validator';
 
 export class InvitarEmpleadorDto {
   @IsString()
@@ -7,6 +7,10 @@ export class InvitarEmpleadorDto {
     message: 'El telefono debe venir en formato 569XXXXXXXX',
   })
   telefono: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 }
 
 export class ValidarCodigoDto {

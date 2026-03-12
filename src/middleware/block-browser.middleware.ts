@@ -32,6 +32,11 @@ export class BlockBrowserMiddleware implements NestMiddleware {
       return next()
     }
 
+    // Descargas (CSV, archivos generados)
+    if (req.originalUrl.includes('/export-csv')) {
+      return next()
+    }
+
     // =========================================================
     // 🔍 DETECCIÓN DE REQUESTS DE NAVEGADOR
     // =========================================================
