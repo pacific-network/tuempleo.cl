@@ -242,14 +242,20 @@ export class AuthService {
     const frontendUrl = process.env.FRONTEND_URL || 'https://tuempleo.cl'
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`
 
-    await this.mailerService.sendTemplateMail({
-      dest_email: user.email,
-      message_id: process.env.PACIFIC_TEMPLATE_RECOVERY || '96275',
-      Nombre: user.nombres,
-      LinkRecuperacion: resetLink,
-    })
+    try {
+      await this.mailerService.sendTemplateMail({
+        dest_email: user.email,
+        message_id: process.env.PACIFIC_TEMPLATE_RECOVERY || '96275',
+        Nombre: user.nombres,
+        LinkRecuperacion: resetLink,
+      })
+    } catch {
+      // Si el email falla, no bloquear el flujo
+    }
 
-    return { message: 'Si el correo existe, recibirás un enlace para restablecer tu contraseña' }
+    return {
+      message: 'Te hemos enviado un enlace para restablecer tu contraseña. Si no lo recibes en unos minutos, revisa tu carpeta de spam o contacta a soporte@tuempleo.cl',
+    }
   }
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {

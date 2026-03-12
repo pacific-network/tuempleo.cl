@@ -114,18 +114,27 @@ export class InvitacionService {
     }
 
     // Enviar email si se proporciona
+    let emailEnviado = false;
     if (email) {
-      await this.mailerService.sendTemplateMail({
-        dest_email: email,
-        message_id: process.env.PACIFIC_TEMPLATE_INVITACION || '96274',
-        NombreInvitado: nombreAdmin,
-        NombreEmpresa: nombreEmpresa,
-        LinkInvitacion: linkInvitacion,
-      });
+      try {
+        await this.mailerService.sendTemplateMail({
+          dest_email: email,
+          message_id: process.env.PACIFIC_TEMPLATE_INVITACION || '96274',
+          NombreInvitado: nombreAdmin,
+          NombreEmpresa: nombreEmpresa,
+          LinkInvitacion: linkInvitacion,
+        });
+        emailEnviado = true;
+      } catch {
+        // Si el email falla, no bloquear el flujo
+      }
     }
 
+    const canales = [telefono && 'SMS', emailEnviado && 'Email'].filter(Boolean);
+
     return {
-      message: `Invitacion enviada por ${[telefono && 'SMS', email && 'Email'].filter(Boolean).join(' y ')}`,
+      message: `Invitacion enviada por ${canales.join(' y ')}`,
+      codigo,
       expiraEn,
     };
   }
