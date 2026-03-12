@@ -1,12 +1,12 @@
-import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches, ValidateIf } from 'class-validator';
 
 export class InvitarEmpleadorDto {
+  @ValidateIf(o => o.telefono != null && o.telefono !== '')
   @IsString()
-  @IsNotEmpty()
   @Matches(/^56\d{9}$/, {
     message: 'El telefono debe venir en formato 569XXXXXXXX',
   })
-  telefono: string;
+  telefono?: string;
 
   @IsOptional()
   @IsEmail()

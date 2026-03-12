@@ -1,6 +1,10 @@
 import axios from 'axios'
+import * as https from 'https'
 
 const BASE_URL = 'https://email.pacificnetwork.cl/publicMailing'
+
+// Pacific Network tiene el certificado SSL expirado
+const httpsAgent = new https.Agent({ rejectUnauthorized: false })
 
 interface SendMailOptions {
     dest_email: string
@@ -31,7 +35,7 @@ export async function sendTemplateMail(payload: SendMailOptions) {
     }
 
     const url = `${BASE_URL}/sendMailUsingMessage.html?${params.toString()}`
-    const { data } = await axios.get(url, { timeout: 15000 })
+    const { data } = await axios.get(url, { timeout: 15000, httpsAgent })
 
     // v1 retorna string: "OK<uuid>" en éxito, o mensaje de error
     if (typeof data === 'string' && data.startsWith('OK')) {
@@ -51,7 +55,7 @@ export async function createTemplateFromUrl(subject: string, contentUrl: string)
     })
 
     const url = `${BASE_URL}/createMessage.html?${params.toString()}`
-    const { data } = await axios.get(url, { timeout: 15000 })
+    const { data } = await axios.get(url, { timeout: 15000, httpsAgent })
 
     // Retorna "ID:123456" en éxito
     if (typeof data === 'string' && data.startsWith('ID:')) {
@@ -70,6 +74,6 @@ export async function checkMailStatus(key: string) {
     })
 
     const url = `${BASE_URL}/mailStatus.html?${params.toString()}`
-    const { data } = await axios.get(url, { timeout: 15000 })
+    const { data } = await axios.get(url, { timeout: 15000, httpsAgent })
     return data
 }

@@ -17,8 +17,11 @@ export class InvitacionEmpleador {
   @Column({ type: 'varchar', length: 6, unique: true })
   codigo: string;
 
-  @Column({ type: 'varchar', length: 20 })
-  telefono: string;
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  telefono: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email: string | null;
 
   @ManyToOne(() => Empresa, { nullable: false })
   @JoinColumn({ name: 'empresa_id' })

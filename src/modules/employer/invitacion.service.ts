@@ -40,7 +40,7 @@ export class InvitacionService {
   // ======================================================
   // INVITAR MIEMBRO
   // ======================================================
-  async invitar(userId: number, telefono: string, email?: string) {
+  async invitar(userId: number, telefono?: string, email?: string) {
     // Verificar que el empleador es admin
     const empleador = await this.empleadorRepo.findOne({
       where: { usuario: { id: userId } },
@@ -55,18 +55,23 @@ export class InvitacionService {
       throw new ForbiddenException('Solo el administrador puede invitar miembros');
     }
 
-    // Verificar que no haya invitacion pendiente para este telefono + empresa
-    const existente = await this.invitacionRepo.findOne({
-      where: {
-        telefono,
-        empresa: { id: empleador.empresa.id },
-        estado: 'pendiente',
-        expiraEn: MoreThan(new Date()),
-      },
-    });
+    if (!telefono && !email) {
+      throw new BadRequestException('Debe proporcionar al menos un telefono o email');
+    }
 
-    if (existente) {
-      throw new BadRequestException('Ya existe una invitacion pendiente para este numero');
+    // Invalidar invitaciones pendientes anteriores para este telefono/email + empresa
+    const condiciones: any[] = [];
+    if (telefono) condiciones.push({ telefono, empresa: { id: empleador.empresa.id }, estado: 'pendiente' });
+    if (email) condiciones.push({ email, empresa: { id: empleador.empresa.id }, estado: 'pendiente' });
+
+    if (condiciones.length > 0) {
+      const anteriores = await this.invitacionRepo.find({ where: condiciones });
+      for (const inv of anteriores) {
+        inv.estado = 'expirada';
+      }
+      if (anteriores.length > 0) {
+        await this.invitacionRepo.save(anteriores);
+      }
     }
 
     // Generar codigo unico
@@ -81,7 +86,8 @@ export class InvitacionService {
 
     const invitacion = this.invitacionRepo.create({
       codigo,
-      telefono,
+      telefono: telefono || null,
+      email: email || null,
       empresa: empleador.empresa,
       invitadoPor: empleador,
       estado: 'pendiente',
@@ -98,12 +104,14 @@ export class InvitacionService {
     const frontendUrl = process.env.FRONTEND_URL || 'https://tuempleo.cl';
     const linkInvitacion = `${frontendUrl}/invitacion?codigo=${codigo}`;
 
-    // Enviar SMS
-    await this.smsService.sendIndividualSms({
-      number: telefono,
-      content: `${nombreAdmin} te invito a ser miembro de ${nombreEmpresa} en TuEmpleo.cl. Tu codigo es: ${codigo}`,
-      tipo: SmsTipo.TRANSACCIONAL,
-    });
+    // Enviar SMS si se proporciona telefono
+    if (telefono) {
+      await this.smsService.sendIndividualSms({
+        number: telefono,
+        content: `${nombreAdmin} te invito a ser miembro de ${nombreEmpresa} en TuEmpleo.cl. Tu codigo es: ${codigo}`,
+        tipo: SmsTipo.TRANSACCIONAL,
+      });
+    }
 
     // Enviar email si se proporciona
     if (email) {
@@ -117,7 +125,7 @@ export class InvitacionService {
     }
 
     return {
-      message: email ? 'Invitacion enviada por SMS y Email' : 'Invitacion enviada por SMS',
+      message: `Invitacion enviada por ${[telefono && 'SMS', email && 'Email'].filter(Boolean).join(' y ')}`,
       expiraEn,
     };
   }
