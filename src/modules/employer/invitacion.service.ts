@@ -6,9 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { InvitacionEmpleador } from 'src/repository/invitacion-empleador/invitacion-empleador.entity';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { Usuario } from 'src/repository/user/user.entity';
+import { Registro } from 'src/repository/register/register.entity';
 import { SmsService } from '../sms-generator/sms.service';
 import { SmsTipo } from '../sms-generator/dto/sms.dto';
 import { MailerService } from '../mailer/mailer.service';
@@ -27,6 +29,10 @@ export class InvitacionService {
     @InjectRepository(Usuario)
     private readonly usuarioRepo: Repository<Usuario>,
 
+    @InjectRepository(Registro)
+    private readonly registroRepo: Repository<Registro>,
+
+    private readonly jwtService: JwtService,
     private readonly smsService: SmsService,
     private readonly mailerService: MailerService,
     private readonly encryptService: EncryptService,
@@ -195,17 +201,27 @@ export class InvitacionService {
       throw new BadRequestException('El email ya esta registrado');
     }
 
+    const encryptedPassword = this.encryptService.encrypt(dto.password);
+
+    // Crear registro (para que pueda hacer login)
+    const registro = this.registroRepo.create({
+      email: dto.email,
+      password: encryptedPassword,
+      nombre_completo: `${dto.nombres} ${dto.apellidos}`,
+      es_activo: true,
+    });
+    await this.registroRepo.save(registro);
+
     // Crear usuario
     const usuario = this.usuarioRepo.create({
       email: dto.email,
       nombres: dto.nombres,
       apellidos: dto.apellidos,
       rut: dto.rut,
-      password: this.encryptService.encrypt(dto.password),
+      password: encryptedPassword,
       is_activo: true,
       id_empresa: invitacion.empresa.id,
     });
-
     await this.usuarioRepo.save(usuario);
 
     // Crear empleador como miembro
@@ -213,17 +229,25 @@ export class InvitacionService {
       usuario,
       empresa: invitacion.empresa,
       rol_empresa: 'miembro',
-      data: {},
+      data: dto.data,
     });
-
     await this.empleadorRepo.save(empleador);
 
     // Marcar invitacion como aceptada
     invitacion.estado = 'aceptada';
     await this.invitacionRepo.save(invitacion);
 
+    // Generar JWT para login automatico
+    const token = this.jwtService.sign({
+      sub: usuario.id,
+      email: usuario.email,
+      context: 'empleador',
+      isAdmin: false,
+    });
+
     return {
       message: 'Invitacion aceptada. Tu cuenta ha sido creada.',
+      token,
       empleador_id: empleador.id,
       empresa_id: invitacion.empresa.id,
     };

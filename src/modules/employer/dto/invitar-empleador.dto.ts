@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches, ValidateIf } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches, ValidateIf, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { EmployerDataDto } from './create-employer.dto';
 
 export class InvitarEmpleadorDto {
   @ValidateIf(o => o.telefono != null && o.telefono !== '')
@@ -49,4 +51,8 @@ export class AceptarInvitacionDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @ValidateNested()
+  @Type(() => EmployerDataDto)
+  data: EmployerDataDto;
 }
