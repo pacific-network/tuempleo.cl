@@ -1,19 +1,26 @@
 import { Body, Controller, Post, Get, Param, NotFoundException, Patch, UseGuards, Req, Query } from '@nestjs/common';
 import { EmpleadorService } from './employer.service';
+import { InvitacionService } from './invitacion.service';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { CreateEmployerDto } from '../employer/dto/create-employer.dto';
 import { EmpleadorBasicInfoDto } from './dto/basic-info.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
 import { Empresa } from 'src/repository/business/business.entity';
 import { UpdateBusinessDto } from '../business/dto/update-business.dto';
 import { UpdateEmployerDto } from './dto/update-employer.dto';
+import { InvitarEmpleadorDto, ValidarCodigoDto, AceptarInvitacionDto } from './dto/invitar-empleador.dto';
+import { OnboardingMiembroDto } from './dto/onboarding-miembro.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { PageDto } from 'src/shared/pagination/page.dto';
 
 
 @Controller('v1/empleador')
 export class EmpleadorController {
-  constructor(private readonly empleadorService: EmpleadorService) { }
+  constructor(
+    private readonly empleadorService: EmpleadorService,
+    private readonly invitacionService: InvitacionService,
+  ) { }
 
   @Post()
   async createEmployer(@Body() createEmployerDto: CreateEmployerDto): Promise<Empleador> {
@@ -46,7 +53,7 @@ export class EmpleadorController {
 
 
   @Patch('empresa')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
   async updateEmpresa(
     @Body() dto: UpdateBusinessDto,
     @Req() req: any,
@@ -80,6 +87,44 @@ export class EmpleadorController {
     return this.empleadorService.findAllEmployers(empleadorId, pageOptionsDto);
   }
 
+  // ======================================================
+  // ONBOARDING MIEMBRO (invitado)
+  // ======================================================
+  @Post('onboarding')
+  @UseGuards(AuthGuard('jwt'))
+  async onboardingMiembro(
+    @Req() req: any,
+    @Body() dto: OnboardingMiembroDto,
+  ) {
+    const userId = req.user.userId;
+    return this.empleadorService.onboardingMiembro(userId, dto);
+  }
 
+  // ======================================================
+  // INVITACIONES
+  // ======================================================
+
+  /** Admin invita miembro por SMS/Email */
+  @Post('invitar')
+  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  async invitarMiembro(
+    @Req() req: any,
+    @Body() dto: InvitarEmpleadorDto,
+  ) {
+    const userId = req.user.userId;
+    return this.invitacionService.invitar(userId, dto.telefono, dto.email);
+  }
+
+  /** Validar codigo de invitacion (sin consumirlo) */
+  @Post('invitacion/validar')
+  async validarCodigo(@Body() dto: ValidarCodigoDto) {
+    return this.invitacionService.validarCodigo(dto.codigo);
+  }
+
+  /** Aceptar invitacion y crear cuenta */
+  @Post('invitacion/aceptar')
+  async aceptarInvitacion(@Body() dto: AceptarInvitacionDto) {
+    return this.invitacionService.aceptarInvitacion(dto);
+  }
 
 }

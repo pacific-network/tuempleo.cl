@@ -10,6 +10,7 @@ import { Usuario } from '../../repository/user/user.entity'
 import { RegistrarUsuarioDto } from './dto/register'
 import { IniciarSesionDto } from '../oauth/dto/login'
 import { EncryptService } from 'src/shared/encrypt/encrypt.service'
+import { MailerService } from '../mailer/mailer.service'
 import { UpdateMeDto } from './dto/update-me'
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
 
     private readonly jwt: JwtService,
     private readonly encrypt: EncryptService,
+    private readonly mailerService: MailerService,
   ) { }
 
   // -------------------
@@ -217,6 +219,71 @@ export class AuthService {
     await this.usuarioRepo.save(user);
 
     return { message: 'Contrasena actualizada correctamente' };
+  }
+
+  // -------------------
+  // Forgot / Reset password
+  // -------------------
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const normalizedEmail = this.norm(email)
+    const user = await this.usuarioRepo.findOne({ where: { email: normalizedEmail } })
+
+    if (!user) {
+      // No revelar si el email existe o no
+      return { message: 'Si el correo existe, recibirás un enlace para restablecer tu contraseña' }
+    }
+
+    // Token JWT de 1 hora, con purpose para evitar reutilización
+    const resetToken = this.jwt.sign(
+      { sub: user.id, purpose: 'reset-password' },
+      { expiresIn: '1h' },
+    )
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://tuempleo.cl'
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`
+
+    try {
+      await this.mailerService.sendTemplateMail({
+        dest_email: user.email,
+        message_id: process.env.PACIFIC_TEMPLATE_RECOVERY || '96275',
+        Nombre: user.nombres,
+        LinkRecuperacion: resetLink,
+      })
+    } catch {
+      // Si el email falla, no bloquear el flujo
+    }
+
+    return {
+      message: 'Te hemos enviado un enlace para restablecer tu contraseña. Si no lo recibes en unos minutos, revisa tu carpeta de spam o contacta a soporte@tuempleo.cl',
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    let payload: any
+    try {
+      payload = this.jwt.verify(token)
+    } catch {
+      throw new BadRequestException('Token inválido o expirado')
+    }
+
+    if (payload?.purpose !== 'reset-password') {
+      throw new BadRequestException('Token inválido')
+    }
+
+    const user = await this.usuarioRepo.findOne({ where: { id: payload.sub } })
+    if (!user) throw new NotFoundException('Usuario no encontrado')
+
+    user.password = await this.encrypt.encrypt(newPassword)
+    await this.usuarioRepo.save(user)
+
+    // Sincronizar con tabla registro
+    const registro = await this.registroRepo.findOne({ where: { email: user.email } })
+    if (registro) {
+      registro.password = user.password
+      await this.registroRepo.save(registro)
+    }
+
+    return { message: 'Contraseña restablecida correctamente' }
   }
 
   async updateMe(

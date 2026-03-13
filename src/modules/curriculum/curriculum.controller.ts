@@ -56,7 +56,9 @@ export class CurriculumController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const uploadPath = '/var/www/html/uploads/';
+          const uploadPath = process.env.CV_UPLOAD_PATH || '/var/www/html/uploads/';
+          const fs = require('fs');
+          if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
           cb(null, uploadPath);
         },
         filename: (req, file, cb) => {

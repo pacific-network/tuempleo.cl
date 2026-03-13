@@ -25,6 +25,13 @@ export class Empleador {
   @Column({ type: 'int', nullable: true })
   ofertas: number;
 
+  @Column({
+    type: 'enum',
+    enum: ['admin', 'miembro'],
+    default: 'admin',
+  })
+  rol_empresa: 'admin' | 'miembro';
+
   @Column({ type: 'json', nullable: false })
   data: Record<string, any>;
 

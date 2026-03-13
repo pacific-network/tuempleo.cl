@@ -10,6 +10,7 @@ import { Usuario } from 'src/repository/user/user.entity';
 import { Rol } from 'src/repository/role/role.entity';
 
 import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
+import { MailerModule } from '../mailer/mailer.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 
@@ -21,6 +22,7 @@ import { Empleador } from 'src/repository/employer/employer.entity';
   imports: [
     TypeOrmModule.forFeature([Registro, Usuario, Rol, Postulante, Empleador]),
     EncryptModule,
+    MailerModule,
     PassportModule.register({ session: false }),
     // Si ya hiciste ConfigModule.forRoot({ isGlobal: true }) en AppModule, aquí basta con:
     ConfigModule,

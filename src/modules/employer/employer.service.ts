@@ -10,6 +10,7 @@ import { CreateEmployerDto } from "../employer/dto/create-employer.dto";
 import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
 import { UpdateBusinessDto } from "../business/dto/update-business.dto";
 import { UpdateEmployerDto } from "./dto/update-employer.dto";
+import { OnboardingMiembroDto } from "./dto/onboarding-miembro.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
@@ -204,6 +205,35 @@ export class EmpleadorService {
             totalPostulaciones,
             avisosDisponibles,
         };
+    }
+
+    async onboardingMiembro(userId: number, dto: OnboardingMiembroDto): Promise<Empleador> {
+        // Actualizar datos del usuario
+        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!usuario) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+
+        usuario.nombres = dto.nombres;
+        usuario.apellidos = dto.apellidos;
+        usuario.rut = dto.rut;
+        await this.usuarioRepository.save(usuario);
+
+        // Actualizar data del empleador
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa', 'usuario'],
+        });
+
+        if (!empleador) {
+            throw new NotFoundException('Empleador no encontrado');
+        }
+
+        empleador.data = dto.data;
+        empleador.fecha_update = new Date();
+        empleador.modificado_por = userId;
+
+        return this.empleadorRepository.save(empleador);
     }
 
     async findAllEmployers(

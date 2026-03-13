@@ -23,32 +23,31 @@ export class UserService {
             throw new BadRequestException('No se recibió ningún archivo');
         }
 
-        // Obtener usuario
         const user = await this.userRepository.findOne({ where: { id: userId } });
         if (!user) {
             throw new BadRequestException('Usuario no encontrado');
         }
 
-        // Validación: si ya tiene foto
-        if (user.perfil_foto) {
-            throw new BadRequestException('El usuario ya tiene una foto de perfil. No se puede subir otra.');
-        }
-
-        // Carpeta de uploads
-        const uploadPath = path.join(__dirname, '..', '..', 'upload');
+        const uploadBase = process.env.UPLOAD_PATH || path.join(__dirname, '..', '..', 'upload');
+        const uploadPath = path.join(uploadBase, 'profile-photos');
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
 
-        // Guardar archivo
+        // Eliminar foto anterior si existe
+        if (user.perfil_foto) {
+            const oldFile = path.join(uploadBase, user.perfil_foto.replace('/upload/', ''));
+            if (fs.existsSync(oldFile)) {
+                fs.unlinkSync(oldFile);
+            }
+        }
+
         const ext = path.extname(file.originalname);
         const fileName = `profile-photo-${userId}-${Date.now()}${ext}`;
         const filePath = path.join(uploadPath, fileName);
         fs.writeFileSync(filePath, file.buffer);
 
-        const publicUrl = `/upload/${fileName}`;
-
-        // Actualizar usuario
+        const publicUrl = `/upload/profile-photos/${fileName}`;
         await this.userRepository.update({ id: userId }, { perfil_foto: publicUrl });
 
         return {
