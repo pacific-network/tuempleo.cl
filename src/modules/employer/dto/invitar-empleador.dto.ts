@@ -1,6 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches, ValidateIf, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { EmployerDataDto } from './create-employer.dto';
+import { IsNotEmpty, IsString, IsOptional, IsEmail, Matches, ValidateIf } from 'class-validator';
 
 export class InvitarEmpleadorDto {
   @ValidateIf(o => o.telefono != null && o.telefono !== '')
@@ -34,25 +32,10 @@ export class AceptarInvitacionDto {
 
   @IsString()
   @IsNotEmpty()
-  rut: string;
-
-  @IsString()
-  @IsNotEmpty()
-  nombres: string;
-
-  @IsString()
-  @IsNotEmpty()
-  apellidos: string;
-
-  @IsString()
-  @IsNotEmpty()
+  @IsEmail()
   email: string;
 
   @IsString()
   @IsNotEmpty()
   password: string;
-
-  @ValidateNested()
-  @Type(() => EmployerDataDto)
-  data: EmployerDataDto;
 }

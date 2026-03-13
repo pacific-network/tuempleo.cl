@@ -207,29 +207,28 @@ export class InvitacionService {
     const registro = this.registroRepo.create({
       email: dto.email,
       password: encryptedPassword,
-      nombre_completo: `${dto.nombres} ${dto.apellidos}`,
+      nombre_completo: '',
       es_activo: true,
     });
     await this.registroRepo.save(registro);
 
-    // Crear usuario
+    // Crear usuario minimo (datos se completan en onboarding)
     const usuario = this.usuarioRepo.create({
       email: dto.email,
-      nombres: dto.nombres,
-      apellidos: dto.apellidos,
-      rut: dto.rut,
+      nombres: '',
+      apellidos: '',
       password: encryptedPassword,
       is_activo: true,
       id_empresa: invitacion.empresa.id,
     });
     await this.usuarioRepo.save(usuario);
 
-    // Crear empleador como miembro
+    // Crear empleador como miembro (data se completa en onboarding)
     const empleador = this.empleadorRepo.create({
       usuario,
       empresa: invitacion.empresa,
       rol_empresa: 'miembro',
-      data: dto.data,
+      data: {},
     });
     await this.empleadorRepo.save(empleador);
 

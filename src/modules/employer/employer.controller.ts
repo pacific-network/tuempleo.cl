@@ -10,6 +10,7 @@ import { Empresa } from 'src/repository/business/business.entity';
 import { UpdateBusinessDto } from '../business/dto/update-business.dto';
 import { UpdateEmployerDto } from './dto/update-employer.dto';
 import { InvitarEmpleadorDto, ValidarCodigoDto, AceptarInvitacionDto } from './dto/invitar-empleador.dto';
+import { OnboardingMiembroDto } from './dto/onboarding-miembro.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { PageDto } from 'src/shared/pagination/page.dto';
 
@@ -84,6 +85,19 @@ export class EmpleadorController {
     @Query() pageOptionsDto: PageOptionsDto
   ): Promise<PageDto<Empleador>> {
     return this.empleadorService.findAllEmployers(empleadorId, pageOptionsDto);
+  }
+
+  // ======================================================
+  // ONBOARDING MIEMBRO (invitado)
+  // ======================================================
+  @Post('onboarding')
+  @UseGuards(AuthGuard('jwt'))
+  async onboardingMiembro(
+    @Req() req: any,
+    @Body() dto: OnboardingMiembroDto,
+  ) {
+    const userId = req.user.userId;
+    return this.empleadorService.onboardingMiembro(userId, dto);
   }
 
   // ======================================================
