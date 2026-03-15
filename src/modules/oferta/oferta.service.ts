@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import { Oferta } from "../../repository/job_offer/job-offer.entity";
 import { Empleador } from "../../repository/employer/employer.entity";
 import { Empresa } from "../../repository/business/business.entity";
+import { ProcesoSeleccion } from "../../repository/hiring_process/hiring_process.entity";
 import { CreateOfertaDto } from "./dto/create-oferta.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
@@ -31,10 +32,11 @@ export class OfertaService {
     private readonly empleadorRepository: Repository<Empleador>,
     @InjectRepository(Empresa)
     private readonly empresaRepository: Repository<Empresa>,
+    @InjectRepository(ProcesoSeleccion)
+    private readonly procesoSeleccionRepository: Repository<ProcesoSeleccion>,
     private readonly StockService: StockService,
     private readonly jobOfferRepository: jobOfferRepository,
-    private readonly freeStockService: FreeStockService
-
+    private readonly freeStockService: FreeStockService,
   ) { }
 
   // ======================================================
@@ -270,7 +272,8 @@ export class OfertaService {
   // }
   async obtenerOfertasPorEmpleador(
     empleadorId: number,
-    pageOptions: PageOptionsDto
+    pageOptions: PageOptionsDto,
+    estado?: string,
   ): Promise<PageDto<Oferta>> {
     const qb = this.ofertaRepository.createQueryBuilder('oferta')
       .leftJoinAndSelect('oferta.empresa', 'empresa')
@@ -279,6 +282,10 @@ export class OfertaService {
       .orderBy('oferta.fecha_publicacion', Order.DESC)
       .skip(pageOptions.skip)
       .take(pageOptions.take);
+
+    if (estado) {
+      qb.andWhere('oferta.estado = :estado', { estado });
+    }
 
     const [entities, itemCount] = await qb.getManyAndCount();
 
@@ -394,6 +401,99 @@ export class OfertaService {
     oferta.es_activa = false;
     oferta.estado = 'completada';
     oferta.fecha_cierre = new Date();
+    oferta.modificada_por = empleador;
+
+    return this.ofertaRepository.save(oferta);
+  }
+
+  // ======================================================
+  // 📊 ESTADO DE OFERTA (resumen para frontend)
+  // ======================================================
+  async obtenerEstadoOferta(id: number) {
+    const oferta = await this.ofertaRepository.findOne({
+      where: { id },
+      relations: ['empleador', 'empresa'],
+    });
+    if (!oferta)
+      throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
+
+    const contratados = await this.procesoSeleccionRepository.count({
+      where: {
+        estado: 'contratado',
+        postulacion: { oferta: { id } },
+      },
+      relations: { postulacion: { oferta: true } },
+    });
+
+    const fechaExpiracion = new Date(oferta.fecha_publicacion);
+    fechaExpiracion.setDate(fechaExpiracion.getDate() + oferta.duracion_publicacion);
+
+    let motivo_cierre: string | null = null;
+    if (!oferta.es_activa) {
+      if (oferta.estado === 'expirada') motivo_cierre = 'fecha_expiracion';
+      else if (contratados >= oferta.numero_vacantes) motivo_cierre = 'vacantes_cubiertas';
+      else motivo_cierre = 'cierre_manual';
+    }
+
+    return {
+      id: oferta.id,
+      titulo: oferta.titulo,
+      estado: oferta.estado,
+      es_activa: oferta.es_activa,
+      motivo_cierre,
+      numero_vacantes: oferta.numero_vacantes,
+      vacantes_cubiertas: contratados,
+      vacantes_disponibles: Math.max(0, oferta.numero_vacantes - contratados),
+      fecha_publicacion: oferta.fecha_publicacion,
+      fecha_expiracion: fechaExpiracion,
+      fecha_cierre: oferta.fecha_cierre,
+      dias_restantes: oferta.es_activa
+        ? Math.max(0, Math.ceil((fechaExpiracion.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        : 0,
+    };
+  }
+
+  // ======================================================
+  // 🔄 REACTIVAR OFERTA (solo si fue cerrada manualmente)
+  // ======================================================
+  async reactivarOferta(id: number, userId: number): Promise<Oferta> {
+    const oferta = await this.ofertaRepository.findOne({
+      where: { id },
+      relations: ['empleador'],
+    });
+    if (!oferta)
+      throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
+
+    const empleador = await this.empleadorRepository.findOne({
+      where: { usuario: { id: userId } },
+      relations: ['usuario'],
+    });
+    if (!empleador)
+      throw new NotFoundException(`Empleador con usuario_id ${userId} no encontrado`);
+
+    if (oferta.empleador.id !== empleador.id)
+      throw new ForbiddenException('No tienes permisos para reactivar esta oferta');
+
+    if (oferta.es_activa)
+      throw new BadRequestException('La oferta ya se encuentra activa');
+
+    if (oferta.estado === 'expirada')
+      throw new BadRequestException('No se puede reactivar una oferta expirada. Cree una nueva oferta.');
+
+    const contratados = await this.procesoSeleccionRepository.count({
+      where: {
+        estado: 'contratado',
+        postulacion: { oferta: { id } },
+      },
+      relations: { postulacion: { oferta: true } },
+    });
+
+    if (contratados >= oferta.numero_vacantes)
+      throw new BadRequestException('No se puede reactivar: todas las vacantes están cubiertas.');
+
+    oferta.es_activa = true;
+    oferta.estado = 'publicada';
+    (oferta as any).fecha_cierre = null;
     oferta.modificada_por = empleador;
 
     return this.ofertaRepository.save(oferta);

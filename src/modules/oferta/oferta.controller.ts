@@ -37,13 +37,20 @@ export class OfertaController {
     return this.ofertaService.getJobsOffersPriority(pageOptionsDto);
   }
 
-  /** Listado por empleador (dashboard empresa) */
+  /** Listado por empleador (dashboard empresa) con filtro por estado */
   @Get('empleador/:empleadorId')
   async obtenerOfertasPorEmpleador(
     @Param('empleadorId', ParseIntPipe) empleadorId: number,
-    @Query() pageOptionsDto: PageOptionsDto
+    @Query() pageOptionsDto: PageOptionsDto,
+    @Query('estado') estado?: string,
   ): Promise<PageDto<Oferta>> {
-    return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto);
+    return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto, estado);
+  }
+
+  /** Resumen del estado de una oferta */
+  @Get(':id/estado')
+  async obtenerEstadoOferta(@Param('id', ParseIntPipe) id: number) {
+    return this.ofertaService.obtenerEstadoOferta(id);
   }
 
   /** Detalle de oferta */
@@ -70,6 +77,16 @@ export class OfertaController {
     @User() user: any,
   ): Promise<Oferta> {
     return this.ofertaService.cerrarOferta(id, user.sub);
+  }
+
+  /** Reactivar oferta cerrada manualmente */
+  @UseGuards(AuthGuard)
+  @Patch(':id/reactivar')
+  async reactivarOferta(
+    @Param('id', ParseIntPipe) id: number,
+    @User() user: any,
+  ): Promise<Oferta> {
+    return this.ofertaService.reactivarOferta(id, user.sub);
   }
 
   /** Update parcial */
