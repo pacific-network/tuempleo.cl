@@ -459,7 +459,7 @@ export class OfertaService {
   async reactivarOferta(id: number, userId: number): Promise<Oferta> {
     const oferta = await this.ofertaRepository.findOne({
       where: { id },
-      relations: ['empleador'],
+      relations: ['empleador', 'empresa'],
     });
     if (!oferta)
       throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
@@ -490,6 +490,19 @@ export class OfertaService {
 
     if (contratados >= oferta.numero_vacantes)
       throw new BadRequestException('No se puede reactivar: todas las vacantes están cubiertas.');
+
+    // Descontar crédito según el tipo de aviso original
+    if (oferta.tipo_aviso === 'GRATIS') {
+      const result = await this.freeStockService.useMonthlyFreeStock(oferta.empresa.id);
+      if (!result.disponible) {
+        throw new BadRequestException(result.mensaje);
+      }
+    } else {
+      await this.StockService.useCredit(
+        oferta.empresa.id,
+        oferta.tipo_aviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+      );
+    }
 
     oferta.es_activa = true;
     oferta.estado = 'publicada';
