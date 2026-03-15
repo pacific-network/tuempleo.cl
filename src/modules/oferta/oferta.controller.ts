@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards, Patch, Req } from '@nestjs/common';
 import { OfertaService } from './oferta.service';
+import { OfertaValidationService } from './oferta-validation.service';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
@@ -12,14 +13,23 @@ import { CountVisitService } from './count-visit.service';
 
 @Controller('v1/ofertas')
 export class OfertaController {
-  constructor(private readonly ofertaService: OfertaService,
+  constructor(
+    private readonly ofertaService: OfertaService,
     private readonly countVisitService: CountVisitService,
+    private readonly ofertaValidationService: OfertaValidationService,
   ) { }
 
 
   @Post()
   async crearOferta(@Body() dto: CreateOfertaDto): Promise<Oferta> {
     return this.ofertaService.crearOferta(dto);
+  }
+
+  /** Pre-validar oferta sin crearla (para validación en frontend) */
+  @Post('validar')
+  async validarOferta(@Body() dto: CreateOfertaDto): Promise<{ valid: true }> {
+    await this.ofertaValidationService.validarOferta(dto);
+    return { valid: true };
   }
 
   /** Listado publico con filtros/busqueda/paginacion */

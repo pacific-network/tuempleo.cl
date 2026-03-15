@@ -15,6 +15,7 @@ import { StockService } from "../stock/stock.service";
 import { jobOfferRepository } from "../../repository/job_offer/job-offer.repository";
 import { Order } from "src/shared/pagination/constants";
 import { FreeStockService } from "../stock/free-stock.service";
+import { OfertaValidationService } from "./oferta-validation.service";
 
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
@@ -37,6 +38,7 @@ export class OfertaService {
     private readonly StockService: StockService,
     private readonly jobOfferRepository: jobOfferRepository,
     private readonly freeStockService: FreeStockService,
+    private readonly ofertaValidationService: OfertaValidationService,
   ) { }
 
   // ======================================================
@@ -170,6 +172,9 @@ export class OfertaService {
   //   return saved;
   // }
   async crearOferta(data: CreateOfertaDto): Promise<Oferta> {
+    // 0️⃣ Validación automática
+    await this.ofertaValidationService.validarOferta(data);
+
     // 1️⃣ Empleador
     const empleador = await this.empleadorRepository.findOne({
       where: { id: data.empleador_id },

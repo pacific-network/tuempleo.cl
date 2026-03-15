@@ -12,6 +12,7 @@ import { OfertaService } from "./oferta.service";
 import { OfertaController } from "./oferta.controller";
 import { OfertaStatusService } from "./oferta-status/oferta-status.service";
 import { OfertaStatusCron } from "./oferta-status/oferta-status.cron";
+import { OfertaValidationService } from "./oferta-validation.service";
 
 import { StockModule } from "../stock/stock.module";
 import { CountVisitService } from "./count-visit.service";
@@ -33,6 +34,7 @@ import { jobOfferRepository } from "src/repository/job_offer/job-offer.repositor
     OfertaService,
     OfertaStatusService,
     OfertaStatusCron,
+    OfertaValidationService,
     CountVisitService,
     jobOfferRepository,
   ],
