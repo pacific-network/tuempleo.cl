@@ -2,6 +2,7 @@ import {
   Controller, Post, Get, Req, Body, HttpCode, HttpStatus,
   Patch, UnauthorizedException, UseGuards
 } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { AuthService } from './auth.service'
 import { RegistrarUsuarioDto } from './dto/register'
 import { Request } from 'express'
@@ -34,6 +35,7 @@ export class AuthController {
   // Register
   // -------------------------
   @Post('register')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   async register(@Body() dto: RegistrarUsuarioDto) {
     return this.authService.register(dto)
   }
@@ -42,11 +44,13 @@ export class AuthController {
   // Login (UX contexts)
   // -------------------------
   @Post('login-postulante')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   loginPostulante(@Body() dto: IniciarSesionDto) {
     return this.authService.login(dto, 'postulante')
   }
 
   @Post('login-empleador')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   loginEmpleador(@Body() dto: IniciarSesionDto) {
     return this.authService.login(dto, 'empleador')
   }
@@ -177,12 +181,14 @@ export class AuthController {
   // Forgot / Reset password
   // -------------------------
   @Post('forgot-password')
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email)
   }
 
   @Post('reset-password')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.newPassword)

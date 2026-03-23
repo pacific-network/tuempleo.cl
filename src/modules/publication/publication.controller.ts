@@ -1,5 +1,12 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { PublicationService, PlanKey } from './publication.service';
+import {
+  PublishOfferDto,
+  ReservePublicationDto,
+  ValidatePaidDto,
+  ConfirmPublicationDto,
+  UnlockViewDto,
+} from './dto/publish-offer.dto';
 
 @Controller('v1/publication')
 export class PublicationController {
@@ -12,7 +19,7 @@ export class PublicationController {
   }
 
   @Post('ofertas')
-  publish(@Body() body: any) {
+  publish(@Body() body: PublishOfferDto) {
     return this.service.publishOffer(body);
   }
 
@@ -28,17 +35,17 @@ export class PublicationController {
   }
 
   @Post('reservations')
-  reserve(@Body() body: { employerId: number; planKey: PlanKey }) {
-    return this.service.reservePublication(body.employerId, body.planKey);
+  reserve(@Body() body: ReservePublicationDto) {
+    return this.service.reservePublication(body.employerId, body.planKey as PlanKey);
   }
 
   @Post('paid/validate')
-  validatePaid(@Body() body: { employerId: number; planKey: PlanKey; orderId: string }) {
+  validatePaid(@Body() body: ValidatePaidDto) {
     return this.service.validatePaidAndReserve(body);
   }
 
   @Post('confirm')
-  confirm(@Body() body: { reservationId: number; ofertaId: number }) {
+  confirm(@Body() body: ConfirmPublicationDto) {
     return this.service.confirmPublication(body);
   }
 
@@ -49,7 +56,7 @@ export class PublicationController {
   }
 
   @Post('offer/:ofertaId/views/unlock')
-  unlock(@Param('ofertaId', ParseIntPipe) ofertaId: number, @Body() body: { postulanteId: number }) {
+  unlock(@Param('ofertaId', ParseIntPipe) ofertaId: number, @Body() body: UnlockViewDto) {
     return this.service.unlockProfileView({ ofertaId, postulanteId: body.postulanteId });
   }
 

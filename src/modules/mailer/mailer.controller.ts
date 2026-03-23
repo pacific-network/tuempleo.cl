@@ -1,6 +1,8 @@
 import { Controller, Post, Body, Get, Param, Query, HttpCode, HttpStatus, Res, NotFoundException } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { Response } from 'express'
 import { MailerService } from './mailer.service'
+import { SendMailDto, CreateTemplateDto } from './dto/send-mail.dto'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -10,8 +12,9 @@ export class MailerController {
 
     /** Enviar mail usando template existente (con personalización) */
     @Post('send')
+    @Throttle({ default: { ttl: 60_000, limit: 5 } })
     @HttpCode(HttpStatus.OK)
-    async sendMail(@Body() body: any) {
+    async sendMail(@Body() body: SendMailDto) {
         return this.mailerService.sendTemplateMail(body)
     }
 
@@ -24,7 +27,7 @@ export class MailerController {
     /** Crear template desde URL pública con HTML */
     @Post('template')
     @HttpCode(HttpStatus.CREATED)
-    async createTemplate(@Body() body: { subject: string; contentUrl: string }) {
+    async createTemplate(@Body() body: CreateTemplateDto) {
         return this.mailerService.createTemplate(body.subject, body.contentUrl)
     }
 
