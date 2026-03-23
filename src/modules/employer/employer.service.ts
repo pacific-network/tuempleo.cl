@@ -1,6 +1,6 @@
 import { Injectable, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, Between } from "typeorm";
 import { Empresa } from "src/repository/business/business.entity";
 import { Usuario } from "src/repository/user/user.entity";
 import { Empleador } from "src/repository/employer/employer.entity";
@@ -178,32 +178,138 @@ export class EmpleadorService {
             throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
         }
 
+        const empleadorId = empleador.id;
+        const empresaId = empleador.empresa?.id;
+
+        // Ofertas por estado
+        const ofertasPorEstado = await this.ofertaRepository
+            .createQueryBuilder('o')
+            .select('o.estado', 'estado')
+            .addSelect('COUNT(*)', 'cantidad')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .groupBy('o.estado')
+            .getRawMany();
+
         const ofertasActivas = await this.ofertaRepository.count({
-            where: {
-                empleador: { id: empleador.id },
-                es_activa: true,
-            },
+            where: { empleador: { id: empleadorId }, es_activa: true },
         });
 
+        const totalOfertas = await this.ofertaRepository.count({
+            where: { empleador: { id: empleadorId } },
+        });
+
+        // Postulaciones totales y por estado
         const totalPostulaciones = await this.postulacionRepository
             .createQueryBuilder('p')
             .innerJoin('p.oferta', 'o')
-            .where('o.empleador_id = :empleadorId', { empleadorId: empleador.id })
+            .where('o.empleador_id = :empleadorId', { empleadorId })
             .getCount();
 
-        const empresaId = empleador.empresa?.id;
-        let avisosDisponibles = 0;
+        const postulacionesPorEstado = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .select('p.estado', 'estado')
+            .addSelect('COUNT(*)', 'cantidad')
+            .innerJoin('p.oferta', 'o')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .groupBy('p.estado')
+            .getRawMany();
 
+        // Postulaciones últimos 7 días (para gráfico de tendencia)
+        const hace7Dias = new Date();
+        hace7Dias.setDate(hace7Dias.getDate() - 7);
+
+        const postulacionesPorDia = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .select('DATE(p.fecha_postulacion)', 'fecha')
+            .addSelect('COUNT(*)', 'cantidad')
+            .innerJoin('p.oferta', 'o')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .andWhere('p.fecha_postulacion >= :desde', { desde: hace7Dias })
+            .groupBy('DATE(p.fecha_postulacion)')
+            .orderBy('fecha', 'ASC')
+            .getRawMany();
+
+        // Postulaciones últimos 30 días (para comparar con período anterior)
+        const hace30Dias = new Date();
+        hace30Dias.setDate(hace30Dias.getDate() - 30);
+        const hace60Dias = new Date();
+        hace60Dias.setDate(hace60Dias.getDate() - 60);
+
+        const postulacionesUltimos30 = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .innerJoin('p.oferta', 'o')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .andWhere('p.fecha_postulacion >= :desde', { desde: hace30Dias })
+            .getCount();
+
+        const postulacionesPeriodoAnterior = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .innerJoin('p.oferta', 'o')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .andWhere('p.fecha_postulacion >= :desde', { desde: hace60Dias })
+            .andWhere('p.fecha_postulacion < :hasta', { hasta: hace30Dias })
+            .getCount();
+
+        // Visitas totales de ofertas activas
+        const visitasTotales = await this.ofertaRepository
+            .createQueryBuilder('o')
+            .select('SUM(o.visits_total)', 'total')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .getRawOne();
+
+        // Top 5 ofertas con más postulaciones
+        const topOfertas = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .select('o.id', 'oferta_id')
+            .addSelect('o.titulo', 'titulo')
+            .addSelect('o.es_activa', 'es_activa')
+            .addSelect('COUNT(*)', 'postulaciones')
+            .innerJoin('p.oferta', 'o')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .groupBy('o.id')
+            .addGroupBy('o.titulo')
+            .addGroupBy('o.es_activa')
+            .orderBy('postulaciones', 'DESC')
+            .limit(5)
+            .getRawMany();
+
+        // Tasa de conversión (visitas → postulaciones)
+        const totalVisitas = parseInt(visitasTotales?.total || '0', 10);
+        const tasaConversion = totalVisitas > 0
+            ? Math.round((totalPostulaciones / totalVisitas) * 10000) / 100
+            : 0;
+
+        // Stock disponible
+        let avisosDisponibles = 0;
+        let stockDetalle: any = null;
         if (empresaId) {
             const { gratis, pagados } = await this.stockService.getFullAvailability(empresaId);
             avisosDisponibles = (gratis?.cantidad_disponible ?? 0)
                 + pagados.reduce((sum, s) => sum + (s.cantidad_disponible ?? 0), 0);
+            stockDetalle = { gratis, pagados };
         }
 
         return {
-            ofertasActivas,
-            totalPostulaciones,
-            avisosDisponibles,
+            resumen: {
+                ofertas_activas: ofertasActivas,
+                total_ofertas: totalOfertas,
+                total_postulaciones: totalPostulaciones,
+                total_visitas: totalVisitas,
+                tasa_conversion: tasaConversion,
+                avisos_disponibles: avisosDisponibles,
+            },
+            ofertas_por_estado: ofertasPorEstado,
+            postulaciones_por_estado: postulacionesPorEstado,
+            tendencia: {
+                postulaciones_por_dia: postulacionesPorDia,
+                ultimos_30_dias: postulacionesUltimos30,
+                periodo_anterior_30_dias: postulacionesPeriodoAnterior,
+                variacion_porcentual: postulacionesPeriodoAnterior > 0
+                    ? Math.round(((postulacionesUltimos30 - postulacionesPeriodoAnterior) / postulacionesPeriodoAnterior) * 10000) / 100
+                    : null,
+            },
+            top_ofertas: topOfertas,
+            stock: stockDetalle,
         };
     }
 

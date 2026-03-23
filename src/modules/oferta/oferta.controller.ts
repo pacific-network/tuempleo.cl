@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Delete, UseGuards, Patch, Req } from '@nestjs/common';
 import { OfertaService } from './oferta.service';
+import { OfertaValidationService } from './oferta-validation.service';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
@@ -12,14 +13,23 @@ import { CountVisitService } from './count-visit.service';
 
 @Controller('v1/ofertas')
 export class OfertaController {
-  constructor(private readonly ofertaService: OfertaService,
+  constructor(
+    private readonly ofertaService: OfertaService,
     private readonly countVisitService: CountVisitService,
+    private readonly ofertaValidationService: OfertaValidationService,
   ) { }
 
 
   @Post()
   async crearOferta(@Body() dto: CreateOfertaDto): Promise<Oferta> {
     return this.ofertaService.crearOferta(dto);
+  }
+
+  /** Pre-validar oferta sin crearla (para validación en frontend) */
+  @Post('validar')
+  async validarOferta(@Body() dto: CreateOfertaDto): Promise<{ valid: true }> {
+    await this.ofertaValidationService.validarOferta(dto);
+    return { valid: true };
   }
 
   /** Listado publico con filtros/busqueda/paginacion */
@@ -37,13 +47,20 @@ export class OfertaController {
     return this.ofertaService.getJobsOffersPriority(pageOptionsDto);
   }
 
-  /** Listado por empleador (dashboard empresa) */
+  /** Listado por empleador (dashboard empresa) con filtro por estado */
   @Get('empleador/:empleadorId')
   async obtenerOfertasPorEmpleador(
     @Param('empleadorId', ParseIntPipe) empleadorId: number,
-    @Query() pageOptionsDto: PageOptionsDto
+    @Query() pageOptionsDto: PageOptionsDto,
+    @Query('estado') estado?: string,
   ): Promise<PageDto<Oferta>> {
-    return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto);
+    return this.ofertaService.obtenerOfertasPorEmpleador(empleadorId, pageOptionsDto, estado);
+  }
+
+  /** Resumen del estado de una oferta */
+  @Get(':id/estado')
+  async obtenerEstadoOferta(@Param('id', ParseIntPipe) id: number) {
+    return this.ofertaService.obtenerEstadoOferta(id);
   }
 
   /** Detalle de oferta */
@@ -70,6 +87,16 @@ export class OfertaController {
     @User() user: any,
   ): Promise<Oferta> {
     return this.ofertaService.cerrarOferta(id, user.sub);
+  }
+
+  /** Reactivar oferta cerrada manualmente */
+  @UseGuards(AuthGuard)
+  @Patch(':id/reactivar')
+  async reactivarOferta(
+    @Param('id', ParseIntPipe) id: number,
+    @User() user: any,
+  ): Promise<Oferta> {
+    return this.ofertaService.reactivarOferta(id, user.sub);
   }
 
   /** Update parcial */
