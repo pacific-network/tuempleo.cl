@@ -1,0 +1,20 @@
+{
+  "NOT_FOUND": "Resource not found",
+  "USUARIO_NOT_FOUND": "User not found",
+  "POSTULANTE_NOT_FOUND": "Applicant does not exist",
+  "OFERTA_NOT_FOUND": "Job offer not found",
+  "CURRICULUM_NOT_FOUND": "Curriculum not found",
+  "ARCHIVO_NOT_FOUND": "File not found on the server",
+  "CV_UPLOAD_SUCCESS": "File uploaded and path updated successfully",
+  "CV_PARSE_SUCCESS": "CV processed and profile updated automatically",
+  "CV_PARSE_PARTIAL": "CV uploaded successfully. Some data could not be extracted automatically",
+  "CV_NO_FILE": "No file was uploaded",
+  "CV_TYPE_NOT_ALLOWED": "File type not allowed. Only .pdf, .doc, .docx",
+  "EMPLOYER_NOT_OWNER": "You do not have permissions on this job offer",
+  "EXPORT_NO_DATA": "No applications to export",
+  "EXPORT_SUCCESS": "Export generated successfully",
+  "SALARY_NO_DATA": "No salary data available for the selected filters",
+  "VALIDATION_FAILED": "Validation error in the submitted data",
+  "UNAUTHORIZED": "Unauthorized",
+  "FORBIDDEN": "Access denied"
+}

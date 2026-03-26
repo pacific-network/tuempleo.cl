@@ -1,8 +1,10 @@
 import {
-  Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req,
+  Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res,
   Param, ParseIntPipe, Query
 } from '@nestjs/common';
+import { Response } from 'express';
 import { PostulacionService } from '../../modules/applications/application.service';
+import { ExportApplicantsService } from './export/export-applicants.service';
 import { CreatePostulacionDto } from './dto/create-postulacion.dto';
 import { Postulacion } from '../../repository/applications/applications.entity';
 import { AuthGuard } from '@nestjs/passport';
@@ -10,7 +12,10 @@ import { AuthGuard as CustomAuthGuard } from '../auth/guards/auth.guards';
 
 @Controller('v1/postulaciones')
 export class PostulacionController {
-  constructor(private readonly postulacionService: PostulacionService) { }
+  constructor(
+    private readonly postulacionService: PostulacionService,
+    private readonly exportService: ExportApplicantsService,
+  ) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -132,7 +137,29 @@ export class PostulacionController {
     return this.postulacionService.ObtenerPostulantesDescartados(ofertaId, userId);
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Get('oferta/:ofertaId/export-csv')
+  async exportApplicants(
+    @Param('ofertaId', ParseIntPipe) ofertaId: number,
+    @Query('format') format: 'xlsx' | 'csv',
+    @Req() req,
+    @Res() res: Response,
+  ) {
+    const userId = req.user.userId;
+    const fmt = format === 'csv' ? 'csv' : 'xlsx';
+    const buffer = await this.exportService.exportApplicants(ofertaId, userId, fmt);
 
+    const contentType =
+      fmt === 'csv'
+        ? 'text/csv'
+        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const ext = fmt === 'csv' ? 'csv' : 'xlsx';
 
-
+    res.setHeader('Content-Type', contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="postulantes-oferta-${ofertaId}.${ext}"`,
+    );
+    res.send(buffer);
+  }
 }

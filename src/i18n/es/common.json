@@ -1,0 +1,20 @@
+{
+  "NOT_FOUND": "Recurso no encontrado",
+  "USUARIO_NOT_FOUND": "Usuario no encontrado",
+  "POSTULANTE_NOT_FOUND": "El postulante no existe",
+  "OFERTA_NOT_FOUND": "Oferta no encontrada",
+  "CURRICULUM_NOT_FOUND": "Curriculum no encontrado",
+  "ARCHIVO_NOT_FOUND": "Archivo no encontrado en el servidor",
+  "CV_UPLOAD_SUCCESS": "Archivo subido y path actualizado correctamente",
+  "CV_PARSE_SUCCESS": "CV procesado y perfil actualizado automáticamente",
+  "CV_PARSE_PARTIAL": "CV subido correctamente. Algunos datos no pudieron ser extraídos automáticamente",
+  "CV_NO_FILE": "No se ha subido ningún archivo",
+  "CV_TYPE_NOT_ALLOWED": "Tipo de archivo no permitido. Solo .pdf, .doc, .docx",
+  "EMPLOYER_NOT_OWNER": "No tienes permisos sobre esta oferta",
+  "EXPORT_NO_DATA": "No hay postulaciones para exportar",
+  "EXPORT_SUCCESS": "Exportación generada correctamente",
+  "SALARY_NO_DATA": "No hay datos salariales disponibles para los filtros seleccionados",
+  "VALIDATION_FAILED": "Error de validación en los datos enviados",
+  "UNAUTHORIZED": "No autorizado",
+  "FORBIDDEN": "Acceso denegado"
+}

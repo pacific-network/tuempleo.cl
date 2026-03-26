@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { I18nModule, AcceptLanguageResolver, I18nJsonLoader } from 'nestjs-i18n';
 import { databaseConfig } from './config/database';
 import { UserModule } from './modules/user/user.module';
 import { EncryptModule } from './shared/encrypt/encrypt.module';
@@ -38,6 +39,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SalaryStatsModule } from './modules/salary-stats/salary-stats.module';
 
 
 
@@ -57,6 +59,15 @@ import { AdminModule } from './modules/admin/admin.module';
 
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+
+    I18nModule.forRoot({
+      fallbackLanguage: 'es',
+      loader: I18nJsonLoader,
+      loaderOptions: {
+        path: join(__dirname, '/i18n/'),
+      },
+      resolvers: [AcceptLanguageResolver],
     }),
 
     TypeOrmModule.forRoot(databaseConfig),
@@ -99,6 +110,7 @@ import { AdminModule } from './modules/admin/admin.module';
     MailerModule,
     AlertasModule,
     AdminModule,
+    SalaryStatsModule,
 
 
 
