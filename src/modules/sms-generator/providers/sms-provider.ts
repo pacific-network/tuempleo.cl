@@ -13,33 +13,25 @@ import { SmsProvider, SmsProviderResponse } from './sms-provider.interface'
 export class PacificSmsProvider implements SmsProvider {
     private readonly logger = new Logger(PacificSmsProvider.name)
 
-    private readonly apiUrl: string
+    private readonly baseUrl: string
     private readonly apiKey: string
-    private readonly empresaServiceId: number
+    private readonly apiSecret: string
 
     constructor(private readonly http: HttpService) {
         const baseUrl = process.env.PACIFIC_BASE_URL
         const apiKey = process.env.PACIFIC_API_KEY
-        const empresaServiceIdRaw = process.env.PACIFIC_EMPRESA_SERVICE_ID
+        const apiSecret = process.env.PACIFIC_API_SECRET
 
         if (!baseUrl) throw new Error('PACIFIC_BASE_URL no configurada')
         if (!apiKey) throw new Error('PACIFIC_API_KEY no configurada')
-        if (!empresaServiceIdRaw)
-            throw new Error('PACIFIC_EMPRESA_SERVICE_ID no configurada')
+        if (!apiSecret) throw new Error('PACIFIC_API_SECRET no configurada')
 
-        const empresaServiceId = Number(empresaServiceIdRaw)
-        if (Number.isNaN(empresaServiceId)) {
-            throw new Error(
-                'PACIFIC_EMPRESA_SERVICE_ID debe ser un número válido',
-            )
-        }
-
-        this.apiUrl = `${baseUrl}/v2/messages/send`
+        this.baseUrl = baseUrl
         this.apiKey = apiKey
-        this.empresaServiceId = empresaServiceId
+        this.apiSecret = apiSecret
 
         this.logger.log(
-            `PacificSmsProvider configurado → ${this.apiUrl}`,
+            `PacificSmsProvider configurado → ${this.baseUrl}/sms/send`,
         )
     }
 
@@ -48,28 +40,25 @@ export class PacificSmsProvider implements SmsProvider {
         content: string
     }): Promise<SmsProviderResponse> {
         try {
-            this.logger.log(
-                `Enviando SMS a ${payload.number} (empresa_service_id=${this.empresaServiceId})`,
-            )
+            this.logger.log(`Enviando SMS a ${payload.number}`)
 
             const response = await firstValueFrom(
                 this.http.post(
-                    this.apiUrl,
+                    `${this.baseUrl}/sms/send`,
                     {
-                        empresa_service_id: this.empresaServiceId,
-                        number: payload.number,
-                        sms_content: payload.content,
+                        numero: payload.number,
+                        mensaje: payload.content,
                     },
                     {
+                        auth: {
+                            username: this.apiKey,
+                            password: this.apiSecret,
+                        },
                         headers: {
-                            'x-api-key': this.apiKey,
                             'Content-Type': 'application/json',
-                            Accept: '*/*',
-                            'User-Agent': 'PostmanRuntime/7.36.1',
-                            Connection: 'keep-alive',
                         },
                         timeout: 8000,
-                        validateStatus: () => true, // ← necesario
+                        validateStatus: () => true,
                     },
                 ),
             )
@@ -79,34 +68,68 @@ export class PacificSmsProvider implements SmsProvider {
                 data: response.data,
             })
 
-            // ✅ Aceptar TODO 2xx
             if (response.status < 200 || response.status >= 300) {
                 throw new Error(
-                    `Pacific error ${response.status}: ${JSON.stringify(
+                    `Pacific Solutions error ${response.status}: ${JSON.stringify(
                         response.data,
                     )}`,
                 )
             }
 
-            if (!response.data?.id_sms) {
+            if (!response.data?.ok || !response.data?.message_id) {
                 throw new Error(
-                    'Respuesta inválida del proveedor Pacific (id_sms faltante)',
+                    'Respuesta inválida del proveedor Pacific Solutions (message_id faltante)',
                 )
             }
 
             return {
-                externalId: response.data.id_sms,
-                number: response.data.number,
-                status: response.data.status,
+                externalId: String(response.data.message_id),
+                number: payload.number,
+                status: 'enviado',
             }
         } catch (error) {
-            this.logger.error('Error enviando SMS vía Pacific', {
+            this.logger.error('Error enviando SMS vía Pacific Solutions', {
                 message: error.message,
                 stack: error.stack,
             })
 
             throw new InternalServerErrorException(
-                'Error enviando SMS vía Pacific',
+                'Error enviando SMS vía Pacific Solutions',
+            )
+        }
+    }
+
+    async getStatus(messageId: string): Promise<string> {
+        try {
+            const response = await firstValueFrom(
+                this.http.get(
+                    `${this.baseUrl}/sms/status/${messageId}`,
+                    {
+                        auth: {
+                            username: this.apiKey,
+                            password: this.apiSecret,
+                        },
+                        timeout: 8000,
+                        validateStatus: () => true,
+                    },
+                ),
+            )
+
+            if (response.status < 200 || response.status >= 300) {
+                throw new Error(
+                    `Pacific Solutions status error ${response.status}: ${JSON.stringify(
+                        response.data,
+                    )}`,
+                )
+            }
+
+            return response.data?.estado ?? 'desconocido'
+        } catch (error) {
+            this.logger.error('Error consultando estado SMS', {
+                message: error.message,
+            })
+            throw new InternalServerErrorException(
+                'Error consultando estado de SMS',
             )
         }
     }
