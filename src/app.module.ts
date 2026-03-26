@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { I18nModule, AcceptLanguageResolver, I18nJsonLoader } from 'nestjs-i18n';
 import { databaseConfig } from './config/database';
 import { UserModule } from './modules/user/user.module';
 import { EncryptModule } from './shared/encrypt/encrypt.module';
@@ -20,6 +22,8 @@ import { OfertaModule } from './modules/oferta/oferta.module';
 import { GuardadosModule } from './modules/guardados/guardados.module';
 import { ApplicationModule } from './modules/applications/application.module';
 import { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { BlockBrowserMiddleware } from './middleware/block-browser.middleware';
 import { SiiModule } from './modules/api-gateway/sii.module';
 import { HiringProcessModule } from './modules/hiring_process/hiring_process.module';
@@ -35,6 +39,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SalaryStatsModule } from './modules/salary-stats/salary-stats.module';
 
 
 
@@ -46,8 +51,23 @@ import { AdminModule } from './modules/admin/admin.module';
       serveRoot: '/upload',
     }),
 
+    // Rate limiting global: 60 requests por minuto por IP
+    ThrottlerModule.forRoot([{
+      ttl: 60_000,
+      limit: 60,
+    }]),
+
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+
+    I18nModule.forRoot({
+      fallbackLanguage: 'es',
+      loader: I18nJsonLoader,
+      loaderOptions: {
+        path: join(__dirname, '/i18n/'),
+      },
+      resolvers: [AcceptLanguageResolver],
     }),
 
     TypeOrmModule.forRoot(databaseConfig),
@@ -90,9 +110,16 @@ import { AdminModule } from './modules/admin/admin.module';
     MailerModule,
     AlertasModule,
     AdminModule,
+    SalaryStatsModule,
 
 
 
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {

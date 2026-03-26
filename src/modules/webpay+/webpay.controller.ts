@@ -15,6 +15,7 @@ import { WebpayService } from './webpay.service'
 import { Request, Response } from 'express'
 import { WEBPAY_CONFIG } from './config/webpay.config'
 import { AuthGuard } from '@nestjs/passport'
+import { CreatePendingTransactionDto } from './dto/create-pending-transaction.dto'
 
 @Controller('v1/webpay')
 export class WebpayController {
@@ -26,7 +27,7 @@ export class WebpayController {
     @Post('/create-pending')
     @UseGuards(AuthGuard('jwt'))
     async createPendingTransaction(
-        @Body() body: any,
+        @Body() body: CreatePendingTransactionDto,
         @Req() req: Request,
     ) {
         const user = req.user as any
@@ -34,14 +35,6 @@ export class WebpayController {
 
         const userId = user.sub ?? user.userId ?? user.id
         const { empresaId, items } = body
-
-        if (!empresaId || isNaN(Number(empresaId))) {
-            throw new BadRequestException('empresaId inválido o ausente')
-        }
-
-        if (!Array.isArray(items) || items.length === 0) {
-            throw new BadRequestException('items vacío o inválido')
-        }
 
         console.log(`🧾 Creando transacción Webpay:
         - Usuario ID: ${userId}

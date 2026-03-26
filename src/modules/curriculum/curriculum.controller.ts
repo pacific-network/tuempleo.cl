@@ -18,11 +18,15 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { CurriculumService } from './curriculum.service';
+import { CvParserService } from './cv-parser/cv-parser.service';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 
 @Controller('v1/curriculum')
 export class CurriculumController {
-  constructor(private readonly curriculumService: CurriculumService) { }
+  constructor(
+    private readonly curriculumService: CurriculumService,
+    private readonly cvParserService: CvParserService,
+  ) { }
 
   // Si quieres, deja esta constante para otros usos
   // (no se usa en las rutas de abajo)
@@ -84,7 +88,7 @@ export class CurriculumController {
   async uploadFile(
     @Param('rut') rut: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ message: string; cv_path: string; url: string }> {
+  ): Promise<{ message: string; cv_path: string; url: string; parsed: boolean }> {
     if (!file) {
       throw new BadRequestException('No se ha subido ningún archivo.');
     }
@@ -96,6 +100,20 @@ export class CurriculumController {
       absolutePath,
     );
 
+    // Intentar parsear el CV y actualizar el perfil del postulante
+    let parsed = false;
+    try {
+      const uploadPath = process.env.CV_UPLOAD_PATH || '/var/www/html/uploads/';
+      const diskPath = path.join(uploadPath, file.filename);
+      const parsedData = await this.cvParserService.parseFromFile(diskPath);
+      if (parsedData && Object.keys(parsedData).some((k) => parsedData[k])) {
+        await this.curriculumService.updatePostulanteDataFromCv(rut, parsedData);
+        parsed = true;
+      }
+    } catch (err) {
+      console.warn('CV parsing failed, upload still succeeded:', err.message);
+    }
+
     // Para mostrar en el navegador, la URL pública es /uploads/<archivo>
     const publicPath =
       curriculum.cv_path?.startsWith('/uploads')
@@ -105,9 +123,12 @@ export class CurriculumController {
     const base = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
 
     return {
-      message: 'Archivo subido y path actualizado correctamente.',
-      cv_path: curriculum.cv_path, // lo que quedó en BD (absoluto)
-      url: `${base}${publicPath}`, // URL lista para abrir en el navegador
+      message: parsed
+        ? 'Archivo subido y perfil actualizado automáticamente.'
+        : 'Archivo subido y path actualizado correctamente.',
+      cv_path: curriculum.cv_path,
+      url: `${base}${publicPath}`,
+      parsed,
     };
   }
 
