@@ -28,7 +28,7 @@ import { JwtStrategy } from 'src/modules/auth/strategies/jwt.strategy';
       useFactory: async (config: ConfigService) => ({
         // ⬇️ MISMO secreto y mismo fallback que en AuthModule
         secret: config.get<string>('JWT_SECRET') || 'pacificNetwork2024',
-        signOptions: { expiresIn: '3h' },
+        signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
     }),

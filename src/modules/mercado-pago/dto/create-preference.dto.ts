@@ -1,12 +1,20 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsNumber, IsString, Min, ArrayMinSize, ValidateNested, IsIn } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class CreatePreferenceDto {
+export class MercadoPagoItemDto {
   @IsString()
   @IsIn(['BASICO', 'ESTANDAR', 'PREMIUM'])
-  tipo: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+  tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM';
 
-  // Opcionalmente puedes asociar el aviso/orden para guardarlo luego
-  @IsOptional()
-  @IsString()
-  referencia?: string; // ej: id_aviso, id_orden, etc.
+  @IsNumber()
+  @Min(1)
+  cantidad: number;
+}
+
+export class CreatePreferenceDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => MercadoPagoItemDto)
+  items: MercadoPagoItemDto[];
 }
