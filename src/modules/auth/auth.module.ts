@@ -31,7 +31,7 @@ import { Empleador } from 'src/repository/employer/employer.entity';
       useFactory: async (config: ConfigService) => ({
         // ⬇️ MISMO secreto y mismo fallback que en OauthModule
         secret: config.get<string>('JWT_SECRET') || 'pacificNetwork2024',
-        signOptions: { expiresIn: '3h' },
+        signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
     }),

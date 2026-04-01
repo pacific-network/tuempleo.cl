@@ -29,7 +29,7 @@ import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
       imports: [ConfigModule],
       useFactory: async (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET') || 'pacificNetwork2024',
-        signOptions: { expiresIn: '3h' },
+        signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
     }),
