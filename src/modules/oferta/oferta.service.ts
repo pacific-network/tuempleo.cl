@@ -459,7 +459,7 @@ export class OfertaService {
   }
 
   // ======================================================
-  // 🔄 REACTIVAR OFERTA (solo si fue cerrada manualmente)
+  // 🔄 REACTIVAR OFERTA (republicar como nueva)
   // ======================================================
   async reactivarOferta(id: number, userId: number): Promise<Oferta> {
     const oferta = await this.ofertaRepository.findOne({
@@ -481,9 +481,6 @@ export class OfertaService {
 
     if (oferta.es_activa)
       throw new BadRequestException('La oferta ya se encuentra activa');
-
-    if (oferta.estado === 'expirada')
-      throw new BadRequestException('No se puede reactivar una oferta expirada. Cree una nueva oferta.');
 
     const contratados = await this.procesoSeleccionRepository.count({
       where: {
@@ -509,8 +506,10 @@ export class OfertaService {
       );
     }
 
+    // Republicar como nueva: resetear fechas y estado
     oferta.es_activa = true;
     oferta.estado = 'publicada';
+    oferta.fecha_publicacion = new Date();
     (oferta as any).fecha_cierre = null;
     oferta.modificada_por = empleador;
 
