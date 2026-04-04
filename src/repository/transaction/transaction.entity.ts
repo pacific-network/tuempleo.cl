@@ -47,6 +47,9 @@ export class Transaction {
     })
     origen: PaymentGateway;
 
+    @Column({ type: 'boolean', default: false })
+    stock_processed: boolean;
+
     @CreateDateColumn({ type: 'datetime', name: 'created_at' })
     createdAt: Date;
 
