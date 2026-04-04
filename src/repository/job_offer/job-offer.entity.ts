@@ -72,10 +72,10 @@ export class Oferta {
     numero_vacantes: number;
     @Column({
         type: 'enum',
-        enum: ['publicada', 'en_proceso', 'completada', 'expirada', 'eliminada'],
+        enum: ['pendiente_revision', 'publicada', 'en_proceso', 'completada', 'expirada', 'eliminada'],
         default: 'publicada'
     })
-    estado: 'publicada' | 'en_proceso' | 'completada' | 'expirada' | 'eliminada';
+    estado: 'pendiente_revision' | 'publicada' | 'en_proceso' | 'completada' | 'expirada' | 'eliminada';
 
     @DeleteDateColumn({ name: 'fecha_eliminacion' })
     fecha_eliminacion: Date;

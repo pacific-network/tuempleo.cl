@@ -276,7 +276,7 @@ export class EmpleadorService {
         // Tasa de conversión (visitas → postulaciones)
         const totalVisitas = parseInt(visitasTotales?.total || '0', 10);
         const tasaConversion = totalVisitas > 0
-            ? Math.round((totalPostulaciones / totalVisitas) * 10000) / 100
+            ? Math.min(100, Math.round((totalPostulaciones / totalVisitas) * 10000) / 100)
             : 0;
 
         // Stock disponible
