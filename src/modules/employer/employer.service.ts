@@ -218,16 +218,22 @@ export class EmpleadorService {
         const hace7Dias = new Date();
         hace7Dias.setDate(hace7Dias.getDate() - 7);
 
-        const postulacionesPorDia = await this.postulacionRepository
+        const postulacionesPorDiaRaw = await this.postulacionRepository
             .createQueryBuilder('p')
-            .select('DATE(p.fecha_postulacion)', 'fecha')
+            .select('DATE_FORMAT(p.fecha_postulacion, \'%Y-%m-%d\')', 'fecha')
             .addSelect('COUNT(*)', 'cantidad')
             .innerJoin('p.oferta', 'o')
             .where('o.empleador_id = :empleadorId', { empleadorId })
             .andWhere('p.fecha_postulacion >= :desde', { desde: hace7Dias })
-            .groupBy('DATE(p.fecha_postulacion)')
+            .groupBy('DATE_FORMAT(p.fecha_postulacion, \'%Y-%m-%d\')')
             .orderBy('fecha', 'ASC')
             .getRawMany();
+
+        // Asegurar formato string YYYY-MM-DD
+        const postulacionesPorDia = postulacionesPorDiaRaw.map(r => ({
+            fecha: String(r.fecha),
+            cantidad: Number(r.cantidad),
+        }));
 
         // Postulaciones últimos 30 días (para comparar con período anterior)
         const hace30Dias = new Date();
@@ -279,6 +285,25 @@ export class EmpleadorService {
             ? Math.min(100, Math.round((totalPostulaciones / totalVisitas) * 10000) / 100)
             : 0;
 
+        // Métricas del mes actual (últimos 30 días)
+        const ofertasMes = await this.ofertaRepository
+            .createQueryBuilder('o')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .andWhere('o.fecha_publicacion >= :desde', { desde: hace30Dias })
+            .getCount();
+
+        const visitasMesRaw = await this.ofertaRepository
+            .createQueryBuilder('o')
+            .select('SUM(o.visits_total)', 'total')
+            .where('o.empleador_id = :empleadorId', { empleadorId })
+            .andWhere('o.fecha_publicacion >= :desde', { desde: hace30Dias })
+            .getRawOne();
+        const visitasMes = parseInt(visitasMesRaw?.total || '0', 10);
+
+        const tasaConversionMes = visitasMes > 0
+            ? Math.min(100, Math.round((postulacionesUltimos30 / visitasMes) * 10000) / 100)
+            : 0;
+
         // Stock disponible
         let avisosDisponibles = 0;
         let stockDetalle: any = null;
@@ -310,6 +335,12 @@ export class EmpleadorService {
             },
             top_ofertas: topOfertas,
             stock: stockDetalle,
+            mes_actual: {
+                ofertas_publicadas: ofertasMes,
+                postulaciones: postulacionesUltimos30,
+                visitas: visitasMes,
+                tasa_conversion: tasaConversionMes,
+            },
         };
     }
 

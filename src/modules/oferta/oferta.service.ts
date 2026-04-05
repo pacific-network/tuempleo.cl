@@ -271,7 +271,7 @@ export class OfertaService {
       fecha_publicacion: publicacion,
       duracion_publicacion: duracion,
       fecha_cierre,
-      es_activa: esGratis ? false : (data.es_activa ?? true),
+      es_activa: esGratis ? false : true,
       estado: esGratis ? 'pendiente_revision' : 'publicada',
       data: JSON.stringify(data.data),
       priority: prioridad,
