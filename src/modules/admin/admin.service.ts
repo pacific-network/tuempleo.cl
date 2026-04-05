@@ -116,7 +116,7 @@ export class AdminService {
     const skip = (page - 1) * take;
     const [items, total] = await this.ofertaRepo.findAndCount({
       where: { estado: 'pendiente_revision' },
-      relations: ['empresa', 'empleador'],
+      relations: ['empresa', 'empleador', 'empleador.usuario'],
       order: { fecha_publicacion: 'ASC' },
       take,
       skip,
