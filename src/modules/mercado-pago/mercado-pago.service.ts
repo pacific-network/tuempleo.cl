@@ -113,24 +113,16 @@ export class MercadoPagoService {
                 preference_id: prefId,
             });
 
-            // 🔍 Buscar transacción
-            let tx: Transaction | null = null;
-
-            if (prefId) {
-                tx = await this.transactionRepository.findOne({ where: { token: prefId } });
-                if (tx) console.log(`✅ Transacción encontrada por token (${prefId})`);
+            // 🔍 Buscar transacción por preference_id
+            if (!prefId) {
+                console.warn(`⚠️ Pago ${paymentId} sin preference_id. No se puede asociar a una transacción.`);
+                return;
             }
 
-            if (!tx) {
-                tx = await this.transactionRepository.findOne({
-                    where: { status: TransactionStatus.PENDIENTE, origen: PaymentGateway.MERCADOPAGO },
-                    order: { createdAt: 'DESC' },
-                });
-                if (tx) console.log(`⚠️ preference_id vacío → usando la última transacción pendiente: ${tx.orderId}`);
-            }
+            const tx = await this.transactionRepository.findOne({ where: { token: prefId } });
 
             if (!tx) {
-                console.warn(`⚠️ No se encontró transacción asociada al pago ${paymentId}`);
+                console.warn(`⚠️ No se encontró transacción con preference_id ${prefId} (pago ${paymentId})`);
                 return;
             }
 

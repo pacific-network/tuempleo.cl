@@ -51,9 +51,9 @@ export const crearPreferenciaPago = async (itemsCarrito: MpItem[]) => {
         body: {
             items,
             back_urls: {
-                success: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
-                failure: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
-                pending: 'https://www.tuempleo.cl/empresas/resultado-transaccion-otros.html',
+                success: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`,
+                failure: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`,
+                pending: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`,
             },
             auto_return: 'approved',
             notification_url: 'https://tuempleo.cl/api/v1/mercadopago/webhook',

@@ -270,6 +270,7 @@ export class EmpleadorService {
             .addSelect('o.titulo', 'titulo')
             .addSelect('o.es_activa', 'es_activa')
             .addSelect('COUNT(*)', 'postulaciones')
+            .addSelect("SUM(CASE WHEN p.estado = 'contratado' THEN 1 ELSE 0 END)", 'contratados')
             .innerJoin('p.oferta', 'o')
             .where('o.empleador_id = :empleadorId', { empleadorId })
             .groupBy('o.id')
