@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
+import { Usuario } from 'src/repository/user/user.entity';
 import { PageDto } from 'src/shared/pagination/page.dto';
 import { PageMetaDto } from 'src/shared/pagination/page-meta.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
@@ -20,6 +21,8 @@ export class TransactionsService {
         private readonly transactionRepository: Repository<Transaction>,
         @InjectRepository(TransactionItem)
         private readonly transactionItemRepository: Repository<TransactionItem>,
+        @InjectRepository(Usuario)
+        private readonly usuarioRepository: Repository<Usuario>,
     ) { }
 
     async obtenerTransacciones(
@@ -29,10 +32,8 @@ export class TransactionsService {
     ): Promise<PageDto<Transaction>> {
         const qb = this.transactionRepository
             .createQueryBuilder('transaction')
-            // ✅ Filtramos por el sessionId (que es el userId)
             .where('transaction.sessionId = :userId', { userId });
 
-        // 🔍 Búsqueda por texto libre
         if (filters.search) {
             const like = `%${filters.search}%`;
             qb.andWhere(
@@ -44,7 +45,6 @@ export class TransactionsService {
             );
         }
 
-        // 🔹 Filtro por rango de fechas
         if (filters.fechaInicio && filters.fechaFin) {
             qb.andWhere(
                 'transaction.created_at BETWEEN :fechaInicio AND :fechaFin',
@@ -65,24 +65,41 @@ export class TransactionsService {
             .take(pageOptions.take);
 
         const [entities, itemCount] = await qb.getManyAndCount();
-        const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
 
+        // Obtener usuarios asociados
+        const userIds = [...new Set(entities.map(t => Number(t.sessionId)).filter(id => !isNaN(id)))];
+        if (userIds.length > 0) {
+            const usuarios = await this.usuarioRepository.find({
+                where: { id: In(userIds) },
+                select: ['id', 'nombres', 'apellidos', 'email'],
+            });
+            const userMap = new Map(usuarios.map(u => [u.id, u]));
+            for (const tx of entities) {
+                tx.usuario = userMap.get(Number(tx.sessionId));
+            }
+        }
+
+        const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
         return new PageDto(entities, meta);
     }
 
     async obtenerTransaccionPorId(id: string): Promise<Transaction> {
-        // Buscar la transacción base
         const transaction = await this.transactionRepository.findOne({
             where: { id },
-            relations: ['items'], // ← trae los ítems asociados
+            relations: ['items'],
         });
-    
-        // Si no existe, lanzamos error
+
         if (!transaction) {
             throw new NotFoundException(`Transacción con ID ${id} no encontrada`);
         }
-    
+
+        const usuario = await this.usuarioRepository.findOne({
+            where: { id: Number(transaction.sessionId) },
+            select: ['id', 'nombres', 'apellidos', 'email'],
+        });
+        transaction.usuario = usuario ?? undefined;
+
         return transaction;
     }
-    
+
 }
