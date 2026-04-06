@@ -8,6 +8,7 @@ import { PaymentResponseExtended } from './interfaces/payment-response.interface
 import { generateOrderId } from 'src/shared/generator/order-id.generator';
 import { StockService } from '../stock/stock.service';
 import { Empleador } from 'src/repository/employer/employer.entity';
+import { TransactionStatus, mapPaymentStatus } from '../webpay+/enum/transaction-status';
 
 @Injectable()
 export class MercadoPagoService {
@@ -51,7 +52,7 @@ export class MercadoPagoService {
             sessionId: String(userId),
             amount: total,
             token: preference.id,
-            status: 'PENDING',
+            status: TransactionStatus.PENDIENTE,
             origen: PaymentGateway.MERCADOPAGO,
             response_data: preference,
             items: items.map((i) => ({
@@ -122,7 +123,7 @@ export class MercadoPagoService {
 
             if (!tx) {
                 tx = await this.transactionRepository.findOne({
-                    where: { status: 'PENDING', origen: PaymentGateway.MERCADOPAGO },
+                    where: { status: TransactionStatus.PENDIENTE, origen: PaymentGateway.MERCADOPAGO },
                     order: { createdAt: 'DESC' },
                 });
                 if (tx) console.log(`⚠️ preference_id vacío → usando la última transacción pendiente: ${tx.orderId}`);
@@ -136,13 +137,19 @@ export class MercadoPagoService {
             console.log(`🧾 Transacción encontrada: ${tx.orderId}`);
 
             // 🧾 Actualizar estado de transacción
-            tx.status = status;
+            const mappedStatus = mapPaymentStatus(status);
+            tx.status = mappedStatus;
             tx.response_data = result;
             await this.transactionRepository.save(tx);
 
-            // 🚨 Procesar solo si está APROBADO
-            if (!(status === 'APPROVED' || status === 'AUTHORIZED')) {
-                console.warn(`⚠️ Pago ${paymentId} no aprobado (estado: ${status}).`);
+            // 🚨 Procesar solo si está PAGADA y no se procesó stock antes
+            if (mappedStatus !== TransactionStatus.PAGADA) {
+                console.warn(`⚠️ Pago ${paymentId} no aprobado (estado: ${status} → ${mappedStatus}).`);
+                return;
+            }
+
+            if (tx.stock_processed) {
+                console.log(`ℹ️ Stock ya procesado para ${tx.orderId}, omitiendo.`);
                 return;
             }
 
@@ -164,8 +171,10 @@ export class MercadoPagoService {
             // 📦 Procesar stock (items ya fueron guardados al crear la transacción)
             await this.stockService.processTransactionStock(tx.id, empresaId);
 
+            tx.stock_processed = true;
+            await this.transactionRepository.save(tx);
+
             console.log(`✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${tx.orderId})`);
-            console.log(`🎉 Compra procesada correctamente → ${tx.orderId}`);
         } catch (error) {
             console.error('❌ Error procesando notificación de Mercado Pago:', error);
         }

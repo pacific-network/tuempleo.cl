@@ -87,6 +87,24 @@ export class AdminController {
     return this.adminService.getOfertas(Number(page), Number(limit));
   }
 
+  @Get('ofertas/pendientes')
+  getOfertasPendientes(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getOfertasPendientes(Number(page), Number(limit));
+  }
+
+  @Patch('ofertas/:id/aprobar')
+  aprobarOferta(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.aprobarOferta(id);
+  }
+
+  @Patch('ofertas/:id/rechazar')
+  rechazarOferta(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.rechazarOferta(id);
+  }
+
   @Delete('ofertas/:id')
   eliminarOferta(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.eliminarOferta(id);

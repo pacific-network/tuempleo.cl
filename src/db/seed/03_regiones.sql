@@ -22,11 +22,11 @@ VALUES
   -- =========================
   -- ZONA CENTRAL
   -- =========================
-  (5,  'Valparaíso',                        'zona_central', 1, 6),
-  (13, 'Metropolitana de Santiago',         'zona_central', 1, 7),
-  (6,  'Libertador General Bernardo O’Higgins','zona_central', 1, 8),
-  (7,  'Maule',                             'zona_central', 1, 9),
-  (16, 'Ñuble',                             'zona_central', 1, 10),
+  (5,  'Valparaíso',                                    'zona_central', 1, 6),
+  (13, 'Metropolitana de Santiago',                     'zona_central', 1, 7),
+  (6,  'Libertador General Bernardo O''Higgins',        'zona_central', 1, 8),
+  (7,  'Maule',                                         'zona_central', 1, 9),
+  (16, 'Ñuble',                                         'zona_central', 1, 10),
 
   -- =========================
   -- ZONA SUR
@@ -39,8 +39,8 @@ VALUES
   -- =========================
   -- ZONA AUSTRAL
   -- =========================
-  (11, 'Aysén del General Carlos Ibáñez del Campo','zona_austral', 1, 15),
-  (12, 'Magallanes y la Antártica Chilena',        'zona_austral', 1, 16);
+  (11, 'Aysén del General Carlos Ibáñez del Campo',     'zona_austral', 1, 15),
+  (12, 'Magallanes y la Antártica Chilena',             'zona_austral', 1, 16);
 
 -- ======================================================
 -- Fin seed regiones

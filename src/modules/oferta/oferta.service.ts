@@ -64,6 +64,8 @@ export class OfertaService {
     const qb = this.ofertaRepository.createQueryBuilder("oferta")
       .leftJoinAndSelect("oferta.empresa", "empresa")
       .leftJoinAndSelect("oferta.empleador", "empleador")
+      .where("oferta.es_activa = :activa", { activa: true })
+      .andWhere("oferta.estado = :estado", { estado: 'publicada' })
       .skip(pageOptionsDto.skip)
       .take(pageOptionsDto.take);
 
@@ -73,12 +75,17 @@ export class OfertaService {
     const searchTerm = rawSearch ? rawSearch.trim().toLowerCase() : undefined;
     if (searchTerm) {
       const likeKw = `%${searchTerm}%`;
+      // Filtrar: solo ofertas que coincidan en título o descripción
+      qb.andWhere(
+        `(LOWER(oferta.titulo) LIKE :likeKw OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data,'$.descripcion_puesto'))) LIKE :likeKw)`,
+        { likeKw },
+      );
+      // Ranking: título pesa más que descripción
       scoreParts.push(`
         (CASE WHEN LOWER(oferta.titulo) LIKE :likeKw THEN 3 ELSE 0 END)
         +
         (CASE WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data,'$.descripcion_puesto'))) LIKE :likeKw THEN 2 ELSE 0 END)
       `);
-      qb.setParameter('likeKw', likeKw);
     }
 
     // Región y comuna
@@ -107,7 +114,47 @@ export class OfertaService {
 
     const [entities, itemCount] = await qb.getManyAndCount();
     const meta = new PageMetaDto({ itemCount, pageOptionsDto });
+
+    // Si no hay resultados y hay filtros activos, sugerir ofertas relacionadas
+    if (entities.length === 0 && (searchTerm || regionVal || comunaVal)) {
+      const sugeridas = await this.obtenerSugeridas(regionVal, 6);
+      return Object.assign(new PageDto(entities, meta), { sugeridas });
+    }
+
     return new PageDto(entities, meta);
+  }
+
+  /**
+   * Obtiene ofertas sugeridas cuando la búsqueda no tiene resultados.
+   * Prioridad: misma región > más recientes.
+   */
+  private async obtenerSugeridas(region: string, limit: number): Promise<Oferta[]> {
+    const qb = this.ofertaRepository.createQueryBuilder('oferta')
+      .leftJoinAndSelect('oferta.empresa', 'empresa')
+      .leftJoinAndSelect('oferta.empleador', 'empleador')
+      .where('oferta.es_activa = :activa', { activa: true })
+      .andWhere('oferta.estado = :estado', { estado: 'publicada' })
+      .take(limit);
+
+    if (region) {
+      // Intentar primero con la misma región
+      const regionQb = qb.clone()
+        .andWhere(
+          "LOWER(JSON_UNQUOTE(JSON_EXTRACT(oferta.data,'$.region'))) LIKE :region",
+          { region: `%${region.toLowerCase()}%` },
+        )
+        .orderBy('oferta.priority', 'DESC')
+        .addOrderBy('oferta.fecha_publicacion', 'DESC');
+
+      const regionResults = await regionQb.getMany();
+      if (regionResults.length > 0) return regionResults;
+    }
+
+    // Fallback: ofertas más recientes con mayor prioridad
+    return qb
+      .orderBy('oferta.priority', 'DESC')
+      .addOrderBy('oferta.fecha_publicacion', 'DESC')
+      .getMany();
   }
 
 
@@ -214,7 +261,8 @@ export class OfertaService {
     // 5️⃣ Prioridad automática
     const prioridad = priorityMap[data.tipo_aviso];
 
-    // 6️⃣ Crear oferta
+    // 6️⃣ Crear oferta (GRATIS → pendiente de revisión)
+    const esGratis = data.tipo_aviso === 'GRATIS';
     const nuevaOferta: Partial<Oferta> = {
       titulo: data.titulo,
       tipo_aviso: data.tipo_aviso,
@@ -223,7 +271,8 @@ export class OfertaService {
       fecha_publicacion: publicacion,
       duracion_publicacion: duracion,
       fecha_cierre,
-      es_activa: data.es_activa ?? true,
+      es_activa: esGratis ? false : true,
+      estado: esGratis ? 'pendiente_revision' : 'publicada',
       data: JSON.stringify(data.data),
       priority: prioridad,
     };
@@ -459,7 +508,7 @@ export class OfertaService {
   }
 
   // ======================================================
-  // 🔄 REACTIVAR OFERTA (solo si fue cerrada manualmente)
+  // 🔄 REACTIVAR OFERTA (republicar como nueva)
   // ======================================================
   async reactivarOferta(id: number, userId: number): Promise<Oferta> {
     const oferta = await this.ofertaRepository.findOne({
@@ -481,9 +530,6 @@ export class OfertaService {
 
     if (oferta.es_activa)
       throw new BadRequestException('La oferta ya se encuentra activa');
-
-    if (oferta.estado === 'expirada')
-      throw new BadRequestException('No se puede reactivar una oferta expirada. Cree una nueva oferta.');
 
     const contratados = await this.procesoSeleccionRepository.count({
       where: {
@@ -509,8 +555,10 @@ export class OfertaService {
       );
     }
 
+    // Republicar como nueva: resetear fechas y estado
     oferta.es_activa = true;
     oferta.estado = 'publicada';
+    oferta.fecha_publicacion = new Date();
     (oferta as any).fecha_cierre = null;
     oferta.modificada_por = empleador;
 

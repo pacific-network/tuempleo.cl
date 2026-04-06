@@ -111,6 +111,46 @@ export class AdminService {
     return { total, page, limit: take, items };
   }
 
+  async getOfertasPendientes(page = 1, limit = 20) {
+    const take = Math.min(limit, 100);
+    const skip = (page - 1) * take;
+    const [items, total] = await this.ofertaRepo.findAndCount({
+      where: { estado: 'pendiente_revision' },
+      relations: ['empresa', 'empleador', 'empleador.usuario'],
+      order: { fecha_publicacion: 'ASC' },
+      take,
+      skip,
+    });
+    return { total, page, limit: take, items };
+  }
+
+  async aprobarOferta(id: number) {
+    const oferta = await this.ofertaRepo.findOne({ where: { id } });
+    if (!oferta) throw new NotFoundException('Oferta no encontrada');
+    if (oferta.estado !== 'pendiente_revision') {
+      return { message: 'La oferta no está pendiente de revisión', id };
+    }
+
+    oferta.estado = 'publicada';
+    oferta.es_activa = true;
+    oferta.fecha_publicacion = new Date();
+    await this.ofertaRepo.save(oferta);
+    return { id, estado: 'publicada', message: 'Oferta aprobada y publicada' };
+  }
+
+  async rechazarOferta(id: number) {
+    const oferta = await this.ofertaRepo.findOne({ where: { id } });
+    if (!oferta) throw new NotFoundException('Oferta no encontrada');
+    if (oferta.estado !== 'pendiente_revision') {
+      return { message: 'La oferta no está pendiente de revisión', id };
+    }
+
+    oferta.estado = 'eliminada';
+    oferta.es_activa = false;
+    await this.ofertaRepo.save(oferta);
+    return { id, estado: 'eliminada', message: 'Oferta rechazada' };
+  }
+
   async eliminarOferta(id: number) {
     const oferta = await this.ofertaRepo.findOne({ where: { id }, withDeleted: true });
     if (!oferta) throw new NotFoundException('Oferta no encontrada');
@@ -180,6 +220,7 @@ export class AdminService {
       totalEmpleadores,
       totalTransacciones,
       registrosPendientes,
+      ofertasPendientesRevision,
     ] = await Promise.all([
       this.usuarioRepo.count(),
       this.usuarioRepo.count({ where: { is_activo: true } }),
@@ -189,11 +230,12 @@ export class AdminService {
       this.empleadorRepo.count(),
       this.transaccionRepo.count(),
       this.registroRepo.count({ where: { es_activo: false } }),
+      this.ofertaRepo.count({ where: { estado: 'pendiente_revision' } }),
     ]);
 
     return {
       usuarios: { total: totalUsuarios, activos: usuariosActivos },
-      ofertas: { total: totalOfertas, activas: ofertasActivas },
+      ofertas: { total: totalOfertas, activas: ofertasActivas, pendientes_revision: ofertasPendientesRevision },
       empresas: { total: totalEmpresas },
       empleadores: { total: totalEmpleadores },
       transacciones: { total: totalTransacciones },

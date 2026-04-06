@@ -49,6 +49,7 @@ export enum Modalidad {
 
 export enum NivelExperiencia {
     SIN_EXPERIENCIA = 'sin_experiencia',
+    CON_EXPERIENCIA = 'con_experiencia',
     JUNIOR = 'junior',
     SEMI_SENIOR = 'semi_senior',
     SENIOR = 'senior',
@@ -67,7 +68,7 @@ export class DataOfertaDto {
     // 2️⃣ Nivel de experiencia (SIEMPRE obligatorio)
     @IsEnum(NivelExperiencia, {
         message:
-            'Nivel de experiencia no válido. Use: sin_experiencia, junior, semi_senior, senior o experto.',
+            'Nivel de experiencia no válido. Use: sin_experiencia, con_experiencia, junior, semi_senior, senior o experto.',
     })
     nivel_experiencia: NivelExperiencia
 

@@ -15,6 +15,7 @@ import { PageDto } from 'src/shared/pagination/page.dto';
 import { PageMetaDto } from 'src/shared/pagination/page-meta.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { generateOrderId } from 'src/shared/generator/order-id.generator';
+import { TransactionStatus, mapPaymentStatus } from './enum/transaction-status';
 
 // =======================
 // CONFIGURACIÓN WEBPAY
@@ -73,7 +74,7 @@ export class WebpayService {
                 orderId,
                 sessionId,
                 amount: total,
-                status: 'PENDING',
+                status: TransactionStatus.PENDIENTE,
                 items: items.map((i) => ({
                     tipoAviso: i.tipoAviso,
                     cantidad: i.cantidad,
@@ -94,7 +95,7 @@ export class WebpayService {
 
             // 5️⃣ Actualizar transacción existente
             transaction.token = response.token
-            transaction.status = 'CREATED'
+            transaction.status = TransactionStatus.PENDIENTE
             await this.transactionRepository.save(transaction)
 
             console.log(`💳 Webpay creado correctamente:
@@ -132,29 +133,13 @@ export class WebpayService {
                 throw new NotFoundException('Transacción no encontrada')
             }
 
-            transaction.status = response.status
+            const mappedStatus = mapPaymentStatus(response.status)
+            transaction.status = mappedStatus
             transaction.response_data = response
             await this.transactionRepository.save(transaction)
 
-            if (response.status === 'AUTHORIZED') {
-                const userId = Number(transaction.sessionId)
-
-                const empleador = await this.empleadorRepository.findOne({
-                    where: { usuario: { id: userId } },
-                    relations: ['empresa'],
-                })
-
-                if (!empleador?.empresa?.id) {
-                    console.warn(
-                        `⚠️ Usuario ${userId} sin empresa asociada`,
-                    )
-                    return response
-                }
-
-                await this.stockService.processTransactionStock(
-                    transaction.id,
-                    empleador.empresa.id,
-                )
+            if (mappedStatus === TransactionStatus.PAGADA && !transaction.stock_processed) {
+                await this.processStockForTransaction(transaction)
             }
 
             return response
@@ -167,7 +152,77 @@ export class WebpayService {
     }
 
     // ==============================================================
-    // 3️⃣ Buscar transacción por token
+    // 3️⃣ Procesar stock para una transacción autorizada
+    // ==============================================================
+    async processStockForTransaction(transaction: Transaction) {
+        const userId = Number(transaction.sessionId)
+
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+        })
+
+        if (!empleador?.empresa?.id) {
+            console.warn(`⚠️ Usuario ${userId} sin empresa asociada`)
+            return
+        }
+
+        await this.stockService.processTransactionStock(
+            transaction.id,
+            empleador.empresa.id,
+        )
+
+        transaction.stock_processed = true
+        await this.transactionRepository.save(transaction)
+
+        console.log(`✅ Stock procesado para transacción ${transaction.id}`)
+    }
+
+    // ==============================================================
+    // 4️⃣ Reconciliar transacciones huérfanas (CREATED > 10 min)
+    // ==============================================================
+    async reconcileOrphanedTransactions() {
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+
+        const orphaned = await this.transactionRepository
+            .createQueryBuilder('t')
+            .leftJoinAndSelect('t.items', 'items')
+            .where('t.status = :status', { status: TransactionStatus.PENDIENTE })
+            .andWhere('t.origen = :origen', { origen: 'WEBPAY' })
+            .andWhere('t.createdAt < :cutoff', { cutoff: tenMinutesAgo })
+            .getMany()
+
+        if (orphaned.length === 0) return
+
+        console.log(`🔄 Reconciliando ${orphaned.length} transacciones huérfanas`)
+
+        for (const tx of orphaned) {
+            try {
+                const wpStatus = await webpay.status(tx.token)
+
+                const mappedStatus = mapPaymentStatus(wpStatus.status)
+                tx.response_data = wpStatus
+                tx.status = mappedStatus
+                await this.transactionRepository.save(tx)
+
+                if (mappedStatus === TransactionStatus.PAGADA && !tx.stock_processed) {
+                    await this.processStockForTransaction(tx)
+                    console.log(`✅ Reconciliada transacción ${tx.orderId}`)
+                } else {
+                    console.log(`ℹ️ Transacción ${tx.orderId} estado: ${wpStatus.status}`)
+                }
+            } catch (error) {
+                console.error(`❌ Error reconciliando ${tx.orderId}:`, error.message)
+
+                // Si Webpay ya no reconoce el token (expirado), marcar como FALLIDA
+                tx.status = TransactionStatus.FALLIDA
+                await this.transactionRepository.save(tx)
+            }
+        }
+    }
+
+    // ==============================================================
+    // 5️⃣ Buscar transacción por token
     // ==============================================================
     async findTransactionByToken(token: string) {
         const transaction = await this.transactionRepository.findOne({
