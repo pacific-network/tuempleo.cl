@@ -17,6 +17,11 @@ export class PostulanteService {
     private readonly usuarioRepository: Repository<Usuario>,
   ) {}
 
+  async checkRutExists(rut: string): Promise<{ exists: boolean }> {
+    const usuario = await this.usuarioRepository.findOne({ where: { rut } });
+    return { exists: !!usuario };
+  }
+
   async crearPostulante(
     userId: number,
     rut: string,
