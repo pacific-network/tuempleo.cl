@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Param, NotFoundException, Patch, UseGuards, Req, Query } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, ParseIntPipe, NotFoundException, Patch, UseGuards, Req, Query } from '@nestjs/common';
 import { EmpleadorService } from './employer.service';
 import { InvitacionService } from './invitacion.service';
 import { Empleador } from 'src/repository/employer/employer.entity';
@@ -28,6 +28,11 @@ export class EmpleadorController {
       createEmployerDto,
       createEmployerDto.empresaId
     );
+  }
+
+  @Get('check-exists/:userId')
+  async checkEmpleadorExists(@Param('userId', ParseIntPipe) userId: number) {
+    return this.empleadorService.checkEmpleadorExists(userId);
   }
 
   @Get(':userId')

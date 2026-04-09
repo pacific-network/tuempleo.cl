@@ -31,6 +31,15 @@ export class EmpresaService {
         return business;
     }
 
+    public async checkRutExists(rut: string): Promise<{ exists: boolean; empresa?: { id: number; razon_social: string; nombre_fantasia: string } }> {
+        const empresa = await this.businessRepository.findOne({ where: { rut } });
+        if (!empresa) return { exists: false };
+        return {
+            exists: true,
+            empresa: { id: empresa.id, razon_social: empresa.razon_social, nombre_fantasia: empresa.nombre_fantasia },
+        };
+    }
+
     public createBusiness(createBusinessDto: CreateBusinessDto): Promise<Empresa> {
 
 

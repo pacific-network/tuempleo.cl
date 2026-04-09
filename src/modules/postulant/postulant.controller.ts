@@ -11,6 +11,11 @@ import { User } from 'src/shared/decorators/user.decorator';
 export class PostulanteController {
   constructor(private readonly postulanteService: PostulanteService) { }
 
+  @Get('check-rut/:rut')
+  async checkRut(@Param('rut') rut: string) {
+    return this.postulanteService.checkRutExists(rut);
+  }
+
   // ── Perfil propio (seguro: userId desde JWT) ──────────────
 
   @UseGuards(AuthGuard)

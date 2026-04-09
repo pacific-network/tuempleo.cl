@@ -42,21 +42,24 @@ class EducacionDto {
   @IsString()
   titulo: string;
 
+  @IsOptional()
   @IsString()
-  institucion: string;
+  institucion?: string;
 
   @IsString()
-  tipo_estudio: string;
-
-  @IsString()
-  estado: string;
-
-  @IsString()
-  anno_inicio: string;
+  grado: string;
 
   @IsOptional()
   @IsString()
-  anno_termino?: string;
+  estado?: string;
+
+  @IsOptional()
+  @IsString()
+  anio_inicio?: string;
+
+  @IsOptional()
+  @IsString()
+  anio_finalizacion?: string;
 }
 
 class ExperienciaDto {
@@ -148,6 +151,10 @@ export class PostulantDataDto {
   @ValidateNested({ each: true })
   @Type(() => RedSocialDto)
   redes_sociales?: RedSocialDto[];
+
+  @IsOptional()
+  @IsString({ each: true })
+  herramientas?: string[];
 }
 
 export class CreatePostulantDto {

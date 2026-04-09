@@ -28,7 +28,7 @@ export class MercadoPagoController {
         @Req() req: Request,
     ) {
         const user = req.user as any;
-        const userId = user?.sub ?? user?.id ?? null;
+        const userId = user?.userId ?? user?.sub ?? user?.id ?? null;
 
         if (!userId) {
             throw new BadRequestException('No se pudo determinar el usuario autenticado.');

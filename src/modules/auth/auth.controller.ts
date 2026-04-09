@@ -123,7 +123,10 @@ export class AuthController {
       // onboarding no completo
     }
 
-    const hasCompletedProfile = Boolean(user.rut)
+    // Perfil completo = tiene RUT + tiene el perfil correspondiente al contexto
+    const hasCompletedProfile = Boolean(user.rut) && (
+      context === 'empleador' ? isEmpleador : isPostulante
+    )
 
     return {
       id: user.id,

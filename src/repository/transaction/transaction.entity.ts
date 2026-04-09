@@ -7,6 +7,7 @@ import {
     OneToMany,
 } from "typeorm";
 import { TransactionItem } from "../transaction_items/transaction-items.entity";
+import { Usuario } from "../user/user.entity";
 
 // 🔹 Enum para identificar el origen del pago
 export enum PaymentGateway {
@@ -60,4 +61,7 @@ export class Transaction {
         cascade: true,
     })
     items: TransactionItem[];
+
+    // Virtual: se popula via leftJoinAndMapOne en el service
+    usuario?: Usuario;
 }

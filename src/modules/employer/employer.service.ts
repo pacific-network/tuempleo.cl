@@ -1,4 +1,4 @@
-import { Injectable, NotAcceptableException, NotFoundException } from "@nestjs/common";
+import { Injectable, ConflictException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Between } from "typeorm";
 import { Empresa } from "src/repository/business/business.entity";
@@ -33,10 +33,30 @@ export class EmpleadorService {
         private readonly stockService: StockService,
     ) { }
 
+    async checkEmpleadorExists(userId: number): Promise<{ exists: boolean; empleador?: { id: number; empresaId: number } }> {
+        const empleador = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId } },
+            relations: ['empresa'],
+        });
+        if (!empleador) return { exists: false };
+        return {
+            exists: true,
+            empleador: { id: empleador.id, empresaId: empleador.empresa?.id },
+        };
+    }
+
     async createEmployerWithCompany(
         createEmployerDto: CreateEmployerDto,
         empresaId: number,
     ): Promise<Empleador> {
+        // 0. Verificar que no exista empleador para este usuario
+        const existente = await this.empleadorRepository.findOne({
+            where: { usuario: { id: createEmployerDto.userId } },
+        });
+        if (existente) {
+            throw new ConflictException('Este usuario ya tiene un perfil de empleador');
+        }
+
         // 1. Buscar usuario por id
         const usuario = await this.usuarioRepository.findOne({
             where: { id: createEmployerDto.userId },
@@ -270,6 +290,7 @@ export class EmpleadorService {
             .addSelect('o.titulo', 'titulo')
             .addSelect('o.es_activa', 'es_activa')
             .addSelect('COUNT(*)', 'postulaciones')
+            .addSelect("SUM(CASE WHEN p.estado = 'contratado' THEN 1 ELSE 0 END)", 'contratados')
             .innerJoin('p.oferta', 'o')
             .where('o.empleador_id = :empleadorId', { empleadorId })
             .groupBy('o.id')

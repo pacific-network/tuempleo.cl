@@ -29,6 +29,11 @@ export class EmpresaController {
         return business;
     }
 
+    @Get('check-rut/:rut')
+    public async checkRut(@Param('rut') rut: string) {
+        return this.businessService.checkRutExists(rut);
+    }
+
     @Post()
     public async createBusiness(@Body() createBusinessDto: CreateBusinessDto): Promise<Empresa> {
         const business = await this.businessService.createBusiness(createBusinessDto);

@@ -88,11 +88,11 @@ export class CvGeneratorService {
 
         data.educacion.forEach((edu) => {
           doc.fontSize(12).text(
-            `${edu.titulo} - ${edu.institucion} (${edu.anno_inicio} - ${edu.anno_termino ?? 'Presente'
+            `${edu.titulo} - ${edu.institucion} (${edu.anio_inicio} - ${edu.anio_finalizacion ?? 'Presente'
             })`,
           );
 
-          doc.text(`Tipo de estudio: ${edu.tipo_estudio}`);
+          doc.text(`Grado: ${edu.grado}`);
           doc.text(`Estado: ${edu.estado}`);
 
           doc.moveDown();
