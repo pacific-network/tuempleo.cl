@@ -11,6 +11,7 @@ import { RegistrarUsuarioDto } from './dto/register'
 import { IniciarSesionDto } from '../oauth/dto/login'
 import { EncryptService } from 'src/shared/encrypt/encrypt.service'
 import { MailerService } from '../mailer/mailer.service'
+import { LegalService } from '../legal/legal.service'
 import { UpdateMeDto } from './dto/update-me'
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly encrypt: EncryptService,
     private readonly mailerService: MailerService,
+    private readonly legalService: LegalService,
   ) { }
 
   // -------------------
@@ -60,6 +62,7 @@ export class AuthService {
         is_activo: true,
       })
       await this.usuarioRepo.save(user)
+      await this.legalService.recordInitialConsent(user.id)
     } else {
       let changed = false
 
@@ -174,6 +177,7 @@ export class AuthService {
       })
 
       await this.usuarioRepo.save(user)
+      await this.legalService.recordInitialConsent(user.id)
     }
 
     // ⚠️ LOGIN NO MODIFICA USUARIO ⚠️
