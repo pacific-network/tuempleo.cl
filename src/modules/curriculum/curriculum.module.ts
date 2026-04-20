@@ -10,5 +10,6 @@ import { Usuario } from 'src/repository/user/user.entity';
   imports: [TypeOrmModule.forFeature([Curriculum, Postulante, Usuario])],
   controllers: [CurriculumController],
   providers: [CurriculumService, CvParserService],
+  exports: [CurriculumService, CvParserService],
 })
 export class CurriculumModule { }
