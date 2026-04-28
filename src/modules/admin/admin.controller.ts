@@ -145,4 +145,9 @@ export class AdminController {
   ) {
     return this.adminService.getTransacciones(Number(page), Number(limit));
   }
+
+  @Get('transacciones/:id')
+  getTransaccion(@Param('id') id: string) {
+    return this.adminService.getTransaccion(id);
+  }
 }
