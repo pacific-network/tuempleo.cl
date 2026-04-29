@@ -7,6 +7,7 @@ import { Oferta } from 'src/repository/job_offer/job-offer.entity';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
+import { Postulante } from 'src/repository/postulant/postulant.entity';
 
 @Injectable()
 export class AdminService {
@@ -28,6 +29,9 @@ export class AdminService {
 
     @InjectRepository(Transaction)
     private readonly transaccionRepo: Repository<Transaction>,
+
+    @InjectRepository(Postulante)
+    private readonly postulanteRepo: Repository<Postulante>,
   ) {}
 
   // ─────────────────────────────────────────
@@ -99,6 +103,39 @@ export class AdminService {
     user.isAdmin = !user.isAdmin;
     await this.usuarioRepo.save(user);
     return { id: user.id, isAdmin: user.isAdmin };
+  }
+
+  // ─────────────────────────────────────────
+  // POSTULANTES
+  // ─────────────────────────────────────────
+
+  async getPostulantes(page = 1, limit = 20) {
+    const take = Math.min(limit, 100);
+    const skip = (page - 1) * take;
+    const [items, total] = await this.postulanteRepo.findAndCount({
+      relations: ['usuario'],
+      order: { fecha_update: 'DESC' },
+      take,
+      skip,
+    });
+    return { total, page, limit: take, items };
+  }
+
+  // ─────────────────────────────────────────
+  // ADMINS
+  // ─────────────────────────────────────────
+
+  async getAdmins(page = 1, limit = 20) {
+    const take = Math.min(limit, 100);
+    const skip = (page - 1) * take;
+    const [items, total] = await this.usuarioRepo.findAndCount({
+      where: { isAdmin: true },
+      order: { fecha_creacion: 'DESC' },
+      take,
+      skip,
+      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'fecha_creacion'],
+    });
+    return { total, page, limit: take, items };
   }
 
   // ─────────────────────────────────────────

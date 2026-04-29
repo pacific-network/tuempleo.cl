@@ -59,6 +59,30 @@ export class AdminController {
   }
 
   // ─────────────────────────────────────────
+  // POSTULANTES
+  // ─────────────────────────────────────────
+
+  @Get('postulantes')
+  getPostulantes(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getPostulantes(Number(page), Number(limit));
+  }
+
+  // ─────────────────────────────────────────
+  // ADMINS
+  // ─────────────────────────────────────────
+
+  @Get('admins')
+  getAdmins(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getAdmins(Number(page), Number(limit));
+  }
+
+  // ─────────────────────────────────────────
   // REGISTROS
   // ─────────────────────────────────────────
 
