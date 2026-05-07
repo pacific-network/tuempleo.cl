@@ -9,6 +9,7 @@ import {
     UpdateDateColumn,
     DeleteDateColumn,
     OneToMany,
+    AfterLoad,
 } from 'typeorm';
 import { Empresa } from '../business/business.entity';
 import { Empleador } from '../employer/employer.entity';
@@ -87,4 +88,19 @@ export class Oferta {
     @ManyToOne(() => Empleador, { nullable: true })
     @JoinColumn({ name: 'modificada_por' })
     modificada_por: Empleador;
+
+    // Calculada: fecha_publicacion + duracion_publicacion (días). No se persiste.
+    fecha_expiracion?: Date | null;
+
+    @AfterLoad()
+    computeFechaExpiracion() {
+        if (!this.fecha_publicacion) {
+            this.fecha_expiracion = null;
+            return;
+        }
+        const dias = this.duracion_publicacion ?? 30;
+        const d = new Date(this.fecha_publicacion);
+        d.setDate(d.getDate() + dias);
+        this.fecha_expiracion = d;
+    }
 }

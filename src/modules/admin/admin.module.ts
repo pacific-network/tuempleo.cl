@@ -8,6 +8,7 @@ import { Oferta } from 'src/repository/job_offer/job-offer.entity';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
+import { Postulante } from 'src/repository/postulant/postulant.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Transaction } from 'src/repository/transaction/transaction.entity';
       Empleador,
       Empresa,
       Transaction,
+      Postulante,
     ]),
   ],
   providers: [AdminService],

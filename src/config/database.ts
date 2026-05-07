@@ -33,6 +33,9 @@ import { BusinessActivity } from 'src/repository/catalog/company_activity';
 import { Mail } from 'src/repository/mail/mail.entity';
 import { AlertaEmpleo } from 'src/repository/alerta-empleo/alerta-empleo.entity';
 import { InvitacionEmpleador } from 'src/repository/invitacion-empleador/invitacion-empleador.entity';
+import { LegalDocument } from 'src/repository/legal/legal-document.entity';
+import { ConsentRecord } from 'src/repository/legal/consent-record.entity';
+import { AccountDeletionLog } from 'src/repository/legal/account-deletion-log.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -46,7 +49,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog],
     // logging: true,
     synchronize: process.env.DB_SYNCHRONIZE === 'false',
 

@@ -88,6 +88,34 @@ export class CurriculumService {
     return this.curriculumRepository.save(curriculum);
   }
 
+  async upsertCvPath(rut: string, cvPath: string): Promise<Curriculum> {
+    if (!cvPath) {
+      throw new BadRequestException('El path del archivo no puede estar vacío.');
+    }
+
+    const usuario = await this.usuarioRepository.findOne({ where: { rut } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    let curriculum = await this.curriculumRepository.findOne({
+      where: { usuario: { id: usuario.id } },
+    });
+
+    if (!curriculum) {
+      curriculum = this.curriculumRepository.create({
+        usuario,
+        data: {},
+        cv_file: path.basename(cvPath),
+        cv_path: cvPath,
+      });
+    } else {
+      curriculum.cv_path = cvPath;
+    }
+
+    return this.curriculumRepository.save(curriculum);
+  }
+
   async updatePostulanteDataFromCv(
     rut: string,
     parsedData: ParsedCvData,

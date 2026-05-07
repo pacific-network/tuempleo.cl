@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Usuario } from 'src/repository/user/user.entity';
 import { Registro } from 'src/repository/register/register.entity';
 import { Oferta } from 'src/repository/job_offer/job-offer.entity';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
+import { Postulante } from 'src/repository/postulant/postulant.entity';
 
 @Injectable()
 export class AdminService {
@@ -28,6 +29,9 @@ export class AdminService {
 
     @InjectRepository(Transaction)
     private readonly transaccionRepo: Repository<Transaction>,
+
+    @InjectRepository(Postulante)
+    private readonly postulanteRepo: Repository<Postulante>,
   ) {}
 
   // ─────────────────────────────────────────
@@ -37,12 +41,42 @@ export class AdminService {
   async getUsuarios(page = 1, limit = 20) {
     const take = Math.min(limit, 100);
     const skip = (page - 1) * take;
-    const [items, total] = await this.usuarioRepo.findAndCount({
+    const [users, total] = await this.usuarioRepo.findAndCount({
       order: { fecha_creacion: 'DESC' },
       take,
       skip,
       select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'fecha_creacion'],
     });
+
+    const ids = users.map((u) => u.id);
+    let empleadorIds = new Set<number>();
+    let postulanteIds = new Set<number>();
+
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => '?').join(',');
+      const [empRows, postRows] = await Promise.all([
+        this.usuarioRepo.manager.query(
+          `SELECT usuario_id FROM empleador WHERE usuario_id IN (${placeholders})`,
+          ids,
+        ),
+        this.usuarioRepo.manager.query(
+          `SELECT usuario_id FROM postulante WHERE usuario_id IN (${placeholders})`,
+          ids,
+        ),
+      ]);
+      empleadorIds = new Set(empRows.map((r: any) => Number(r.usuario_id)));
+      postulanteIds = new Set(postRows.map((r: any) => Number(r.usuario_id)));
+    }
+
+    const items = users.map((u) => ({
+      ...u,
+      tipo: empleadorIds.has(u.id)
+        ? 'empleador'
+        : postulanteIds.has(u.id)
+          ? 'postulante'
+          : null,
+    }));
+
     return { total, page, limit: take, items };
   }
 
@@ -69,6 +103,39 @@ export class AdminService {
     user.isAdmin = !user.isAdmin;
     await this.usuarioRepo.save(user);
     return { id: user.id, isAdmin: user.isAdmin };
+  }
+
+  // ─────────────────────────────────────────
+  // POSTULANTES
+  // ─────────────────────────────────────────
+
+  async getPostulantes(page = 1, limit = 20) {
+    const take = Math.min(limit, 100);
+    const skip = (page - 1) * take;
+    const [items, total] = await this.postulanteRepo.findAndCount({
+      relations: ['usuario'],
+      order: { fecha_update: 'DESC' },
+      take,
+      skip,
+    });
+    return { total, page, limit: take, items };
+  }
+
+  // ─────────────────────────────────────────
+  // ADMINS
+  // ─────────────────────────────────────────
+
+  async getAdmins(page = 1, limit = 20) {
+    const take = Math.min(limit, 100);
+    const skip = (page - 1) * take;
+    const [items, total] = await this.usuarioRepo.findAndCount({
+      where: { isAdmin: true },
+      order: { fecha_creacion: 'DESC' },
+      take,
+      skip,
+      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'fecha_creacion'],
+    });
+    return { total, page, limit: take, items };
   }
 
   // ─────────────────────────────────────────
@@ -197,13 +264,94 @@ export class AdminService {
   async getTransacciones(page = 1, limit = 20) {
     const take = Math.min(limit, 100);
     const skip = (page - 1) * take;
-    const [items, total] = await this.transaccionRepo.findAndCount({
+    const [transacciones, total] = await this.transaccionRepo.findAndCount({
       relations: ['items'],
       order: { createdAt: 'DESC' },
       take,
       skip,
     });
+
+    // sessionId guarda String(userId) tanto en Webpay como en Mercado Pago
+    const userIds = Array.from(
+      new Set(
+        transacciones
+          .map((t) => Number(t.sessionId))
+          .filter((n) => Number.isFinite(n) && n > 0),
+      ),
+    );
+
+    const usersById = new Map<number, Usuario>();
+    const empresaByUserId = new Map<number, { id: number; razon_social: string; nombre_fantasia: string }>();
+
+    if (userIds.length > 0) {
+      const [users, empleadores] = await Promise.all([
+        this.usuarioRepo.find({
+          where: { id: In(userIds) },
+          select: ['id', 'nombres', 'apellidos', 'email'],
+        }),
+        this.empleadorRepo.find({
+          where: { usuario: { id: In(userIds) } },
+          relations: ['usuario', 'empresa'],
+        }),
+      ]);
+
+      for (const u of users) usersById.set(u.id, u);
+      for (const e of empleadores) {
+        if (e.usuario?.id && e.empresa) {
+          empresaByUserId.set(e.usuario.id, {
+            id: e.empresa.id,
+            razon_social: e.empresa.razon_social,
+            nombre_fantasia: e.empresa.nombre_fantasia,
+          });
+        }
+      }
+    }
+
+    const items = transacciones.map((t) => {
+      const uid = Number(t.sessionId);
+      return {
+        ...t,
+        usuario: usersById.get(uid) ?? null,
+        empresa: empresaByUserId.get(uid) ?? null,
+      };
+    });
+
     return { total, page, limit: take, items };
+  }
+
+  async getTransaccion(id: string) {
+    const tx = await this.transaccionRepo.findOne({
+      where: { id },
+      relations: ['items'],
+    });
+    if (!tx) throw new NotFoundException('Transacción no encontrada');
+
+    const uid = Number(tx.sessionId);
+    let usuario: Pick<Usuario, 'id' | 'nombres' | 'apellidos' | 'email'> | null = null;
+    let empresa: { id: number; razon_social: string; nombre_fantasia: string } | null = null;
+
+    if (Number.isFinite(uid) && uid > 0) {
+      const [user, empleador] = await Promise.all([
+        this.usuarioRepo.findOne({
+          where: { id: uid },
+          select: ['id', 'nombres', 'apellidos', 'email'],
+        }),
+        this.empleadorRepo.findOne({
+          where: { usuario: { id: uid } },
+          relations: ['empresa'],
+        }),
+      ]);
+      usuario = user ?? null;
+      if (empleador?.empresa) {
+        empresa = {
+          id: empleador.empresa.id,
+          razon_social: empleador.empresa.razon_social,
+          nombre_fantasia: empleador.empresa.nombre_fantasia,
+        };
+      }
+    }
+
+    return { ...tx, usuario, empresa };
   }
 
   // ─────────────────────────────────────────

@@ -22,6 +22,17 @@ export class PostulanteService {
     return { exists: !!usuario };
   }
 
+  async getRutByUserId(userId: number): Promise<string> {
+    const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    if (!usuario.rut) {
+      throw new NotFoundException('El usuario no tiene RUT registrado');
+    }
+    return usuario.rut;
+  }
+
   async crearPostulante(
     userId: number,
     rut: string,

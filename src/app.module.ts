@@ -40,6 +40,7 @@ import { MailerModule } from './modules/mailer/mailer.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SalaryStatsModule } from './modules/salary-stats/salary-stats.module';
+import { LegalModule } from './modules/legal/legal.module';
 
 
 
@@ -111,8 +112,7 @@ import { SalaryStatsModule } from './modules/salary-stats/salary-stats.module';
     AlertasModule,
     AdminModule,
     SalaryStatsModule,
-
-
+    LegalModule,
 
   ],
   providers: [

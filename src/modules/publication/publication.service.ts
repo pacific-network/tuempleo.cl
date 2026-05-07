@@ -6,20 +6,9 @@ import { OfferPolicy } from './entities/offer-policy.entity';
 import { OfferProfileView } from './entities/offer-profile-view.entity';
 import { PaymentIntent } from './entities/payment-intent.entity';
 import { PaymentTxn } from './entities/payment-txn.entity';
+import { PLAN_POLICIES, type PlanKey, type PlanPolicy } from 'src/shared/plan-policy/plan-policy';
 
-export type PlanKey = 'FREE' | 'BASICO' | 'ESTANDAR' | 'PREMIUM';
-
-export interface PlanPolicy {
-  planKey: PlanKey;
-  price: number;
-  durationDays: number;
-  reviewHours: number;
-  requireSalary: boolean;
-  questionPriority: 1 | 2 | 3 | null;
-  profilesLimit: number | null;
-  profileRecommendations: boolean;
-  freeMonthlyQuota?: number;
-}
+export type { PlanKey, PlanPolicy };
 
 @Injectable()
 export class PublicationService {
@@ -33,13 +22,7 @@ export class PublicationService {
 
   // ===== Catálogo =====
   getPolicyFor(planKey: PlanKey): PlanPolicy {
-    const map: Record<PlanKey, PlanPolicy> = {
-      FREE: { planKey: 'FREE', price: 0, durationDays: 30, reviewHours: 48, requireSalary: true, questionPriority: null, profilesLimit: 5, profileRecommendations: false, freeMonthlyQuota: 3 },
-      BASICO: { planKey: 'BASICO', price: 80000, durationDays: 45, reviewHours: 0, requireSalary: true, questionPriority: 3, profilesLimit: null, profileRecommendations: false },
-      ESTANDAR: { planKey: 'ESTANDAR', price: 140000, durationDays: 45, reviewHours: 0, requireSalary: false, questionPriority: 2, profilesLimit: null, profileRecommendations: true },
-      PREMIUM: { planKey: 'PREMIUM', price: 180000, durationDays: 60, reviewHours: 0, requireSalary: false, questionPriority: 1, profilesLimit: null, profileRecommendations: true },
-    };
-    return map[planKey];
+    return PLAN_POLICIES[planKey];
   }
 
   // ===== Helpers =====

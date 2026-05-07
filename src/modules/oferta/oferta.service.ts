@@ -16,6 +16,7 @@ import { jobOfferRepository } from "../../repository/job_offer/job-offer.reposit
 import { Order } from "src/shared/pagination/constants";
 import { FreeStockService } from "../stock/free-stock.service";
 import { OfertaValidationService } from "./oferta-validation.service";
+import { getPolicyForTipoAviso } from "src/shared/plan-policy/plan-policy";
 
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
@@ -252,16 +253,16 @@ export class OfertaService {
 
     // 4️⃣ Calcular fechas
     const publicacion = data.fecha_publicacion ? new Date(data.fecha_publicacion) : new Date();
-    const duracion = data.duracion_publicacion ?? 30;
-
-    const fecha_cierre = data.fecha_cierre
-      ? new Date(data.fecha_cierre)
-      : new Date(publicacion.getTime() + duracion * 24 * 60 * 60 * 1000);
+    // La duración la define el plan según tipo_aviso. Ignoramos el override del DTO
+    // para que la expiración sea confiable y no manipulable desde el cliente.
+    const duracion = getPolicyForTipoAviso(data.tipo_aviso).durationDays;
 
     // 5️⃣ Prioridad automática
     const prioridad = priorityMap[data.tipo_aviso];
 
     // 6️⃣ Crear oferta (GRATIS → pendiente de revisión)
+    // fecha_cierre queda null: solo se setea al cerrar manualmente o al completar vacantes.
+    // La expiración la calcula el @AfterLoad como publicacion + duracion.
     const esGratis = data.tipo_aviso === 'GRATIS';
     const nuevaOferta: Partial<Oferta> = {
       titulo: data.titulo,
@@ -270,7 +271,7 @@ export class OfertaService {
       empleador,
       fecha_publicacion: publicacion,
       duracion_publicacion: duracion,
-      fecha_cierre,
+      fecha_cierre: null as any,
       es_activa: esGratis ? false : true,
       estado: esGratis ? 'pendiente_revision' : 'publicada',
       data: JSON.stringify(data.data),

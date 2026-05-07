@@ -59,6 +59,30 @@ export class AdminController {
   }
 
   // ─────────────────────────────────────────
+  // POSTULANTES
+  // ─────────────────────────────────────────
+
+  @Get('postulantes')
+  getPostulantes(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getPostulantes(Number(page), Number(limit));
+  }
+
+  // ─────────────────────────────────────────
+  // ADMINS
+  // ─────────────────────────────────────────
+
+  @Get('admins')
+  getAdmins(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getAdmins(Number(page), Number(limit));
+  }
+
+  // ─────────────────────────────────────────
   // REGISTROS
   // ─────────────────────────────────────────
 
@@ -144,5 +168,10 @@ export class AdminController {
     @Query('limit') limit = '20',
   ) {
     return this.adminService.getTransacciones(Number(page), Number(limit));
+  }
+
+  @Get('transacciones/:id')
+  getTransaccion(@Param('id') id: string) {
+    return this.adminService.getTransaccion(id);
   }
 }
