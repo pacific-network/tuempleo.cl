@@ -532,6 +532,14 @@ export class OfertaService {
     if (oferta.es_activa)
       throw new BadRequestException('La oferta ya se encuentra activa');
 
+    // Solo se puede reactivar una oferta cerrada (expirada o completada).
+    // Una en pendiente_revision aún está en moderación y no debe re-publicarse por esta vía;
+    // una eliminada está soft-deleted.
+    if (oferta.estado !== 'expirada' && oferta.estado !== 'completada')
+      throw new BadRequestException(
+        `No se puede reactivar una oferta en estado "${oferta.estado}". Solo ofertas expiradas o completadas pueden republicarse.`,
+      );
+
     const contratados = await this.procesoSeleccionRepository.count({
       where: {
         estado: 'contratado',
