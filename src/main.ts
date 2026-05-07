@@ -18,7 +18,10 @@ async function bootstrap() {
       const allowedOrigins = [
         'https://tuempleo.cl',
         'https://www.tuempleo.cl',
-        'http://localhost:5173'
+        'http://localhost:5173',
+        'https://tuvacante.com',
+        'https://www.tuvacante.com'
+
 
       ];
 
