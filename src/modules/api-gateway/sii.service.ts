@@ -26,7 +26,7 @@ export class SiiService {
                     },
                 }),
             );
-            return response.data;
+            return { ...response.data, fuente: 'apigateway' };
         } catch (error) {
             console.error('Error al consultar API Gateway:', error?.response?.data || error.message);
             throw new HttpException(
