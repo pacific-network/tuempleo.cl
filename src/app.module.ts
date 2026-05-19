@@ -42,6 +42,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { SalaryStatsModule } from './modules/salary-stats/salary-stats.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { BugModule } from './modules/bug/bug.module';
+import { SeoModule } from './modules/seo/seo.module';
 
 
 
@@ -115,6 +116,7 @@ import { BugModule } from './modules/bug/bug.module';
     SalaryStatsModule,
     LegalModule,
     BugModule,
+    SeoModule,
 
   ],
   providers: [
