@@ -99,4 +99,33 @@ export class MercadoPagoController {
             data: detail,
         };
     }
+
+    // 🔁 Redirect handler para back_urls (success/failure/pending)
+    //    MP envía aquí al usuario tras pagar. Procesamos stock síncronamente
+    //    y redirigimos al frontend con los parámetros relevantes.
+    @Get('return')
+    async handleReturn(@Req() req: Request, @Res() res: Response) {
+        const preferenceId = (req.query.preference_id as string) || '';
+        const paymentId = (req.query.payment_id as string) || '';
+        const status = (req.query.status as string) || '';
+
+        if (paymentId) {
+            await this.mpService.confirmAndProcess(paymentId);
+        } else {
+            console.warn('⚠️ Redirect MP sin payment_id en query.');
+        }
+
+        const finalUrl =
+            process.env.MERCADO_PAGO_FINAL_URL ||
+            `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`;
+
+        const sep = finalUrl.includes('?') ? '&' : '?';
+        const params = new URLSearchParams({
+            preference_id: preferenceId,
+            payment_id: paymentId,
+            status,
+        }).toString();
+
+        return res.redirect(`${finalUrl}${sep}${params}`);
+    }
 }

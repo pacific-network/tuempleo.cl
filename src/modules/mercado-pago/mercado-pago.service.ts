@@ -89,14 +89,21 @@ export class MercadoPagoService {
     // ======================================================
     async procesarNotificacionPago(paymentId: string): Promise<void> {
         console.log(`📬 [Webhook] Notificación recibida de Mercado Pago → paymentId=${paymentId}`);
+        await this.confirmAndProcess(paymentId);
+    }
 
+    // ======================================================
+    // ✅ CONFIRMAR + PROCESAR STOCK (idempotente)
+    //    Usado tanto por el webhook como por el redirect del usuario.
+    // ======================================================
+    async confirmAndProcess(paymentId: string): Promise<void> {
         try {
             const client = new MercadoPagoConfig({
                 accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
             });
             const payment = new Payment(client);
 
-            console.log('🔍 Consultando pago en API de Mercado Pago...');
+            console.log(`🔍 Consultando pago en API de Mercado Pago → ${paymentId}`);
             const result = (await payment.get({ id: paymentId })) as PaymentResponseExtended;
 
             if (!result) {
@@ -107,13 +114,6 @@ export class MercadoPagoService {
             const prefId = result.preference_id;
             const status = result.status?.toUpperCase() || 'UNKNOWN';
 
-            console.log('📦 Datos del pago recibido:', {
-                id: result.id,
-                status,
-                preference_id: prefId,
-            });
-
-            // 🔍 Buscar transacción por preference_id
             if (!prefId) {
                 console.warn(`⚠️ Pago ${paymentId} sin preference_id. No se puede asociar a una transacción.`);
                 return;
@@ -126,15 +126,11 @@ export class MercadoPagoService {
                 return;
             }
 
-            console.log(`🧾 Transacción encontrada: ${tx.orderId}`);
-
-            // 🧾 Actualizar estado de transacción
             const mappedStatus = mapPaymentStatus(status);
             tx.status = mappedStatus;
             tx.response_data = result;
             await this.transactionRepository.save(tx);
 
-            // 🚨 Procesar solo si está PAGADA y no se procesó stock antes
             if (mappedStatus !== TransactionStatus.PAGADA) {
                 console.warn(`⚠️ Pago ${paymentId} no aprobado (estado: ${status} → ${mappedStatus}).`);
                 return;
@@ -145,7 +141,6 @@ export class MercadoPagoService {
                 return;
             }
 
-            // 👤 Obtener empresa del usuario
             const userId = Number(tx.sessionId);
 
             const empleador = await this.empleadorRepository.findOne({
@@ -158,17 +153,14 @@ export class MercadoPagoService {
                 return;
             }
 
-            const empresaId = empleador.empresa.id;
-
-            // 📦 Procesar stock (items ya fueron guardados al crear la transacción)
-            await this.stockService.processTransactionStock(tx.id, empresaId);
+            await this.stockService.processTransactionStock(tx.id, empleador.empresa.id);
 
             tx.stock_processed = true;
             await this.transactionRepository.save(tx);
 
-            console.log(`✅ Stock actualizado correctamente para empresa ${empresaId} (orden ${tx.orderId})`);
+            console.log(`✅ Stock actualizado correctamente para empresa ${empleador.empresa.id} (orden ${tx.orderId})`);
         } catch (error) {
-            console.error('❌ Error procesando notificación de Mercado Pago:', error);
+            console.error('❌ Error confirmando/procesando pago Mercado Pago:', error);
         }
     }
 

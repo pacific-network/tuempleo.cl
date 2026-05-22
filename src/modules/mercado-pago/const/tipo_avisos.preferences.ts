@@ -47,20 +47,25 @@ export const crearPreferenciaPago = async (itemsCarrito: MpItem[]) => {
         };
     });
 
+    // Igual que Webpay: back_urls apuntan al backend para procesar stock
+    // sincronamente; el backend redirige al frontend al terminar.
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const isPublicFrontend = /^https:\/\//i.test(frontendUrl);
+    const backUrl =
+        process.env.MERCADO_PAGO_RETURN_URL ||
+        `${frontendUrl}/payment/mercadopago`;
+    const isPublicBackUrl = /^https:\/\//i.test(backUrl);
 
     const body: any = {
         items,
         back_urls: {
-            success: `${frontendUrl}/payment/mercadopago`,
-            failure: `${frontendUrl}/payment/mercadopago`,
-            pending: `${frontendUrl}/payment/mercadopago`,
+            success: backUrl,
+            failure: backUrl,
+            pending: backUrl,
         },
     };
 
     // Mercado Pago no acepta auto_return con back_urls en localhost / http
-    if (isPublicFrontend) {
+    if (isPublicBackUrl) {
         body.auto_return = 'approved';
     }
 
