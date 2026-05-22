@@ -19,6 +19,11 @@ export class BlockBrowserMiddleware implements NestMiddleware {
       return next()
     }
 
+    // Mercado Pago return (flujo browser-based)
+    if (req.originalUrl.startsWith('/v1/mercadopago/return')) {
+      return next()
+    }
+
     // Archivos estáticos / uploads
     if (
       req.originalUrl.startsWith('/uploads/') ||
