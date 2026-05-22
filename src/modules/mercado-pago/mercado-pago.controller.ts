@@ -56,16 +56,23 @@ export class MercadoPagoController {
             console.log(JSON.stringify(body, null, 2));
 
             const topic = body?.topic || body?.type;
-            const paymentId = body?.data?.id ?? body?.id;
+
+            // El topic 'merchant_order' no tiene paymentId directo - lo ignoramos
+            // y nos quedamos solo con los webhooks de 'payment'.
+            if (topic && topic !== 'payment') {
+                console.log(`ℹ️ Evento ignorado (topic=${topic})`);
+                return res.status(200).json({ message: 'Evento ignorado', topic });
+            }
+
+            // IPN viejo manda { resource, topic }; webhook v2 manda { data: { id }, type }.
+            const paymentId =
+                body?.data?.id ??
+                (topic === 'payment' ? body?.resource : undefined) ??
+                body?.id;
 
             if (!paymentId) {
                 console.warn('⚠️ Webhook sin ID de pago. No se procesa.');
                 return res.status(200).json({ message: 'Sin ID de pago' });
-            }
-
-            if (topic && topic !== 'payment') {
-                console.log(`ℹ️ Evento ignorado (topic=${topic})`);
-                return res.status(200).json({ message: 'Evento ignorado', topic });
             }
 
             await this.mpService.procesarNotificacionPago(String(paymentId));

@@ -34,11 +34,14 @@ export class MercadoPagoService {
             throw new Error('Debes seleccionar al menos un tipo de aviso.');
         }
 
-        // 1️⃣ Crear preferencia con ítems y cantidades
-        const preference = await crearPreferenciaPago(items);
+        // 1️⃣ Generar orderId primero para usarlo como external_reference
+        const orderId = generateOrderId('MERCADOPAGO');
+
+        // 2️⃣ Crear preferencia (orderId viaja como external_reference)
+        const preference = await crearPreferenciaPago(items, orderId);
         console.log('🪄 Preferencia creada en Mercado Pago:', preference.id);
 
-        // 2️⃣ Calcular monto total desde backend
+        // 3️⃣ Calcular monto total desde backend
         let total = 0;
         for (const item of items) {
             const plan = avisos[item.tipoAviso];
@@ -46,9 +49,9 @@ export class MercadoPagoService {
             total += plan.price * item.cantidad;
         }
 
-        // 3️⃣ Crear transacción con items en base de datos
+        // 4️⃣ Crear transacción con items en base de datos
         const transaction = this.transactionRepository.create({
-            orderId: generateOrderId('MERCADOPAGO'),
+            orderId,
             sessionId: String(userId),
             amount: total,
             token: preference.id,
@@ -112,17 +115,21 @@ export class MercadoPagoService {
             }
 
             const prefId = result.preference_id;
+            const externalRef = (result as any).external_reference as string | undefined;
             const status = result.status?.toUpperCase() || 'UNKNOWN';
 
-            if (!prefId) {
-                console.warn(`⚠️ Pago ${paymentId} sin preference_id. No se puede asociar a una transacción.`);
-                return;
+            let tx = prefId
+                ? await this.transactionRepository.findOne({ where: { token: prefId } })
+                : null;
+
+            if (!tx && externalRef) {
+                tx = await this.transactionRepository.findOne({ where: { orderId: externalRef } });
             }
 
-            const tx = await this.transactionRepository.findOne({ where: { token: prefId } });
-
             if (!tx) {
-                console.warn(`⚠️ No se encontró transacción con preference_id ${prefId} (pago ${paymentId})`);
+                console.warn(
+                    `⚠️ Sin transacción asociada al pago ${paymentId} (preference_id=${prefId ?? 'null'}, external_reference=${externalRef ?? 'null'})`,
+                );
                 return;
             }
 

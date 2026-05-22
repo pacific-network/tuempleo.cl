@@ -29,7 +29,10 @@ const avisos = {
 
 export type MpItem = { tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM'; cantidad: number };
 
-export const crearPreferenciaPago = async (itemsCarrito: MpItem[]) => {
+export const crearPreferenciaPago = async (
+    itemsCarrito: MpItem[],
+    externalReference?: string,
+) => {
     if (!Array.isArray(itemsCarrito) || itemsCarrito.length === 0) {
         throw new Error('Debes seleccionar al menos un tipo de aviso.');
     }
@@ -63,6 +66,12 @@ export const crearPreferenciaPago = async (itemsCarrito: MpItem[]) => {
             pending: backUrl,
         },
     };
+
+    // external_reference deja un puntero a nuestra transacción aunque el
+    // payment object no incluya preference_id (caso frecuente en MP).
+    if (externalReference) {
+        body.external_reference = externalReference;
+    }
 
     // Mercado Pago no acepta auto_return con back_urls en localhost / http
     if (isPublicBackUrl) {
