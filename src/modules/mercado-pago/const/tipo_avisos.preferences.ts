@@ -47,18 +47,28 @@ export const crearPreferenciaPago = async (itemsCarrito: MpItem[]) => {
         };
     });
 
-    const result = await preference.create({
-        body: {
-            items,
-            back_urls: {
-                success: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`,
-                failure: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`,
-                pending: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/mercadopago`,
-            },
-            auto_return: 'approved',
-            notification_url: 'https://tuempleo.cl/api/v1/mercadopago/webhook',
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const isPublicFrontend = /^https:\/\//i.test(frontendUrl);
+
+    const body: any = {
+        items,
+        back_urls: {
+            success: `${frontendUrl}/payment/mercadopago`,
+            failure: `${frontendUrl}/payment/mercadopago`,
+            pending: `${frontendUrl}/payment/mercadopago`,
         },
-    });
+    };
+
+    // Mercado Pago no acepta auto_return con back_urls en localhost / http
+    if (isPublicFrontend) {
+        body.auto_return = 'approved';
+    }
+
+    if (process.env.MERCADO_PAGO_NOTIFICATION_URL) {
+        body.notification_url = process.env.MERCADO_PAGO_NOTIFICATION_URL;
+    }
+
+    const result = await preference.create({ body });
 
     console.log('✅ Preferencia creada con items:', itemsCarrito);
     console.log('🆔 ID Mercado Pago:', result.id);

@@ -46,6 +46,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Credenciales locales de sandbox (test users, etc.)
+docs/sandbox-credentials.md
+
 # Runtime data
 pids
 *.pid
