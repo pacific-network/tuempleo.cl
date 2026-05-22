@@ -101,8 +101,31 @@ export class MercadoPagoController {
         if (!token) throw new BadRequestException('Falta el parámetro token o preference_id');
 
         const detail = await this.mpService.getDetailMpTransaccion(token);
+
+        // Campos al nivel raiz + aliases en espanol para que el frontend
+        // funcione con cualquiera de los nombres comunes.
+        const amount = Number(detail.amount);
         return {
             message: 'Detalle de transacción recuperado correctamente',
+
+            // raiz - en ingles
+            orderId: detail.orderId,
+            sessionId: detail.sessionId,
+            amount,
+            status: detail.status,
+            createdAt: detail.createdAt,
+            updatedAt: detail.updatedAt,
+            origen: detail.origen,
+
+            // aliases en espanol
+            orden: detail.orderId,
+            total: amount,
+            monto: amount,
+            fecha: detail.createdAt,
+            estado: detail.status,
+            medioPago: detail.origen === 'MERCADOPAGO' ? 'Mercado Pago' : 'Webpay',
+
+            // wrapper original (compat)
             data: detail,
         };
     }
