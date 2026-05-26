@@ -48,7 +48,7 @@ export class UserController {
 
         // 🔹 Obtener usuario autenticado
         const user = req.user as any;
-        const userId = user?.sub ?? user?.id ?? null;
+        const userId = user?.userId ?? user?.sub ?? user?.id ?? null;
 
         if (!userId) {
             throw new BadRequestException('Usuario no autenticado');
