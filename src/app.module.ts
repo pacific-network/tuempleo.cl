@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { I18nModule, AcceptLanguageResolver, I18nJsonLoader } from 'nestjs-i18n';
 import { databaseConfig } from './config/database';
@@ -49,11 +48,6 @@ import { SystemAlertsModule } from './modules/system-alerts/system-alerts.module
 
 @Module({
   imports: [
-
-    ServeStaticModule.forRoot({
-      rootPath: process.env.UPLOAD_PATH || join(__dirname, '..', 'upload'), // flexible
-      serveRoot: '/upload',
-    }),
 
     // Rate limiting global: 60 requests por minuto por IP
     ThrottlerModule.forRoot([{
