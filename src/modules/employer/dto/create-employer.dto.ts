@@ -1,7 +1,7 @@
 // src/modules/forms/dto/create-employer.dto.ts
 
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, Matches, ValidateNested } from 'class-validator';
 
 export class EmployerDataDto {
 
@@ -27,6 +27,7 @@ export class EmployerDataDto {
 
     @IsNotEmpty()
     @IsString()
+    @Matches(/^\+56\d{9}$/, { message: 'telefono debe tener formato +56XXXXXXXXX (12 caracteres)' })
     telefono: string;
 
     @IsOptional()

@@ -3,6 +3,7 @@ import {
     IsString,
     IsArray,
     IsUrl,
+    Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -12,9 +13,10 @@ export class UpdateBusinessDto {
     @IsString()
     nombre_fantasia?: string;
 
-    @ApiProperty({ example: '+56912345678', required: false })
+    @ApiProperty({ example: '+56988440465', required: false })
     @IsOptional()
     @IsString()
+    @Matches(/^\+56\d{9}$/, { message: 'telefono debe tener formato +56XXXXXXXXX (12 caracteres)' })
     telefono?: string;
 
     @ApiProperty({ type: [String], example: ['Av. Providencia 123'], required: false })

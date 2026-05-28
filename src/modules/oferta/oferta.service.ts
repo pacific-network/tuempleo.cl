@@ -238,6 +238,7 @@ export class OfertaService {
       throw new NotFoundException(`Empresa con ID ${data.empresa_id} no encontrada`);
 
     // 3️⃣ Verificar crédito o stock gratis
+    let promocionUsada: Awaited<ReturnType<typeof this.StockService.useCredit>>['promocion'] = null;
     if (data.tipo_aviso === 'GRATIS') {
       const result = await this.freeStockService.useMonthlyFreeStock(data.empresa_id);
 
@@ -245,10 +246,11 @@ export class OfertaService {
         throw new BadRequestException(result.mensaje);
       }
     } else {
-      await this.StockService.useCredit(
+      const { promocion } = await this.StockService.useCredit(
         data.empresa_id,
         data.tipo_aviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM'
       );
+      promocionUsada = promocion;
     }
 
     // 4️⃣ Calcular fechas
@@ -276,6 +278,7 @@ export class OfertaService {
       estado: esGratis ? 'pendiente_revision' : 'publicada',
       data: JSON.stringify(data.data),
       priority: prioridad,
+      promocion: promocionUsada,
     };
 
     const oferta = this.ofertaRepository.create(nuevaOferta);
@@ -558,10 +561,12 @@ export class OfertaService {
         throw new BadRequestException(result.mensaje);
       }
     } else {
-      await this.StockService.useCredit(
+      const { promocion } = await this.StockService.useCredit(
         oferta.empresa.id,
         oferta.tipo_aviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM',
       );
+      // Si el nuevo crédito vino de una promo (o no), actualizamos la atribución.
+      oferta.promocion = promocion;
     }
 
     // Republicar como nueva: resetear fechas y estado

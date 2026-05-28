@@ -7,6 +7,7 @@ import {
     IsOptional,
     IsNumber,
     IsString,
+    Matches,
 } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
@@ -54,9 +55,10 @@ export class BusinessDataDto {
     @IsString()
     pais: string;
 
-    @ApiProperty({ example: '+56912345678' })
+    @ApiProperty({ example: '+56988440465' })
     @IsNotEmpty()
     @IsString()
+    @Matches(/^\+56\d{9}$/, { message: 'telefono debe tener formato +56XXXXXXXXX (12 caracteres)' })
     telefono: string;
 
     @ApiProperty({ example: 'Empresa dedicada a servicios tecnológicos' })

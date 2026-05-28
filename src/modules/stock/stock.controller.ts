@@ -9,8 +9,6 @@ export class StockController {
     // 🔍 Obtener créditos disponibles por empresa
     @Get('empresa/:empresaId')
     @UseGuards(AuthGuard('jwt'))
-    @Get('empresa/:empresaId')
-    @UseGuards(AuthGuard('jwt'))
     async getStockByEmpresa(@Param('empresaId') empresaId: number) {
         const fullStock = await this.stockService.getFullAvailability(empresaId);
 
@@ -20,6 +18,17 @@ export class StockController {
             pagados: fullStock.pagados.map((s) => ({
                 tipoAviso: s.tipoAviso,
                 cantidad_disponible: s.cantidad_disponible,
+            })),
+            promociones: fullStock.promociones.map((p) => ({
+                id: p.id,
+                tipoAviso: p.tipoAviso,
+                cantidad: p.cantidad,
+                cantidad_usada: p.cantidad_usada,
+                saldo: p.cantidad - p.cantidad_usada,
+                fecha_inicio: p.fecha_inicio,
+                fecha_fin: p.fecha_fin,
+                origen: p.origen,
+                motivo: p.motivo,
             })),
         };
     }

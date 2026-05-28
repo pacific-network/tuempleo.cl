@@ -15,6 +15,7 @@ import { Empresa } from '../business/business.entity';
 import { Empleador } from '../employer/employer.entity';
 import { CountVisit } from '../count_visits/count-visits.entity';
 import { DataOfertaDto } from 'src/modules/oferta/dto/create-oferta.dto';
+import { Promocion } from '../promocion/promocion.entity';
 
 @Entity('oferta')
 export class Oferta {
@@ -89,18 +90,27 @@ export class Oferta {
     @JoinColumn({ name: 'modificada_por' })
     modificada_por: Empleador;
 
+    // 🎁 Si la oferta consumió un cupo de una promoción, queda vinculada acá.
+    @ManyToOne(() => Promocion, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'promocion_id' })
+    promocion: Promocion | null;
+
     // Calculada: fecha_publicacion + duracion_publicacion (días). No se persiste.
     fecha_expiracion?: Date | null;
+
+    // Derivado: true si la oferta vino de una promoción.
+    es_promocional?: boolean;
 
     @AfterLoad()
     computeFechaExpiracion() {
         if (!this.fecha_publicacion) {
             this.fecha_expiracion = null;
-            return;
+        } else {
+            const dias = this.duracion_publicacion ?? 30;
+            const d = new Date(this.fecha_publicacion);
+            d.setDate(d.getDate() + dias);
+            this.fecha_expiracion = d;
         }
-        const dias = this.duracion_publicacion ?? 30;
-        const d = new Date(this.fecha_publicacion);
-        d.setDate(d.getDate() + dias);
-        this.fecha_expiracion = d;
+        this.es_promocional = !!this.promocion;
     }
 }

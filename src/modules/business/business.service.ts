@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Empresa } from "../../repository/business/business.entity";
 import { CreateBusinessDto } from "./dto/create-business.dto";
+import { PromocionService } from "../promocion/promocion.service";
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -11,6 +12,7 @@ export class EmpresaService {
     constructor(
         @InjectRepository(Empresa)
         private readonly businessRepository: Repository<Empresa>,
+        private readonly promocionService: PromocionService,
     ) { }
 
     public async getAllBusinesses(): Promise<Empresa[]> {
@@ -40,8 +42,7 @@ export class EmpresaService {
         };
     }
 
-    public createBusiness(createBusinessDto: CreateBusinessDto): Promise<Empresa> {
-
+    public async createBusiness(createBusinessDto: CreateBusinessDto): Promise<Empresa> {
 
         // Aquí creamos la entidad Empresa con plan como objeto { id: planId }
         const business = this.businessRepository.create({
@@ -50,7 +51,12 @@ export class EmpresaService {
             data: createBusinessDto.data,  // data es JSON y viene en DTO
         });
 
-        return this.businessRepository.save(business);
+        const saved = await this.businessRepository.save(business);
+
+        // 🎁 Regalo de bienvenida: 3 avisos PREMIUM por 30 días (idempotente)
+        await this.promocionService.otorgarBienvenida(saved.id);
+
+        return saved;
     }
 
     public async uploadBusinessLogo(rut: string, file: Express.Multer.File): Promise<Empresa> {
