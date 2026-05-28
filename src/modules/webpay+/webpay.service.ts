@@ -183,6 +183,7 @@ export class WebpayService {
     // ==============================================================
     async reconcileOrphanedTransactions() {
         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
         const orphaned = await this.transactionRepository
             .createQueryBuilder('t')
@@ -203,6 +204,19 @@ export class WebpayService {
                 const mappedStatus = mapPaymentStatus(wpStatus.status)
                 tx.response_data = wpStatus
                 tx.status = mappedStatus
+
+                // Timeout duro: si lleva >24h sin avanzar a PAGADA, cerrar como FALLIDA
+                // para que el cron deje de consultarla indefinidamente.
+                if (
+                    mappedStatus === TransactionStatus.PENDIENTE &&
+                    tx.createdAt < twentyFourHoursAgo
+                ) {
+                    tx.status = TransactionStatus.FALLIDA
+                    await this.transactionRepository.save(tx)
+                    console.log(`⏱️ Transacción ${tx.orderId} expirada por timeout (>24h)`)
+                    continue
+                }
+
                 await this.transactionRepository.save(tx)
 
                 if (mappedStatus === TransactionStatus.PAGADA && !tx.stock_processed) {

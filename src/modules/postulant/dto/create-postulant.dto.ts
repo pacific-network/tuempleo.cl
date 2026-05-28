@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 
@@ -26,6 +27,7 @@ class DatosPersonalesDto {
   region: string;
 
   @IsString()
+  @Matches(/^\+56\d{9}$/, { message: 'telefono debe tener formato +56XXXXXXXXX (12 caracteres)' })
   telefono: string;
 
   @IsString()

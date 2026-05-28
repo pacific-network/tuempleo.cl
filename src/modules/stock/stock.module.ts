@@ -8,10 +8,12 @@ import { TransactionItem } from 'src/repository/transaction_items/transaction-it
 import { StockController } from './stock.controller';
 import { StockGratis } from 'src/repository/free_stock/free-stock.entity';
 import { FreeStockService } from 'src/modules/stock/free-stock.service';
+import { PromocionModule } from 'src/modules/promocion/promocion.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Stock, Transaction, TransactionItem, StockGratis]),
+        PromocionModule,
     ],
     providers: [
         StockService,

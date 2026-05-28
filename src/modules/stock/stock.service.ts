@@ -7,6 +7,8 @@ import { Transaction } from '../../repository/transaction/transaction.entity';
 import { TransactionItem } from '../../repository/transaction_items/transaction-items.entity';
 import { StockGratis } from 'src/repository/free_stock/free-stock.entity';
 import { FreeStockService } from 'src/modules/stock/free-stock.service';
+import { PromocionService } from 'src/modules/promocion/promocion.service';
+import { Promocion } from 'src/repository/promocion/promocion.entity';
 @Injectable()
 export class StockService {
     constructor(
@@ -20,6 +22,8 @@ export class StockService {
         private readonly itemRepo: Repository<TransactionItem>,
 
         public readonly freeStockService: FreeStockService,
+
+        private readonly promocionService: PromocionService,
     ) { }
 
     /**
@@ -90,12 +94,13 @@ export class StockService {
     }
 
     /**
-     * ➖ Usa un crédito de un tipo específico
+     * ➖ Usa un crédito de un tipo específico.
+     * @returns objeto con la promoción consumida (si la hubo) y el origen del crédito.
      */
     async useCredit(
         empresaId: number,
         tipoAviso: 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM',
-    ) {
+    ): Promise<{ promocion: Promocion | null; origen: 'GRATIS' | 'PROMOCION' | 'PAGADO' }> {
         tipoAviso = tipoAviso.toUpperCase() as any;
 
         // 📌 1) Si el aviso es GRATIS → usar lógica de stock gratuito
@@ -107,10 +112,17 @@ export class StockService {
                 throw new Error(result.mensaje);
             }
 
-            return result.stock;
+            return { promocion: null, origen: 'GRATIS' };
         }
 
-        // 📌 2) Avisos pagados → lógica actual (NO se toca)
+        // 📌 2) Promoción vigente → consume primero el regalo antes que el stock pagado
+        const promoUsada = await this.promocionService.consumirSiVigente(empresaId, tipoAviso);
+        if (promoUsada) {
+            console.log(`🎁 Crédito ${tipoAviso} consumido desde promoción vigente (id=${promoUsada.id})`);
+            return { promocion: promoUsada, origen: 'PROMOCION' };
+        }
+
+        // 📌 3) Avisos pagados → lógica actual (NO se toca)
         const stock = await this.stockRepo.findOne({
             where: { empresa: { id: empresaId }, tipoAviso },
         });
@@ -128,9 +140,9 @@ export class StockService {
         }
 
         stock.cantidad_disponible -= 1;
-        const saved = await this.stockRepo.save(stock);
+        await this.stockRepo.save(stock);
 
-        return saved;
+        return { promocion: null, origen: 'PAGADO' };
     }
 
 
@@ -151,8 +163,9 @@ export class StockService {
     async getFullAvailability(empresaId: number) {
         const pagados = await this.getAvailability(empresaId);
         const gratis = await this.freeStockService.getMonthlyFreeStock(empresaId);
+        const promociones = await this.promocionService.getVigentes(empresaId);
 
-        return { gratis, pagados };
+        return { gratis, pagados, promociones };
     }
 }
 
