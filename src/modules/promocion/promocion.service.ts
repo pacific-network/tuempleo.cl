@@ -2,23 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { Promocion } from 'src/repository/promocion/promocion.entity';
-
-const DIAS_BIENVENIDA = 30;
-const CANTIDAD_BIENVENIDA = 3;
-const TIPO_BIENVENIDA: 'PREMIUM' = 'PREMIUM';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class PromocionService {
     constructor(
         @InjectRepository(Promocion)
         private readonly promoRepo: Repository<Promocion>,
+        private readonly systemConfigService: SystemConfigService,
     ) { }
 
     /**
-     * 🎁 Regalo de bienvenida: 3 avisos PREMIUM por 30 días.
+     * 🎁 Regalo de bienvenida para empresas nuevas.
+     * El contenido (tipo/cantidad/días) y el on-off vienen de la config global
+     * (clave WELCOME_PROMO), administrable desde el panel admin.
      * Idempotente: si la empresa ya tiene una promo de bienvenida, no crea otra.
      */
     async otorgarBienvenida(empresaId: number): Promise<Promocion | null> {
+        const cfg = await this.systemConfigService.getWelcomePromo();
+        // Campaña desactivada por el admin → no se otorga nada.
+        if (!cfg.enabled) return null;
+
         const yaTiene = await this.promoRepo.findOne({
             where: { empresa: { id: empresaId }, origen: 'AUTO_REGISTRO' },
         });
@@ -26,12 +30,12 @@ export class PromocionService {
 
         const inicio = new Date();
         const fin = new Date(inicio);
-        fin.setDate(fin.getDate() + DIAS_BIENVENIDA);
+        fin.setDate(fin.getDate() + cfg.dias);
 
         const promo = this.promoRepo.create({
             empresa: { id: empresaId } as any,
-            tipoAviso: TIPO_BIENVENIDA,
-            cantidad: CANTIDAD_BIENVENIDA,
+            tipoAviso: cfg.tipoAviso,
+            cantidad: cfg.cantidad,
             cantidad_usada: 0,
             fecha_inicio: inicio,
             fecha_fin: fin,

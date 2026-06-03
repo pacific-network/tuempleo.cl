@@ -39,6 +39,9 @@ import { AccountDeletionLog } from 'src/repository/legal/account-deletion-log.en
 import { Bug } from 'src/repository/bug/bug.entity';
 import { SystemAlert } from 'src/repository/system-alert/system-alert.entity';
 import { Promocion } from 'src/repository/promocion/promocion.entity';
+import { SystemConfig } from 'src/repository/system-config/system-config.entity';
+import { Cupon } from 'src/repository/cupon/cupon.entity';
+import { CuponCanje } from 'src/repository/cupon/cupon-canje.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -52,7 +55,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_NAME || 'tuempleo',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog, Bug, SystemAlert, Promocion],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog, Bug, SystemAlert, Promocion, SystemConfig, Cupon, CuponCanje],
     // logging: true,
     synchronize: process.env.DB_SYNCHRONIZE === 'false',
 

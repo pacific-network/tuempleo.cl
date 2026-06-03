@@ -43,6 +43,8 @@ import { LegalModule } from './modules/legal/legal.module';
 import { BugModule } from './modules/bug/bug.module';
 import { SeoModule } from './modules/seo/seo.module';
 import { SystemAlertsModule } from './modules/system-alerts/system-alerts.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { CuponModule } from './modules/cupon/cupon.module';
 
 
 
@@ -113,6 +115,8 @@ import { SystemAlertsModule } from './modules/system-alerts/system-alerts.module
     BugModule,
     SeoModule,
     SystemAlertsModule,
+    SystemConfigModule,
+    CuponModule,
 
   ],
   providers: [

@@ -39,14 +39,18 @@ export class Promocion {
 
     @Column({
         type: 'enum',
-        enum: ['AUTO_REGISTRO', 'EJECUTIVO'],
+        enum: ['AUTO_REGISTRO', 'EJECUTIVO', 'CUPON'],
         default: 'AUTO_REGISTRO',
     })
-    origen: 'AUTO_REGISTRO' | 'EJECUTIVO';
+    origen: 'AUTO_REGISTRO' | 'EJECUTIVO' | 'CUPON';
 
     // userId de quien otorgó la promo; null = otorgada por el sistema
     @Column({ type: 'int', nullable: true })
     otorgada_por: number | null;
+
+    // Cupón que originó esta promo (origen = CUPON); null en otros casos
+    @Column({ type: 'int', nullable: true })
+    cupon_id: number | null;
 
     @Column({ type: 'varchar', length: 500, nullable: true })
     motivo: string | null;
