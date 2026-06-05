@@ -33,6 +33,10 @@ export class Usuario {
     @Column({ type: 'boolean', default: false })
     isAdmin: boolean;
 
+    // Rol supervisor (backoffice): gestiona, pero sin acceso a datos de dinero.
+    @Column({ type: 'boolean', default: false })
+    isSupervisor: boolean;
+
     /**
  * ⚠️ LEGACY
  * Este campo NO debe usarse para autorización ni contexto.

@@ -1,13 +1,19 @@
 import {
-  Controller, Get, Delete, Patch,
-  Param, Query, ParseIntPipe, UseGuards,
+  Controller, Get, Post, Delete, Patch,
+  Body, Param, Query, ParseIntPipe, UseGuards,
   UseInterceptors, ClassSerializerInterceptor,
+  UsePipes, ValidationPipe,
 } from '@nestjs/common';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { StaffGuard } from '../auth/guards/staff.guard';
 import { AdminService } from './admin.service';
+import { CreateSupervisorDto } from './dto/create-supervisor.dto';
 import { User } from 'src/shared/decorators/user.decorator';
 
-@UseGuards(AdminGuard)
+// Gestión general: accesible a admin y supervisor (StaffGuard).
+// Los endpoints de dinero/sensibles se refuerzan con @UseGuards(AdminGuard)
+// a nivel de método → quedan solo para admin.
+@UseGuards(StaffGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('v1/admin')
 export class AdminController {
@@ -53,9 +59,40 @@ export class AdminController {
     return this.adminService.toggleActivo(id);
   }
 
+  // 🔒 Escalada de privilegios: solo admin.
+  @UseGuards(AdminGuard)
   @Patch('usuarios/:id/admin')
   toggleAdmin(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.toggleAdmin(id);
+  }
+
+  // 🔒 Asignar/quitar rol supervisor: solo admin.
+  @UseGuards(AdminGuard)
+  @Patch('usuarios/:id/supervisor')
+  toggleSupervisor(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.toggleSupervisor(id);
+  }
+
+  // ─────────────────────────────────────────
+  // SUPERVISORES (admin → crea supervisores)
+  // ─────────────────────────────────────────
+
+  // 🔒 Crear cuenta de supervisor desde cero: solo admin.
+  @UseGuards(AdminGuard)
+  @Post('supervisores')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  crearSupervisor(@Body() dto: CreateSupervisorDto) {
+    return this.adminService.crearSupervisor(dto);
+  }
+
+  // 🔒 Listar supervisores: solo admin.
+  @UseGuards(AdminGuard)
+  @Get('supervisores')
+  getSupervisores(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getSupervisores(Number(page), Number(limit));
   }
 
   // ─────────────────────────────────────────
@@ -162,6 +199,8 @@ export class AdminController {
   // TRANSACCIONES
   // ─────────────────────────────────────────
 
+  // 🔒 Datos de dinero: solo admin (supervisor recibe 403).
+  @UseGuards(AdminGuard)
   @Get('transacciones')
   getTransacciones(
     @Query('page') page = '1',
@@ -170,6 +209,8 @@ export class AdminController {
     return this.adminService.getTransacciones(Number(page), Number(limit));
   }
 
+  // 🔒 Datos de dinero: solo admin (supervisor recibe 403).
+  @UseGuards(AdminGuard)
   @Get('transacciones/:id')
   getTransaccion(@Param('id') id: string) {
     return this.adminService.getTransaccion(id);

@@ -9,6 +9,7 @@ import { Empleador } from 'src/repository/employer/employer.entity';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { Postulante } from 'src/repository/postulant/postulant.entity';
+import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Postulante } from 'src/repository/postulant/postulant.entity';
       Transaction,
       Postulante,
     ]),
+    EncryptModule,
   ],
   providers: [AdminService],
   controllers: [AdminController],

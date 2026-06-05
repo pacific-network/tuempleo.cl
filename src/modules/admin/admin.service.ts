@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Usuario } from 'src/repository/user/user.entity';
@@ -8,6 +8,8 @@ import { Empleador } from 'src/repository/employer/employer.entity';
 import { Empresa } from 'src/repository/business/business.entity';
 import { Transaction } from 'src/repository/transaction/transaction.entity';
 import { Postulante } from 'src/repository/postulant/postulant.entity';
+import { EncryptService } from 'src/shared/encrypt/encrypt.service';
+import { CreateSupervisorDto } from './dto/create-supervisor.dto';
 
 @Injectable()
 export class AdminService {
@@ -32,6 +34,8 @@ export class AdminService {
 
     @InjectRepository(Postulante)
     private readonly postulanteRepo: Repository<Postulante>,
+
+    private readonly encrypt: EncryptService,
   ) {}
 
   // ─────────────────────────────────────────
@@ -45,7 +49,7 @@ export class AdminService {
       order: { fecha_creacion: 'DESC' },
       take,
       skip,
-      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'fecha_creacion'],
+      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'isSupervisor', 'fecha_creacion'],
     });
 
     const ids = users.map((u) => u.id);
@@ -83,7 +87,7 @@ export class AdminService {
   async getUsuario(id: number) {
     const user = await this.usuarioRepo.findOne({
       where: { id },
-      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'fecha_creacion', 'perfil_foto'],
+      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'isSupervisor', 'fecha_creacion', 'perfil_foto'],
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
@@ -103,6 +107,70 @@ export class AdminService {
     user.isAdmin = !user.isAdmin;
     await this.usuarioRepo.save(user);
     return { id: user.id, isAdmin: user.isAdmin };
+  }
+
+  async toggleSupervisor(id: number) {
+    const user = await this.usuarioRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    user.isSupervisor = !user.isSupervisor;
+    await this.usuarioRepo.save(user);
+    return { id: user.id, isSupervisor: user.isSupervisor };
+  }
+
+  /**
+   * Crea una cuenta de supervisor desde cero (admin → crea supervisor).
+   * Inserta en `registro` (login/contraseña) y `usuario` (isSupervisor=true),
+   * igual que cualquier cuenta de staff. Login: POST /v1/auth/login-empleador.
+   */
+  async crearSupervisor(dto: CreateSupervisorDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const yaRegistro = await this.registroRepo.findOne({ where: { email } });
+    const yaUsuario = await this.usuarioRepo.findOne({ where: { email } });
+    if (yaRegistro || yaUsuario) {
+      throw new ConflictException('Ya existe una cuenta con ese email');
+    }
+
+    const passwordEncriptado = this.encrypt.encrypt(dto.password);
+
+    const registro = this.registroRepo.create({
+      nombre_completo: `${dto.nombres} ${dto.apellidos}`.trim(),
+      email,
+      password: passwordEncriptado,
+      es_activo: true,
+    });
+    await this.registroRepo.save(registro);
+
+    const usuario = this.usuarioRepo.create({
+      nombres: dto.nombres,
+      apellidos: dto.apellidos,
+      email,
+      password: passwordEncriptado,
+      is_activo: true,
+      isSupervisor: true,
+    });
+    await this.usuarioRepo.save(usuario);
+
+    return {
+      id: usuario.id,
+      nombres: usuario.nombres,
+      apellidos: usuario.apellidos,
+      email: usuario.email,
+      isSupervisor: usuario.isSupervisor,
+    };
+  }
+
+  /** Lista las cuentas con rol supervisor. */
+  async getSupervisores(page = 1, limit = 20) {
+    const take = Math.min(limit, 100);
+    const [items, total] = await this.usuarioRepo.findAndCount({
+      where: { isSupervisor: true },
+      order: { fecha_creacion: 'DESC' },
+      take,
+      skip: (page - 1) * take,
+      select: ['id', 'nombres', 'apellidos', 'email', 'is_activo', 'isSupervisor', 'fecha_creacion'],
+    });
+    return { items, total, page, limit, totalPages: Math.ceil(total / take) };
   }
 
   // ─────────────────────────────────────────
@@ -130,10 +198,11 @@ export class AdminService {
     const skip = (page - 1) * take;
     const [items, total] = await this.usuarioRepo.findAndCount({
       where: { isAdmin: true },
+      // nota: 'admins' lista solo isAdmin; los supervisores se ven en /usuarios
       order: { fecha_creacion: 'DESC' },
       take,
       skip,
-      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'fecha_creacion'],
+      select: ['id', 'nombres', 'apellidos', 'email', 'rut', 'is_activo', 'isAdmin', 'isSupervisor', 'fecha_creacion'],
     });
     return { total, page, limit: take, items };
   }

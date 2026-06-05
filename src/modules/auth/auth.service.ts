@@ -187,6 +187,7 @@ export class AuthService {
       email: user.email,
       context,
       isAdmin: user.isAdmin ?? false,
+      isSupervisor: user.isSupervisor ?? false,
     })
 
     return {
