@@ -17,6 +17,7 @@ import { Postulante } from 'src/repository/postulant/postulant.entity'
 import { Empleador } from 'src/repository/employer/employer.entity'
 import { AuthGuard } from './guards/auth.guards'
 import { User } from 'src/shared/decorators/user.decorator'
+import { requireEnv } from 'src/config/secrets'
 
 @Controller('v1/auth')
 export class AuthController {
@@ -73,7 +74,7 @@ export class AuthController {
     let payload: any
     try {
       payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'pacificNetwork2024',
+        secret: requireEnv('JWT_SECRET'),
       })
     } catch {
       throw new UnauthorizedException('Token inválido o expirado')
@@ -166,7 +167,7 @@ export class AuthController {
     let payload: any
     try {
       payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'pacificNetwork2024',
+        secret: requireEnv('JWT_SECRET'),
       })
     } catch {
       throw new UnauthorizedException('Token inválido o expirado')

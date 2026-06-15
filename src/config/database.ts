@@ -57,6 +57,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
         Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog, Bug, SystemAlert, Promocion, SystemConfig, Cupon, CuponCanje],
     // logging: true,
-    synchronize: process.env.DB_SYNCHRONIZE === 'false',
+    // Solo true si DB_SYNCHRONIZE === 'true'. En producción debe ser false
+    // para evitar que TypeORM altere/elimine columnas automáticamente.
+    synchronize: process.env.DB_SYNCHRONIZE === 'true',
 
 };

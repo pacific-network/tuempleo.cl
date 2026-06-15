@@ -8,7 +8,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.JWT_SECRET || 'pacificNetwork2024',
+      secretOrKey: (() => {
+        const s = process.env.JWT_SECRET;
+        if (!s || s.trim() === '') {
+          throw new Error('Variable de entorno requerida no definida: JWT_SECRET');
+        }
+        return s;
+      })(),
       ignoreExpiration: false,
     })
   }

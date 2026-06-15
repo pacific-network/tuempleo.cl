@@ -31,8 +31,8 @@ import { Empleador } from 'src/repository/employer/employer.entity';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (config: ConfigService) => ({
-        // ⬇️ MISMO secreto y mismo fallback que en OauthModule
-        secret: config.get<string>('JWT_SECRET') || 'pacificNetwork2024',
+        // Falla al arrancar si JWT_SECRET no está definido (sin fallback inseguro)
+        secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],

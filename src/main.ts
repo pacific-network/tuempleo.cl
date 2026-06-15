@@ -1,6 +1,7 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { requireEnv } from './config/secrets';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as passport from 'passport';
 import * as session from 'express-session'; // Importar express-session
@@ -44,12 +45,17 @@ async function bootstrap() {
   });
 
   // Agregar middleware de sesión
+  const isProd = process.env.NODE_ENV === 'production';
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'mi-secreto-super-seguro',
+      secret: requireEnv('SESSION_SECRET'),
       resave: false,
       saveUninitialized: false,
-      cookie: { secure: false }, // cambiar a true si usas HTTPS
+      cookie: {
+        secure: isProd, // HTTPS-only en producción
+        httpOnly: true, // inaccesible desde JS (mitiga XSS robo de cookie)
+        sameSite: 'lax',
+      },
     }),
   );
 
@@ -62,7 +68,16 @@ async function bootstrap() {
     next()
   })
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true, // elimina propiedades no declaradas en el DTO (evita mass-assignment)
+      forbidNonWhitelisted: true, // rechaza con 400 si llegan propiedades desconocidas
+    }),
+  );
+
+  // Aplica @Exclude() de las entidades (p.ej. password) en TODAS las respuestas
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   app.use('/upload', express.static(process.env.UPLOAD_PATH || join(__dirname, '..', 'upload')));
 

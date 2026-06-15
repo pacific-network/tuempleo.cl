@@ -28,7 +28,8 @@ import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'pacificNetwork2024',
+        // Falla al arrancar si JWT_SECRET no está definido (sin fallback inseguro)
+        secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
