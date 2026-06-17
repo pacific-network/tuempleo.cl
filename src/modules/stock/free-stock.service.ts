@@ -58,4 +58,14 @@ export class FreeStockService {
             stock,
         };
     }
+
+    /**
+     * ↩️ Devuelve 1 unidad al stock mensual gratuito (compensación).
+     */
+    async refundMonthlyFreeStock(empresaId: number) {
+        const stock = await this.getMonthlyFreeStock(empresaId);
+        stock.cantidad_disponible += 1;
+        await this.freeRepo.save(stock);
+        return stock;
+    }
 }

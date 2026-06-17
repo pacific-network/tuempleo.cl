@@ -8,6 +8,7 @@ import {
     IsEnum,
     IsArray,
     IsNumber,
+    MaxLength,
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -125,6 +126,9 @@ export class DataOfertaDto {
     @IsNotEmpty({
         message: 'La descripción del puesto es obligatoria.',
     })
+    @MaxLength(20000, {
+        message: 'La descripción del puesto no puede superar los 20.000 caracteres.',
+    })
     descripcion_puesto: string
 
     // 🔟 Responsabilidades (opcional pero recomendado)
@@ -213,6 +217,7 @@ export class DataOfertaDto {
 export class CreateOfertaDto {
     @IsString()
     @IsNotEmpty({ message: 'El título es obligatorio.' })
+    @MaxLength(255, { message: 'El título no puede superar los 255 caracteres.' })
     titulo: string;
 
     @IsEnum(['GRATIS', 'BASICO', 'ESTANDAR', 'PREMIUM'] as const, {

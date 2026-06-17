@@ -48,15 +48,20 @@ export class StockService {
 
         for (const item of transaction.items) {
 
+            // Normalizamos a MAYÚSCULAS: si el ítem se guardó con otro casing
+            // (p.ej. 'basico' desde Webpay), igual lo cuadramos con el enum del stock.
+            const tipoAviso = (item.tipoAviso ?? '').toUpperCase() as
+                | 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+
             // 🎁 Avisos GRATIS NO generan stock pagado
-            if (item.tipoAviso === 'GRATIS') {
+            if (tipoAviso === 'GRATIS') {
                 console.log('🎁 Aviso GRATIS no genera stock pagado');
                 continue;
             }
 
             await this.addCreditsByTransaction(
                 empresaId,
-                item.tipoAviso, // ahora TS sabe que NO es GRATIS
+                tipoAviso, // ahora TS sabe que NO es GRATIS
                 item.cantidad
             );
         }
@@ -73,6 +78,8 @@ export class StockService {
         tipoAviso: 'BASICO' | 'ESTANDAR' | 'PREMIUM',
         cantidad: number,
     ) {
+        tipoAviso = tipoAviso.toUpperCase() as any;
+
         let stock = await this.stockRepo.findOne({
             where: { empresa: { id: empresaId }, tipoAviso },
             relations: ['empresa'],
@@ -146,6 +153,45 @@ export class StockService {
     }
 
 
+
+    /**
+     * ↩️ Revierte un crédito previamente consumido por useCredit.
+     * Compensación para cuando la operación posterior (crear la oferta) falla,
+     * de modo que el empleador no pierda el crédito. El inverso depende del
+     * origen que devolvió useCredit.
+     */
+    async refundCredit(
+        empresaId: number,
+        tipoAviso: 'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM',
+        origen: 'GRATIS' | 'PROMOCION' | 'PAGADO',
+        promocion: Promocion | null,
+    ): Promise<void> {
+        tipoAviso = tipoAviso.toUpperCase() as any;
+
+        if (origen === 'GRATIS') {
+            await this.freeStockService.refundMonthlyFreeStock(empresaId);
+            console.log(`↩️ Crédito GRATIS devuelto a empresa ${empresaId}`);
+            return;
+        }
+
+        if (origen === 'PROMOCION') {
+            if (promocion) {
+                await this.promocionService.revertirConsumo(promocion.id);
+                console.log(`↩️ Crédito de promoción ${promocion.id} devuelto a empresa ${empresaId}`);
+            }
+            return;
+        }
+
+        // PAGADO → reponer 1 unidad al stock del tipo
+        const stock = await this.stockRepo.findOne({
+            where: { empresa: { id: empresaId }, tipoAviso: tipoAviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM' },
+        });
+        if (stock) {
+            stock.cantidad_disponible += 1;
+            await this.stockRepo.save(stock);
+            console.log(`↩️ Crédito ${tipoAviso} devuelto a empresa ${empresaId}`);
+        }
+    }
 
     /**
      * 🔍 Consulta del stock actual

@@ -239,18 +239,21 @@ export class OfertaService {
 
     // 3️⃣ Verificar crédito o stock gratis
     let promocionUsada: Awaited<ReturnType<typeof this.StockService.useCredit>>['promocion'] = null;
+    let origenCredito: 'GRATIS' | 'PROMOCION' | 'PAGADO' = 'GRATIS';
     if (data.tipo_aviso === 'GRATIS') {
       const result = await this.freeStockService.useMonthlyFreeStock(data.empresa_id);
 
       if (!result.disponible) {
         throw new BadRequestException(result.mensaje);
       }
+      origenCredito = 'GRATIS';
     } else {
-      const { promocion } = await this.StockService.useCredit(
+      const { promocion, origen } = await this.StockService.useCredit(
         data.empresa_id,
         data.tipo_aviso as 'BASICO' | 'ESTANDAR' | 'PREMIUM'
       );
       promocionUsada = promocion;
+      origenCredito = origen;
     }
 
     // 4️⃣ Calcular fechas
@@ -282,7 +285,29 @@ export class OfertaService {
     };
 
     const oferta = this.ofertaRepository.create(nuevaOferta);
-    const saved = await this.ofertaRepository.save(oferta);
+
+    // Compensación: si el guardado falla (p. ej. error de DB), devolvemos el
+    // crédito ya consumido para que el empleador no lo pierda, y traducimos el
+    // error a un BadRequest claro en vez de un 500 crudo.
+    let saved: Oferta;
+    try {
+      saved = await this.ofertaRepository.save(oferta);
+    } catch (err) {
+      try {
+        await this.StockService.refundCredit(
+          data.empresa_id,
+          data.tipo_aviso,
+          origenCredito,
+          promocionUsada,
+        );
+      } catch (refundErr) {
+        console.error('⚠️ Falló la devolución de crédito tras error al crear la oferta:', refundErr);
+      }
+      console.error('❌ Error al guardar la oferta (crédito devuelto):', err);
+      throw new BadRequestException(
+        'No se pudo crear la oferta. Se devolvió el crédito; revisa el contenido e inténtalo nuevamente.',
+      );
+    }
 
     console.log(
       `🧾 Oferta creada correctamente: ${saved.titulo} (Empresa ${empresa.id})` +

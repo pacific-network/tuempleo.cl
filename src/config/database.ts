@@ -53,6 +53,9 @@ export const databaseConfig: TypeOrmModuleOptions = {
     password: process.env.DB_PASSWORD || '',
     username: process.env.DB_USERNAME || 'root',
     database: process.env.DB_NAME || 'tuempleo',
+    // utf8mb4 = UTF-8 completo (4 bytes). Sin esto, emojis y caracteres como 🚀 ✨
+    // en la descripción de la oferta provocan ER_TRUNCATED_WRONG_VALUE_FOR_FIELD.
+    charset: 'utf8mb4',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
         Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog, Bug, SystemAlert, Promocion, SystemConfig, Cupon, CuponCanje],

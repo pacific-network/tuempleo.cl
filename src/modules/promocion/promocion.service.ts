@@ -79,6 +79,20 @@ export class PromocionService {
     }
 
     /**
+     * ➕ Revierte 1 cupo consumido de una promo (compensación cuando la
+     * operación que motivó el consumo falla, p. ej. al crear la oferta).
+     * No baja de 0 por seguridad.
+     */
+    async revertirConsumo(promocionId: number): Promise<void> {
+        const promo = await this.promoRepo.findOne({ where: { id: promocionId } });
+        if (!promo) return;
+        if (promo.cantidad_usada > 0) {
+            promo.cantidad_usada -= 1;
+            await this.promoRepo.save(promo);
+        }
+    }
+
+    /**
      * 🔍 Promociones vigentes con saldo (para mostrar en disponibilidad).
      */
     async getVigentes(empresaId: number): Promise<Promocion[]> {
