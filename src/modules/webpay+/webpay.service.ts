@@ -76,7 +76,9 @@ export class WebpayService {
                 amount: total,
                 status: TransactionStatus.PENDIENTE,
                 items: items.map((i) => ({
-                    tipoAviso: i.tipoAviso,
+                    // Persistimos SIEMPRE en MAYÚSCULAS para cuadrar con el enum del stock.
+                    tipoAviso: String(i.tipoAviso ?? '').toUpperCase() as
+                        'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM',
                     cantidad: i.cantidad,
                     precioUnitario: i.precioUnitario,
                     subtotal: (i.precioUnitario ?? 0) * (i.cantidad ?? 1),

@@ -116,6 +116,37 @@ INSERT IGNORE INTO area_trabajo (nombre) VALUES
 ('Eventos y Produccion'),
 
 -- =========================
+-- Diseño / Creatividad / Audiovisual
+-- =========================
+('Diseno Grafico'),
+('Diseno UX/UI'),
+('Diseno Web'),
+('Diseno Industrial'),
+('Diseno de Producto'),
+('Diseno de Interiores'),
+('Diseno Editorial'),
+('Diseno de Modas y Textil'),
+('Direccion de Arte'),
+('Ilustracion'),
+('Animacion y Motion Graphics'),
+('Modelado y Renderizado 3D'),
+('Produccion Audiovisual'),
+('Fotografia'),
+('Edicion de Video'),
+('Locucion y Doblaje'),
+('Arquitectura'),
+
+-- =========================
+-- Otras areas
+-- =========================
+('Agronomia y Agroindustria'),
+('Medio Ambiente y Sostenibilidad'),
+('Traduccion e Interpretacion'),
+('Redaccion y Contenidos'),
+('Veterinaria'),
+('Quimica y Laboratorio'),
+
+-- =========================
 -- Finanzas / Riesgo
 -- =========================
 ('Riesgo y Cumplimiento'),
