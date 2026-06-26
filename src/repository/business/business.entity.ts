@@ -31,7 +31,17 @@ export class Empresa {
     @Column({ type: 'varchar', length: 1000, nullable: true })
     logo_url: string;  // Campo para el logo
 
-    // Dato no visibles 
+    // ✅ Insignia de empresa verificada (vía SMS) para combatir ofertas fraudulentas.
+    @Column({ type: 'boolean', default: false })
+    verificada: boolean;
+
+    @Column({ type: 'datetime', nullable: true })
+    fecha_verificacion: Date | null;
+
+    @Column({ type: 'varchar', length: 20, nullable: true })
+    telefono_verificado: string | null;
+
+    // Dato no visibles
     @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
     fecha_creacion: Date;
 

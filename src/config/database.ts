@@ -42,6 +42,8 @@ import { Promocion } from 'src/repository/promocion/promocion.entity';
 import { SystemConfig } from 'src/repository/system-config/system-config.entity';
 import { Cupon } from 'src/repository/cupon/cupon.entity';
 import { CuponCanje } from 'src/repository/cupon/cupon-canje.entity';
+import { Entrevista } from 'src/repository/hiring_process/entrevista.entity';
+import { VerificacionEmpresa } from 'src/repository/business/verificacion-empresa.entity';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -58,7 +60,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     charset: 'utf8mb4',
     entities: [Registro, Rol, Usuario, Postulante,
         Curriculum, Planes, Empresa, Empleador, Oferta, Postulacion,
-        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog, Bug, SystemAlert, Promocion, SystemConfig, Cupon, CuponCanje],
+        Transaction, ShoppingCart, ProcesoSeleccion, TrabajoGuardado, CompanyReview, EmployerPlanLedger, OfferPolicy, TransactionItem, Stock, PaymentIntent, CountVisit, CuposUsados, StockGratis, Sms, Region, Comuna, WorkArea, InstitucionEducacional, BusinessActivity, Mail, AlertaEmpleo, InvitacionEmpleador, LegalDocument, ConsentRecord, AccountDeletionLog, Bug, SystemAlert, Promocion, SystemConfig, Cupon, CuponCanje, Entrevista, VerificacionEmpresa],
     // logging: true,
     // Solo true si DB_SYNCHRONIZE === 'true'. En producción debe ser false
     // para evitar que TypeORM altere/elimine columnas automáticamente.

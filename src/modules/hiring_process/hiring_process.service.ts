@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ProcesoSeleccion } from "src/repository/hiring_process/hiring_process.entity";
+import { Entrevista } from "src/repository/hiring_process/entrevista.entity";
 import { Postulacion } from "src/repository/applications/applications.entity";
 import { Empleador } from "src/repository/employer/employer.entity";
+import { CrearEntrevistaDto } from "./dto/crear-entrevista.dto";
+import { ActualizarEntrevistaDto } from "./dto/actualizar-entrevista.dto";
 
 @Injectable()
 export class ProcesoSeleccionService {
@@ -16,6 +19,9 @@ export class ProcesoSeleccionService {
 
         @InjectRepository(Empleador)
         private readonly empleadorRepo: Repository<Empleador>,
+
+        @InjectRepository(Entrevista)
+        private readonly entrevistaRepo: Repository<Entrevista>,
     ) { }
 
     async gestionarSeleccion(
@@ -162,8 +168,115 @@ export class ProcesoSeleccionService {
         return this.postulacionRepo.save(postulacion);
     }
 
+    // ======================================================
+    // 📅 ENTREVISTAS / CIERRE DEL PROCESO
+    // ======================================================
 
+    // Helper: valida que el usuario (empleador) sea dueño de la oferta de la
+    // postulación y devuelve { postulacion, gestor }.
+    private async validarDuenioPostulacion(postulacionId: number, userId: number) {
+        const postulacion = await this.postulacionRepo.findOne({
+            where: { id: postulacionId },
+            relations: ['oferta', 'oferta.empleador', 'oferta.empleador.usuario'],
+        });
+        if (!postulacion) throw new NotFoundException('Postulación no encontrada');
+        if (postulacion.oferta?.empleador?.usuario?.id !== userId) {
+            throw new ForbiddenException('El empleador no es dueño de la oferta');
+        }
 
+        const gestor = await this.empleadorRepo.findOne({ where: { usuario: { id: userId } } });
+        return { postulacion, gestor };
+    }
+
+    // Helper: valida que la entrevista pertenezca a una oferta del empleador.
+    private async obtenerEntrevistaDelEmpleador(entrevistaId: number, userId: number) {
+        const entrevista = await this.entrevistaRepo.findOne({
+            where: { id: entrevistaId },
+            relations: ['postulacion', 'postulacion.oferta', 'postulacion.oferta.empleador', 'postulacion.oferta.empleador.usuario'],
+        });
+        if (!entrevista) throw new NotFoundException('Entrevista no encontrada');
+        if (entrevista.postulacion?.oferta?.empleador?.usuario?.id !== userId) {
+            throw new ForbiddenException('El empleador no es dueño de esta entrevista');
+        }
+        return entrevista;
+    }
+
+    async agendarEntrevista(postulacionId: number, userId: number, dto: CrearEntrevistaDto) {
+        const { postulacion, gestor } = await this.validarDuenioPostulacion(postulacionId, userId);
+
+        const entrevista = this.entrevistaRepo.create({
+            postulacion,
+            creadoPor: gestor ?? null,
+            fecha_propuesta: new Date(dto.fecha_propuesta),
+            modalidad_contacto: dto.modalidad_contacto,
+            detalle_contacto: dto.detalle_contacto,
+            mensaje: dto.mensaje ?? null,
+            duracion_min: dto.duracion_min ?? 30,
+            estado: 'propuesta',
+        });
+        const guardada = await this.entrevistaRepo.save(entrevista);
+
+        // Al agendar una entrevista el candidato avanza al menos a 'seleccionado'.
+        if (['enviada', 'vista', 'en_revision', 'cualificado', 'preseleccionado'].includes(postulacion.estado)) {
+            postulacion.estado = 'seleccionado';
+            await this.postulacionRepo.save(postulacion);
+        }
+
+        return guardada;
+    }
+
+    async reprogramarEntrevista(entrevistaId: number, userId: number, dto: ActualizarEntrevistaDto) {
+        const entrevista = await this.obtenerEntrevistaDelEmpleador(entrevistaId, userId);
+
+        if (dto.fecha_propuesta !== undefined) {
+            entrevista.fecha_propuesta = new Date(dto.fecha_propuesta);
+            entrevista.estado = 'reprogramada';
+        }
+        if (dto.modalidad_contacto !== undefined) entrevista.modalidad_contacto = dto.modalidad_contacto;
+        if (dto.detalle_contacto !== undefined) entrevista.detalle_contacto = dto.detalle_contacto;
+        if (dto.mensaje !== undefined) entrevista.mensaje = dto.mensaje;
+        if (dto.duracion_min !== undefined) entrevista.duracion_min = dto.duracion_min;
+
+        return this.entrevistaRepo.save(entrevista);
+    }
+
+    async cambiarEstadoEntrevista(
+        entrevistaId: number,
+        userId: number,
+        estado: Entrevista['estado'],
+    ) {
+        const entrevista = await this.obtenerEntrevistaDelEmpleador(entrevistaId, userId);
+        entrevista.estado = estado;
+        return this.entrevistaRepo.save(entrevista);
+    }
+
+    // Candidato: entrevistas de sus postulaciones (notificación in-app).
+    async listarEntrevistasDelPostulante(userId: number) {
+        return this.entrevistaRepo
+            .createQueryBuilder('e')
+            .leftJoinAndSelect('e.postulacion', 'post')
+            .leftJoinAndSelect('post.postulante', 'postulante')
+            .leftJoinAndSelect('postulante.usuario', 'usuario')
+            .leftJoinAndSelect('post.oferta', 'oferta')
+            .leftJoinAndSelect('oferta.empresa', 'empresa')
+            .where('usuario.id = :userId', { userId })
+            .orderBy('e.fecha_propuesta', 'DESC')
+            .getMany();
+    }
+
+    // Empleador: entrevistas agendadas por su empresa.
+    async listarEntrevistasPorEmpresa(empresaId: number) {
+        if (!empresaId) throw new BadRequestException('El ID de la empresa es requerido.');
+        return this.entrevistaRepo
+            .createQueryBuilder('e')
+            .leftJoinAndSelect('e.postulacion', 'post')
+            .leftJoinAndSelect('post.postulante', 'postulante')
+            .leftJoinAndSelect('postulante.usuario', 'usuario')
+            .leftJoinAndSelect('post.oferta', 'oferta')
+            .where('oferta.empresa_id = :empresaId', { empresaId })
+            .orderBy('e.fecha_propuesta', 'DESC')
+            .getMany();
+    }
 
 
 

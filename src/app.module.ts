@@ -45,6 +45,7 @@ import { SeoModule } from './modules/seo/seo.module';
 import { SystemAlertsModule } from './modules/system-alerts/system-alerts.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { CuponModule } from './modules/cupon/cupon.module';
+import { MatchModule } from './modules/match/match.module';
 
 
 
@@ -117,6 +118,7 @@ import { CuponModule } from './modules/cupon/cupon.module';
     SystemAlertsModule,
     SystemConfigModule,
     CuponModule,
+    MatchModule,
 
   ],
   providers: [
