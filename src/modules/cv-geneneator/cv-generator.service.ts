@@ -88,7 +88,7 @@ export class CvGeneratorService {
 
         data.educacion.forEach((edu) => {
           doc.fontSize(12).text(
-            `${edu.titulo} - ${edu.institucion} (${edu.anio_inicio} - ${edu.anio_finalizacion ?? 'Presente'
+            `${edu.titulo} - ${edu.institucion} (${edu.anno_inicio} - ${edu.anno_termino || 'Presente'
             })`,
           );
 
@@ -132,7 +132,10 @@ export class CvGeneratorService {
 
         doc.text(`Modalidad: ${p.modalidad}`);
         doc.text(`Categoría: ${p.categoria_empleo}`);
-        doc.text(`Salario esperado: ${p.salario_esperado.toLocaleString('es-CL')}`);
+        // salario_esperado es opcional: omitir la línea en vez de imprimir "undefined".
+        if (typeof p.salario_esperado === 'number') {
+          doc.text(`Salario esperado: ${p.salario_esperado.toLocaleString('es-CL')}`);
+        }
 
         doc.moveDown(1.5);
       }

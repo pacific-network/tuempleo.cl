@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsNotEmpty,
   IsNumber,
@@ -55,13 +55,16 @@ class EducacionDto {
   @IsString()
   estado?: string;
 
+  // Misma convención que ExperienciaDto (anno_inicio/anno_termino): antes eran
+  // anio_inicio/anio_finalizacion y la discrepancia rompía el formulario.
+  // Los registros viejos se renombran con `npm run migrate:educacion-annos`.
   @IsOptional()
   @IsString()
-  anio_inicio?: string;
+  anno_inicio?: string;
 
   @IsOptional()
   @IsString()
-  anio_finalizacion?: string;
+  anno_termino?: string;
 }
 
 class ExperienciaDto {
@@ -103,8 +106,15 @@ class PreferenciasDto {
   @IsString()
   categoria_empleo: string;
 
+  // Llega como string desde el input del formulario. El Transform normaliza el
+  // vacío a undefined para que @IsOptional lo acepte: Number('') daría 0, y un
+  // candidato que no declara pretensión salarial no debe guardar 0.
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === '' || value === null || value === undefined ? undefined : Number(value),
+  )
   @IsNumber()
-  salario_esperado: number;
+  salario_esperado?: number;
 
   @IsOptional()
   @IsString()
