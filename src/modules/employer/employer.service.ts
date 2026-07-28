@@ -33,6 +33,20 @@ export class EmpleadorService {
         private readonly stockService: StockService,
     ) { }
 
+    /**
+     * Verifica si un RUT ya está tomado por otro usuario (índice único en usuario.rut).
+     * excludeUserId permite que el propio dueño del RUT no se autodetecte como conflicto.
+     */
+    async checkRutUsuarioExists(
+        rut: string,
+        excludeUserId?: number,
+    ): Promise<{ exists: boolean; disponible: boolean }> {
+        const usuario = await this.usuarioRepository.findOne({ where: { rut } });
+        if (!usuario) return { exists: false, disponible: true };
+        const esPropio = excludeUserId !== undefined && usuario.id === excludeUserId;
+        return { exists: true, disponible: esPropio };
+    }
+
     async checkEmpleadorExists(userId: number): Promise<{ exists: boolean; empleador?: { id: number; empresaId: number } }> {
         const empleador = await this.empleadorRepository.findOne({
             where: { usuario: { id: userId } },
@@ -66,9 +80,21 @@ export class EmpleadorService {
             throw new NotAcceptableException('Usuario no encontrado');
         }
 
-        // 2. Actualizar rut en usuario
-        usuario.rut = createEmployerDto.rut;
-        await this.usuarioRepository.save(usuario);
+        // 2. Actualizar rut en usuario (validando el índice único antes de escribir,
+        //    para no reventar con ER_DUP_ENTRY a mitad del onboarding)
+        if (usuario.rut !== createEmployerDto.rut) {
+            const { disponible } = await this.checkRutUsuarioExists(
+                createEmployerDto.rut,
+                usuario.id,
+            );
+            if (!disponible) {
+                throw new ConflictException(
+                    'El RUT ya está registrado por otro usuario',
+                );
+            }
+            usuario.rut = createEmployerDto.rut;
+            await this.usuarioRepository.save(usuario);
+        }
 
         // 3. Buscar empresa
         const empresa = await this.empresaRepository.findOne({

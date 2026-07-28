@@ -90,11 +90,18 @@ export class EmpresaService {
     }
 
     public async deleteBusinessById(rut: string): Promise<void> {
-        return this.businessRepository.delete({ rut }).then(() => {
-            // Si la empresa fue eliminada correctamente, no hacemos nada más
-        }).catch((error) => {
-            throw new NotFoundException('Empresa no encontrada o no se pudo eliminar');
-        });
+        let result: { affected?: number | null };
+        try {
+            result = await this.businessRepository.delete({ rut });
+        } catch (error) {
+            // No enmascarar el error real: típicamente es una FK apuntando a la empresa
+            // (p. ej. la promoción de bienvenida creada en createBusiness).
+            console.error('❌ [BUSINESS] Falló el DELETE de empresa', { rut }, error);
+            throw error;
+        }
+        if (!result.affected) {
+            throw new NotFoundException('Empresa no encontrada');
+        }
     }
 
 

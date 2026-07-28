@@ -25,7 +25,8 @@ export class Stock {
     @Column({ type: 'int', name: 'cantidad_disponible', default: 0 })
     cantidad_disponible: number;
 
-    @ManyToOne(() => Empresa)
+    // CASCADE: el stock nace con la empresa; no debe bloquear su borrado.
+    @ManyToOne(() => Empresa, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'empresa_id' })
     empresa: Empresa;
 

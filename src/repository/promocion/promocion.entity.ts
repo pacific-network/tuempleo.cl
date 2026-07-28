@@ -14,7 +14,9 @@ export class Promocion {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => Empresa)
+    // CASCADE: la promoción de bienvenida se crea junto con la empresa, así que no
+    // debe impedir borrarla (bloqueaba el rollback del onboarding).
+    @ManyToOne(() => Empresa, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'empresa_id' })
     empresa: Empresa;
 

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Empresa } from '../../repository/business/business.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CreateBusinessDto } from './dto/create-business.dto';
+import { PromocionService } from '../promocion/promocion.service';
 
 describe('BusinessService', () => {
     let service: EmpresaService;
@@ -20,6 +21,13 @@ describe('BusinessService', () => {
                         save: jest.fn(),
                     },
                 },
+                {
+                    // createBusiness otorga el regalo de bienvenida tras guardar.
+                    provide: PromocionService,
+                    useValue: {
+                        otorgarBienvenida: jest.fn(),
+                    },
+                },
             ],
         }).compile();
 
@@ -33,7 +41,6 @@ describe('BusinessService', () => {
             rut: '12345678-9',
             razon_social: 'Tecnologías ACME SpA',
             nombre_fantasia: 'ACME Tech',
-            plan_id: 1,
             modificado_por: 42,
             data: {
                 actividades_economicas: ['Servicios TI', 'Consultoría'],

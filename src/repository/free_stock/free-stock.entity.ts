@@ -15,7 +15,8 @@ export class StockGratis {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => Empresa)
+    // CASCADE: el stock gratuito nace con la empresa; no debe bloquear su borrado.
+    @ManyToOne(() => Empresa, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'empresa_id' })
     empresa: Empresa;
 

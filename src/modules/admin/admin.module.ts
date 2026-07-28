@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { LimpiezaService } from './limpieza.service';
 import { Usuario } from 'src/repository/user/user.entity';
 import { Registro } from 'src/repository/register/register.entity';
 import { Oferta } from 'src/repository/job_offer/job-offer.entity';
@@ -24,7 +25,7 @@ import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
     ]),
     EncryptModule,
   ],
-  providers: [AdminService],
+  providers: [AdminService, LimpiezaService],
   controllers: [AdminController],
 })
 export class AdminModule {}

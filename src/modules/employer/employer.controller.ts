@@ -35,6 +35,19 @@ export class EmpleadorController {
     return this.empleadorService.checkEmpleadorExists(userId);
   }
 
+  // Valida disponibilidad del RUT contra el índice único de usuario.rut.
+  // userId (opcional) excluye al propio dueño del RUT del chequeo.
+  @Get('check-rut/:rut')
+  async checkRutUsuario(
+    @Param('rut') rut: string,
+    @Query('userId') userId?: string,
+  ) {
+    return this.empleadorService.checkRutUsuarioExists(
+      rut,
+      userId ? parseInt(userId, 10) : undefined,
+    );
+  }
+
   @Get(':userId')
   async getEmployerByUserId(@Param('userId') userId: number): Promise<Empleador | null> {
     return this.empleadorService.findEmployerByUserId(userId);

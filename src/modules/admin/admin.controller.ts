@@ -7,6 +7,7 @@ import {
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { StaffGuard } from '../auth/guards/staff.guard';
 import { AdminService } from './admin.service';
+import { LimpiezaService } from './limpieza.service';
 import { CreateSupervisorDto } from './dto/create-supervisor.dto';
 import { User } from 'src/shared/decorators/user.decorator';
 
@@ -17,7 +18,10 @@ import { User } from 'src/shared/decorators/user.decorator';
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('v1/admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly limpiezaService: LimpiezaService,
+  ) {}
 
   // ─────────────────────────────────────────
   // PING / TEST
@@ -214,5 +218,32 @@ export class AdminController {
   @Get('transacciones/:id')
   getTransaccion(@Param('id') id: string) {
     return this.adminService.getTransaccion(id);
+  }
+
+  // ─────────────────────────────────────────
+  // LIMPIEZA DE EMPRESAS HUÉRFANAS
+  // ─────────────────────────────────────────
+
+  // Listado + motivo del bloqueo. Read-only, accesible a staff.
+  @Get('limpieza/empresas-huerfanas')
+  getEmpresasHuerfanas(@Query('minutos') minutos = '60') {
+    return this.limpiezaService.listarEmpresasHuerfanas(Number(minutos));
+  }
+
+  // Diagnóstico detallado de una empresa. Read-only, accesible a staff.
+  @Get('limpieza/empresas/:id')
+  getDiagnosticoEmpresa(@Param('id', ParseIntPipe) id: number) {
+    return this.limpiezaService.diagnosticarEmpresa(id);
+  }
+
+  // 🔒 Borrado: solo admin. dryRun=true por defecto — hay que pedir
+  // explícitamente ?dryRun=false para que escriba.
+  @UseGuards(AdminGuard)
+  @Delete('limpieza/empresas/:id')
+  eliminarEmpresaHuerfana(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('dryRun') dryRun = 'true',
+  ) {
+    return this.limpiezaService.eliminarEmpresa(id, dryRun !== 'false');
   }
 }

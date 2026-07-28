@@ -1,5 +1,6 @@
 import {
     ConflictException,
+    HttpException,
     Injectable,
     InternalServerErrorException,
 } from '@nestjs/common'
@@ -30,6 +31,25 @@ export class FormsService {
             rutEmpresa: dto.business.rut,
             rutEmpleador: dto.employer.rut,
         })
+
+        // ===============================
+        // 0️⃣ PRE-VALIDAR RUT DEL EMPLEADOR
+        // ===============================
+        // Se valida ANTES de crear la empresa: si el RUT está tomado, fallar acá evita
+        // dejar la empresa huérfana cuando el rollback posterior no puede borrarla.
+        const { disponible } = await this.empleadorService.checkRutUsuarioExists(
+            dto.employer.rut,
+            userId,
+        )
+        if (!disponible) {
+            console.warn('⚠️ [FORMS] RUT de empleador ya registrado', {
+                rut: dto.employer.rut,
+                userId,
+            })
+            throw new ConflictException(
+                'El RUT ya está registrado por otro usuario',
+            )
+        }
 
         try {
             // ===============================
@@ -92,10 +112,23 @@ export class FormsService {
             } catch (err) {
                 console.error('❌ [FORMS] Error creando empleador', err)
 
-                // 🔥 rollback empresa
-                await this.businessService.deleteBusinessById(
-                    createdBusiness.rut,
-                )
+                // 🔥 rollback empresa (best-effort): si falla, se loguea pero NO se
+                // propaga, para no perder el error original que causó el rollback.
+                try {
+                    await this.businessService.deleteBusinessById(
+                        createdBusiness.rut,
+                    )
+                } catch (rollbackErr) {
+                    console.error(
+                        '🚨 [FORMS] Rollback falló, empresa huérfana en BD',
+                        { empresaId: createdBusiness.id, rut: createdBusiness.rut },
+                        rollbackErr,
+                    )
+                }
+
+                if (err instanceof ConflictException) {
+                    throw err
+                }
 
                 if (err?.code === 'ER_DUP_ENTRY') {
                     throw new ConflictException(
@@ -110,6 +143,12 @@ export class FormsService {
 
         } catch (err) {
             console.error('❌ [FORMS] Error creando empresa', err)
+
+            // Respetar las excepciones HTTP ya tipadas (409, etc.) en vez de
+            // aplastarlas a un 500 genérico.
+            if (err instanceof HttpException) {
+                throw err
+            }
 
             if (err?.code === 'ER_DUP_ENTRY') {
                 throw new ConflictException(

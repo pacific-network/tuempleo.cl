@@ -100,11 +100,12 @@ export class SiiScraperService {
                         Accept: 'text/html,application/xhtml+xml',
                         'Accept-Language': 'es-CL,es;q=0.9',
                     },
-                    responseType: 'text',
+                    // El SII responde charset=ISO-8859-1: decodificar como utf-8 corrompe los acentos.
+                    responseType: 'arraybuffer',
                     timeout: 15000,
                 }),
             );
-            return response.data as string;
+            return Buffer.from(response.data as ArrayBuffer).toString('latin1');
         } catch (error) {
             this.logger.error(`SII STC request falló: ${error?.message ?? error}`);
             throw new HttpException(
