@@ -47,9 +47,17 @@ export class PostulanteController {
     private readonly cvParserService: CvParserService,
   ) { }
 
+  // userId (opcional) excluye al propio dueño del RUT: un usuario que ya cargó su
+  // RUT como empleador puede usarlo para su perfil de candidato.
   @Get('check-rut/:rut')
-  async checkRut(@Param('rut') rut: string) {
-    return this.postulanteService.checkRutExists(rut);
+  async checkRut(
+    @Param('rut') rut: string,
+    @Query('userId') userId?: string,
+  ) {
+    return this.postulanteService.checkRutExists(
+      rut,
+      userId ? parseInt(userId, 10) : undefined,
+    );
   }
 
   // ── Perfil propio (seguro: userId desde JWT) ──────────────

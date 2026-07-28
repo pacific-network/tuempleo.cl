@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseInterceptors, UploadedFile, Req, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFile, Req, UseGuards, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 import * as path from 'path';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -28,6 +28,20 @@ export class UserController {
     @Post()
     createUser(@Body() userData: any) {
         return this.userService.createUser(userData);
+    }
+
+    // Estado de un RUT para ambos onboardings: dice si sirve para registrarse como
+    // empleador y/o como candidato. Declarado ANTES de '/:id' para que no lo capture.
+    // userId (opcional) identifica al dueño del RUT y habilita el dual-rol.
+    @Get('rut-status/:rut')
+    getRutStatus(
+        @Param('rut') rut: string,
+        @Query('userId') userId?: string,
+    ) {
+        return this.userService.getRutStatus(
+            rut,
+            userId ? parseInt(userId, 10) : undefined,
+        );
     }
 
     @Get('/:id')

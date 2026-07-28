@@ -66,3 +66,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Informe de auditoría de seguridad (sensible: detalla vulnerabilidades). Fuera del repo.
 SECURITY-AUDIT.md
+
+# Informe de auditoría de flujos (sensible: detalla rutas explotables). Fuera del repo.
+AUDIT-FLUJOS.md
+AUDIT-FLUJOS.html

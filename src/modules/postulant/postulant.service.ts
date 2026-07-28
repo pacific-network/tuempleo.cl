@@ -17,9 +17,26 @@ export class PostulanteService {
     private readonly usuarioRepository: Repository<Usuario>,
   ) {}
 
-  async checkRutExists(rut: string): Promise<{ exists: boolean }> {
+  /**
+   * Disponibilidad de un RUT contra el índice único de `usuario.rut`.
+   *
+   * excludeUserId evita el falso positivo del dual-rol: si el usuario ya cargó su
+   * RUT al registrarse como empleador, ese RUT es suyo y sirve igual para su perfil
+   * de candidato. `crearPostulante` ya lo permite ("RUT único, permitiendo mismo
+   * usuario"), así que sin esta exclusión la validación previa era más estricta que
+   * la escritura y bloqueaba un caso válido.
+   *
+   * `exists` se mantiene por compatibilidad con los consumidores actuales, pero la
+   * decisión correcta es `disponible`.
+   */
+  async checkRutExists(
+    rut: string,
+    excludeUserId?: number,
+  ): Promise<{ exists: boolean; disponible: boolean }> {
     const usuario = await this.usuarioRepository.findOne({ where: { rut } });
-    return { exists: !!usuario };
+    if (!usuario) return { exists: false, disponible: true };
+    const esPropio = excludeUserId !== undefined && usuario.id === excludeUserId;
+    return { exists: true, disponible: esPropio };
   }
 
   async getRutByUserId(userId: number): Promise<string> {
