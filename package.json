@@ -21,7 +21,8 @@
     "seed:admin": "ts-node -r tsconfig-paths/register src/db/seed/seed-admin.ts",
     "seed:legal": "ts-node -r tsconfig-paths/register src/db/seed/seed-legal-documents.ts",
     "migrate:empresa-verificacion": "ts-node -r tsconfig-paths/register src/db/migrate/add-empresa-verificacion.ts",
-    "migrate:cascade-empresa": "ts-node -r tsconfig-paths/register src/db/migrate/add-cascade-empresa.ts"
+    "migrate:cascade-empresa": "ts-node -r tsconfig-paths/register src/db/migrate/add-cascade-empresa.ts",
+    "migrate:entrevista-tables": "ts-node -r tsconfig-paths/register src/db/migrate/add-entrevista-verificacion-tables.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
