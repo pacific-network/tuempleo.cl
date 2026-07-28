@@ -38,6 +38,13 @@ class DatosPersonalesDto {
 
   @IsString()
   fecha_nacimiento: string;
+
+  // Biografía libre que el candidato edita desde su perfil. Vive en el JSON de
+  // `postulante.data`, así que no requiere migración; sin declararla aquí el
+  // ValidationPipe global (forbidNonWhitelisted) rechazaba el PATCH con 400.
+  @IsOptional()
+  @IsString()
+  descripcion_bio?: string;
 }
 
 class EducacionDto {
