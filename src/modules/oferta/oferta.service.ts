@@ -402,6 +402,27 @@ export class OfertaService {
     return { message: `Oferta con ID ${id} eliminada correctamente` };
   }
 
+  /**
+   * `oferta.data` es una columna TEXT nullable con JSON serializado, así que
+   * puede llegar en null (ofertas creadas antes de que el campo fuera
+   * obligatorio) o con contenido que no parsea. Devuelve siempre un objeto para
+   * que el merge del PATCH no tire un 500.
+   */
+  private parseData(raw: string | null, ofertaId?: number): Record<string, any> {
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      // Se avisa porque el merge va a partir de {} y el contenido viejo se
+      // reemplaza: sin este log el dato desaparecería sin dejar rastro.
+      console.warn(
+        `⚠️ oferta ${ofertaId ?? '?'}: el campo data no es JSON válido, se parte de {} para el merge`,
+      );
+      return {};
+    }
+  }
+
   // ======================================================
   // ✏️ ACTUALIZAR OFERTA
   // ======================================================
@@ -424,8 +445,17 @@ export class OfertaService {
       throw new ForbiddenException(`No tienes permisos para modificar esta oferta`);
 
     if (data.titulo !== undefined) oferta.titulo = data.titulo;
+
+    // Merge en vez de reemplazo: el PATCH es parcial, así que las claves que no
+    // vienen en el body tienen que sobrevivir. Un `oferta.data = dto.data` pelado
+    // borraría todo lo que el cliente no volvió a mandar.
+    //
+    // Antes esto asignaba a `data.data` (el DTO de entrada) en lugar de a la
+    // entidad, así que el save() guardaba la oferta sin los cambios y el
+    // endpoint respondía 200 habiendo descartado todo.
     if (data.data !== undefined) {
-      data.data = typeof data.data === 'object' ? JSON.stringify(data.data) : data.data;
+      const actual = this.parseData(oferta.data, oferta.id);
+      oferta.data = JSON.stringify({ ...actual, ...data.data });
     }
 
     oferta.modificada_por = empleador;
