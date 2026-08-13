@@ -19,6 +19,35 @@ const WELCOME_PROMO_DEFAULT: WelcomePromoConfig = {
     dias: 30,
 };
 
+export const CIERRE_AUTOMATICO_KEY = 'CIERRE_AUTOMATICO';
+
+export interface CierreAutomaticoConfig {
+    /** Interruptor general. Apagado, el cron no cierra ni notifica nada. */
+    enabled: boolean;
+    /** Días sin movimiento tras los que se cierra una postulación temprana. */
+    diasInactividad: number;
+    /** Días que se le dan al empleador para resolver candidatos avanzados. */
+    diasGraciaAvanzados: number;
+    /** Segundo interruptor, solo para el correo: se puede cerrar sin notificar. */
+    notificarEmail: boolean;
+    /** message_id de la plantilla Pacific Network para el candidato. */
+    messageIdCandidato: string | null;
+    /** message_id de la plantilla de aviso al empleador. */
+    messageIdEmpleador: string | null;
+    /** Techo de correos por ejecución; evita una avalancha en el primer barrido. */
+    maxCorreosPorEjecucion: number;
+}
+
+const CIERRE_AUTOMATICO_DEFAULT: CierreAutomaticoConfig = {
+    enabled: false,
+    diasInactividad: 30,
+    diasGraciaAvanzados: 5,
+    notificarEmail: false,
+    messageIdCandidato: null,
+    messageIdEmpleador: null,
+    maxCorreosPorEjecucion: 200,
+};
+
 @Injectable()
 export class SystemConfigService {
     constructor(
@@ -82,6 +111,37 @@ export class SystemConfigService {
             JSON.stringify(merged),
             updatedBy,
             'Campaña de bienvenida para empresas nuevas',
+        );
+        return merged;
+    }
+
+    // ─────────────────────────────────────────
+    // Cierre automático de postulaciones
+    // ─────────────────────────────────────────
+
+    /** Config del cierre automático; retorna defaults si no está seteada. */
+    async getCierreAutomatico(): Promise<CierreAutomaticoConfig> {
+        const raw = await this.get(CIERRE_AUTOMATICO_KEY);
+        if (!raw) return { ...CIERRE_AUTOMATICO_DEFAULT };
+        try {
+            return { ...CIERRE_AUTOMATICO_DEFAULT, ...JSON.parse(raw) };
+        } catch {
+            return { ...CIERRE_AUTOMATICO_DEFAULT };
+        }
+    }
+
+    /** Actualiza (parcialmente) la config del cierre automático. */
+    async setCierreAutomatico(
+        partial: Partial<CierreAutomaticoConfig>,
+        updatedBy: number | null = null,
+    ): Promise<CierreAutomaticoConfig> {
+        const actual = await this.getCierreAutomatico();
+        const merged: CierreAutomaticoConfig = { ...actual, ...partial };
+        await this.set(
+            CIERRE_AUTOMATICO_KEY,
+            JSON.stringify(merged),
+            updatedBy,
+            'Cierre automático de postulaciones: activación, plazos y notificación',
         );
         return merged;
     }

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Oferta } from 'src/repository/job_offer/job-offer.entity';
 import { ProcesoSeleccion } from 'src/repository/hiring_process/hiring_process.entity';
+import { CierrePostulacionesService } from 'src/modules/cierre-postulaciones/cierre-postulaciones.service';
 
 @Injectable()
 export class OfertaStatusService {
@@ -14,6 +15,8 @@ export class OfertaStatusService {
 
     @InjectRepository(ProcesoSeleccion)
     private readonly procesoSeleccionRepository: Repository<ProcesoSeleccion>,
+
+    private readonly cierrePostulacionesService: CierrePostulacionesService,
   ) { }
 
   /**
@@ -44,6 +47,7 @@ export class OfertaStatusService {
       oferta.es_activa = false;
       oferta.fecha_cierre = new Date();
       await this.ofertaRepository.save(oferta);
+      await this.cerrarPostulacionesPendientes(oferta.id);
       return;
     }
 
@@ -60,7 +64,24 @@ export class OfertaStatusService {
       oferta.es_activa = false;
       oferta.fecha_cierre = new Date();
       await this.ofertaRepository.save(oferta);
+      await this.cerrarPostulacionesPendientes(oferta.id);
       return;
+    }
+  }
+
+  /**
+   * 📪 Cierra las postulaciones que quedaron colgadas al terminar la oferta.
+   * Nunca debe voltear el cierre de la oferta: si el cierre de postulaciones
+   * falla, la oferta ya quedó bien guardada y el barrido diario reintenta.
+   */
+  private async cerrarPostulacionesPendientes(ofertaId: number): Promise<void> {
+    try {
+      await this.cierrePostulacionesService.cerrarPorOferta(ofertaId);
+    } catch (error) {
+      console.error(
+        `No se pudieron cerrar las postulaciones de la oferta ${ofertaId}:`,
+        error,
+      );
     }
   }
 
