@@ -14,7 +14,7 @@ Ahora el backend las cierra solo. Y eso trae un cambio importante de lectura:
 
 > **`estado: 'no_seleccionado'` ya no significa únicamente "el reclutador me descartó".**
 > Puede ser también "la oferta expiró", "se llenaron las vacantes" o "la empresa retiró
-> el aviso". El nuevo campo `cierre_motivo` es lo que distingue un caso del otro.
+> el aviso". El nuevo campo `cierreMotivo` es lo que distingue un caso del otro.
 
 Se reusó `no_seleccionado` a propósito, **para no romper el front**: no se agregó ningún
 estado nuevo al enum. Todo lo nuevo son campos adicionales y nullable.
@@ -24,18 +24,25 @@ estado nuevo al enum. Todo lo nuevo son campos adicionales y nullable.
 Viajan en **todos** los endpoints que devuelven postulaciones, sin cambios de contrato.
 El más relevante para el candidato es `GET /v1/postulaciones/postulante`.
 
-| Campo | Tipo | Significado |
+**Los nombres del JSON son camelCase**, no los de las columnas: TypeORM serializa por
+la propiedad de la entidad. Es la misma convención de `fechaPostulacion`, que el front ya
+consume.
+
+| Campo en el JSON | Tipo | Significado |
 |---|---|---|
-| `cierre_motivo` | `string \| null` | Por qué terminó. `null` = no fue cerrada automáticamente |
-| `fecha_cierre` | `datetime \| null` | Cuándo se cerró |
-| `cierre_automatico` | `boolean` | `true` si la cerró el sistema, no una persona |
-| `cierre_notificado_at` | `datetime \| null` | Cuándo se le avisó al candidato (uso interno) |
-| `fecha_actualizacion` | `datetime \| null` | Último movimiento. `null` en postulaciones viejas |
+| `cierreMotivo` | `string \| null` | Por qué terminó. `null` = no fue cerrada automáticamente |
+| `fechaCierre` | `datetime \| null` | Cuándo se cerró |
+| `cierreAutomatico` | `boolean` | `true` si la cerró el sistema, no una persona |
+| `cierreNotificadoAt` | `datetime \| null` | Cuándo se le avisó al candidato (uso interno) |
+| `fechaActualizacion` | `datetime \| null` | Último movimiento. `null` en postulaciones viejas |
+
+(En la base son `cierre_motivo`, `fecha_cierre`, `cierre_automatico`,
+`cierre_notificado_at` y `fecha_actualizacion` — relevante solo para consultas SQL.)
 
 **Retrocompatible:** si el front ignora estos campos, todo sigue funcionando como hoy.
 Solo se pierde la explicación.
 
-### Valores de `cierre_motivo` y copy sugerido
+### Valores de `cierreMotivo` y copy sugerido
 
 | Valor | Qué pasó | Texto propuesto para la UI |
 |---|---|---|
@@ -54,9 +61,9 @@ su propio copy, conviene mantenerlos alineados con el del correo.
 
 1. Un badge distinto para las postulaciones cerradas — hoy un `no_seleccionado` se ve
    igual que un descarte, y no es lo mismo para quien lo lee.
-2. El texto del motivo cuando `cierre_motivo != null`. Es el punto completo de la
+2. El texto del motivo cuando `cierreMotivo != null`. Es el punto completo de la
    feature: sin esto, el backend cierra pero el candidato sigue sin entender.
-3. `fecha_cierre` para ordenar o mostrar "cerrada hace X días".
+3. `fechaCierre` para ordenar o mostrar "cerrada hace X días".
 
 Sugerencia de tono: cuando el motivo **no** es un descarte real (expirada, eliminada,
 inactividad), conviene que la UI no lo presente como rechazo. No fue evaluado y
