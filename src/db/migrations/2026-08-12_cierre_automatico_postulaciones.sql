@@ -13,9 +13,14 @@
 -- ------------------------------------------------------------
 -- 1) postulacion: motivo y trazabilidad del cierre
 -- ------------------------------------------------------------
+-- OJO con fecha_actualizacion: si se declara DEFAULT CURRENT_TIMESTAMP, el ALTER
+-- estampa la hora de la migración en TODAS las filas existentes, y entonces
+-- ninguna postulación histórica se vería inactiva hasta 30 días después.
+-- Con DEFAULT NULL las filas viejas quedan en NULL y el COALESCE del servicio
+-- cae en fecha_postulacion, que es la antigüedad real.
 ALTER TABLE postulacion
   ADD COLUMN IF NOT EXISTS fecha_actualizacion DATETIME NULL
-    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
     AFTER fecha_postulacion,
   ADD COLUMN IF NOT EXISTS cierre_motivo
     ENUM('oferta_expirada','vacante_completada','oferta_eliminada','inactividad') NULL
@@ -24,8 +29,7 @@ ALTER TABLE postulacion
   ADD COLUMN IF NOT EXISTS cierre_automatico TINYINT(1) NOT NULL DEFAULT 0 AFTER fecha_cierre,
   ADD COLUMN IF NOT EXISTS cierre_notificado_at DATETIME NULL AFTER cierre_automatico;
 
--- Las filas existentes quedan con fecha_actualizacion NULL; el servicio usa
--- COALESCE(fecha_actualizacion, fecha_postulacion), así que no hace falta backfill.
+-- No hace falta backfill: el servicio usa COALESCE(fecha_actualizacion, fecha_postulacion).
 
 -- ------------------------------------------------------------
 -- 2) oferta: inicio del periodo de gracia para candidatos avanzados

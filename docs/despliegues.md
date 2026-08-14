@@ -57,6 +57,18 @@ git reset --hard de003aa   # destructivo: confirmar antes
 `fecha_cierre`, `cierre_automatico`, `cierre_notificado_at` + 2 índices.
 (`oferta`): `aviso_cierre_pendientes_at`. Todas **aditivas y nullable**.
 
+#### ⚠️ Verificar antes: `DB_SYNCHRONIZE`
+
+El `.env` local tiene `DB_SYNCHRONIZE=true`, y `src/config/database.ts:67` pasa eso
+directo a TypeORM. **Si en el servidor está en `true`, TypeORM va a sincronizar el
+esquema solo al arrancar**, contra las entidades — y con `synchronize` activo sobre una
+base con datos puede alterar tipos, tocar el enum de `estado` o botar índices sin avisar.
+Este release agrega columnas y un enum nuevo, así que es exactamente el escenario donde
+más daño haría.
+
+Confirmar que en dev y en producción esté en `false` **antes** de desplegar. Si estuviera
+en `true`, eso es un problema anterior a este release y hay que arreglarlo primero.
+
 #### Orden de despliegue
 
 1. Correr la migración a mano en la base.

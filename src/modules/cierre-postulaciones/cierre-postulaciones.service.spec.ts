@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
-import { CierrePostulacionesService, TEXTO_MOTIVO } from './cierre-postulaciones.service';
+import {
+  CierrePostulacionesService,
+  TAMANO_LOTE,
+  TEXTO_MOTIVO,
+} from './cierre-postulaciones.service';
 import { Postulacion } from '../../repository/applications/applications.entity';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
 import { MailerService } from '../mailer/mailer.service';
@@ -252,6 +256,46 @@ describe('CierrePostulacionesService', () => {
       expect(resultado.correosFallidos).toBe(0);
       expect(mailer.sendTemplateMail).not.toHaveBeenCalled();
       expect(postulacionRepo.createQueryBuilder).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('cierre en lotes', () => {
+    it('sigue cerrando mientras un lote llegue completo', async () => {
+      await construir();
+      // 500 (lote lleno) + 500 (lleno) + 120 (último) = 1120 en 3 UPDATE.
+      postulacionRepo.createQueryBuilder
+        .mockReturnValueOnce(fakeQb({ execute: { affected: TAMANO_LOTE } }))
+        .mockReturnValueOnce(fakeQb({ execute: { affected: TAMANO_LOTE } }))
+        .mockReturnValueOnce(fakeQb({ execute: { affected: 120 } }));
+
+      const total = await service.barrerInactividad(CONFIG_BASE);
+
+      expect(total).toBe(TAMANO_LOTE * 2 + 120);
+      expect(postulacionRepo.createQueryBuilder).toHaveBeenCalledTimes(3);
+    });
+
+    it('se detiene en el primer lote incompleto', async () => {
+      await construir();
+      postulacionRepo.createQueryBuilder.mockReturnValue(
+        fakeQb({ execute: { affected: 3 } }),
+      );
+
+      const total = await service.barrerInactividad(CONFIG_BASE);
+
+      expect(total).toBe(3);
+      expect(postulacionRepo.createQueryBuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it('no itera cuando no hay nada que cerrar', async () => {
+      await construir();
+      postulacionRepo.createQueryBuilder.mockReturnValue(
+        fakeQb({ execute: { affected: 0 } }),
+      );
+
+      const total = await service.barrerInactividad(CONFIG_BASE);
+
+      expect(total).toBe(0);
+      expect(postulacionRepo.createQueryBuilder).toHaveBeenCalledTimes(1);
     });
   });
 

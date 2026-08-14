@@ -35,6 +35,17 @@ export const ESTADOS_AVANZADOS = ['preseleccionado', 'seleccionado'] as const;
  */
 export const VENTANA_NOTIFICACION_DIAS = 7;
 
+/**
+ * Filas por UPDATE. El primer barrido puede tener decenas de miles de
+ * postulaciones acumuladas, y cerrarlas en una sola sentencia bloquearía
+ * `postulacion` — que es una tabla con tráfico— por todo lo que dure. En lotes
+ * son muchos locks cortos en vez de uno largo.
+ */
+export const TAMANO_LOTE = 500;
+
+/** Techo de iteraciones por barrido: 250k filas. Backstop, no límite esperado. */
+const MAX_LOTES = 500;
+
 export interface ResumenBarrido {
   cerradasPorOferta: number;
   cerradasPorInactividad: number;
@@ -117,7 +128,7 @@ export class CierrePostulacionesService {
     const motivo = this.motivoPorOferta(oferta);
     if (!motivo) return { ...RESUMEN_VACIO };
 
-    const cerradas = await this.cerrarLote(
+    const cerradas = await this.cerrarTodo(
       motivo,
       (qb) =>
         qb
@@ -155,7 +166,7 @@ export class CierrePostulacionesService {
     const limite = new Date();
     limite.setDate(limite.getDate() - config.diasInactividad);
 
-    return this.cerrarLote('inactividad', (qb) =>
+    return this.cerrarTodo('inactividad', (qb) =>
       qb
         .andWhere('estado IN (:...estados)', { estados: [...ESTADOS_TEMPRANOS] })
         .andWhere(
@@ -188,7 +199,7 @@ export class CierrePostulacionesService {
       const motivo = this.motivoPorOferta(oferta);
       if (!motivo) continue;
 
-      total += await this.cerrarLote(motivo, (qb) =>
+      total += await this.cerrarTodo(motivo, (qb) =>
         qb
           .andWhere('oferta_id = :ofertaId', { ofertaId: oferta.id })
           .andWhere('estado IN (:...estados)', { estados: [...ESTADOS_AVANZADOS] }),
@@ -340,12 +351,37 @@ export class CierrePostulacionesService {
         cierreAutomatico: true,
         fechaCierre: () => 'NOW()',
       })
-      .where('1 = 1');
+      // Doble función: no re-cierra lo ya cerrado (idempotencia) y garantiza
+      // que ningún UPDATE salga sin filtro aunque `filtro` no aporte ninguno.
+      .where('fecha_cierre IS NULL')
+      .limit(TAMANO_LOTE);
 
     filtro(qb);
 
     const { affected } = await qb.execute();
     return affected ?? 0;
+  }
+
+  /**
+   * Repite el cierre en lotes hasta agotar las filas que califican. Cada lote
+   * saca sus filas del filtro (les pone fecha_cierre), así que no hay riesgo de
+   * bucle infinito.
+   */
+  private async cerrarTodo(
+    motivo: CierreMotivo,
+    filtro: (qb: UpdateQueryBuilder<Postulacion>) => unknown,
+  ): Promise<number> {
+    let total = 0;
+    for (let i = 0; i < MAX_LOTES; i++) {
+      const afectadas = await this.cerrarLote(motivo, filtro);
+      total += afectadas;
+      if (afectadas < TAMANO_LOTE) return total;
+    }
+    this.logger.warn(
+      `Se alcanzó el techo de ${MAX_LOTES} lotes cerrando por "${motivo}"; ` +
+      `quedan filas para el próximo barrido.`,
+    );
+    return total;
   }
 
   private async marcarNotificada(postulacionId: number): Promise<void> {
