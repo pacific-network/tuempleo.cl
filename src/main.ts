@@ -17,13 +17,9 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       const allowedOrigins = [
-        'https://tuempleo.cl',
-        'https://www.tuempleo.cl',
-        'http://localhost:5173',
         'https://tuvacante.com',
-        'https://www.tuvacante.com'
-
-
+        'https://www.tuvacante.com',
+        'http://localhost:5173',
       ];
 
       if (!origin || allowedOrigins.includes(origin)) {
@@ -84,8 +80,8 @@ async function bootstrap() {
 
   // swagger config
   const config = new DocumentBuilder()
-    .setTitle('API TUEMPLEO.CL')
-    .setDescription('Backend para tuempleo.cl')
+    .setTitle('API TUVACANTE.COM')
+    .setDescription('Backend para tuvacante.com')
     .setVersion('1.0')
     .build();
 

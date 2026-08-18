@@ -107,14 +107,14 @@ export class InvitacionService {
       || empleador.empresa.razon_social
       || 'tu empresa';
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://tuempleo.cl';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://tuvacante.com';
     const linkInvitacion = `${frontendUrl}/invitacion?codigo=${codigo}`;
 
     // Enviar SMS si se proporciona telefono
     if (telefono) {
       await this.smsService.sendIndividualSms({
         number: telefono,
-        content: `${nombreAdmin} te invito a ser miembro de ${nombreEmpresa} en TuEmpleo.cl. Tu codigo es: ${codigo}`,
+        content: `${nombreAdmin} te invito a ser miembro de ${nombreEmpresa} en tuvacante.com. Tu codigo es: ${codigo}`,
         tipo: SmsTipo.TRANSACCIONAL,
       });
     }

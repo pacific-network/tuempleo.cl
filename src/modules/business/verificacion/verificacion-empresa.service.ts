@@ -28,7 +28,7 @@ export class VerificacionEmpresaService {
     private readonly empleadorRepo: Repository<Empleador>,
 
     private readonly smsService: SmsService,
-  ) {}
+  ) { }
 
   private generarCodigo(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -83,7 +83,7 @@ export class VerificacionEmpresaService {
     const nombre = empresa.nombre_fantasia || empresa.razon_social || 'tu empresa';
     await this.smsService.sendIndividualSms({
       number: telefono,
-      content: `Tu codigo de verificacion para ${nombre} en TuEmpleo.cl es: ${codigo}. Vence en ${CODIGO_VIGENCIA_MIN} minutos.`,
+      content: `Tu codigo de verificacion para ${nombre} en tuvacante.com es: ${codigo}. Vence en ${CODIGO_VIGENCIA_MIN} minutos.`,
       tipo: SmsTipo.TRANSACCIONAL,
     });
 

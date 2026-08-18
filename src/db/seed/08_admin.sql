@@ -4,7 +4,7 @@
 -- Archivo: 08_admin.sql
 -- Descripción:
 --   Marca un usuario ya registrado como administrador.
---   Reemplaza 'admin@tuempleo.cl' por el email real.
+--   Reemplaza 'admin@tuvacante.com' por el email real.
 --   Este script es IDEMPOTENTE y puede ejecutarse múltiples veces.
 --
 -- ⚠️  REQUISITO: el usuario debe haber hecho login al menos
@@ -14,7 +14,7 @@
 
 UPDATE usuario
 SET isAdmin = true
-WHERE email = 'admin@tuempleo.cl';
+WHERE email = 'admin@tuvacante.com';
 
 -- ======================================================
 -- Fin seed admin
