@@ -8,6 +8,21 @@ import { Planes } from '../../repository/plans/plans.entity';
 import { ConsumeQuotaDto } from './dto/consume-quota.dto';
 import { Usuario } from 'src/repository/user/user.entity';
 
+/**
+ * Cupos de desbloqueo de candidatos según el tipo de aviso.
+ *
+ * Estaba repetido en tres métodos y con distinto criterio ante un tipo desconocido:
+ * dos devolvían 0 y `consumeQuota` devolvía `undefined`, con lo que la comparación
+ * `usados >= undefined` daba false y la oferta quedaba sin tope. Una sola fuente,
+ * con `getTotalCupos` como único acceso.
+ */
+const CUPOS_POR_TIPO_AVISO: Record<string, number> = {
+    GRATIS: 10,
+    BASICO: 25,
+    ESTANDAR: 50,
+    PREMIUM: 100,
+};
+
 @Injectable()
 export class QuotaService {
     constructor(
@@ -54,14 +69,7 @@ export class QuotaService {
         }
 
         // 4️⃣ Cupos según tipo de aviso
-        const cuposPorTipo = {
-            GRATIS: 10,
-            BASICO: 25,
-            ESTANDAR: 50,
-            PREMIUM: 100,
-        };
-
-        const totalCupos = cuposPorTipo[oferta.tipo_aviso];
+        const totalCupos = this.getTotalCupos(oferta.tipo_aviso);
 
         // 5️⃣ Validar usuario
         const usuario = await this.usuarioRepo.findOne({ where: { id: usuario_id } });
@@ -142,13 +150,7 @@ export class QuotaService {
     // Función auxiliar para total de cupos según tipo de aviso
     // ================================
     private getTotalCupos(tipo_aviso: string) {
-        const cuposPorTipo = {
-            GRATIS: 10,
-            BASICO: 25,
-            ESTANDAR: 50,
-            PREMIUM: 100,
-        };
-        return cuposPorTipo[tipo_aviso] || 0;
+        return CUPOS_POR_TIPO_AVISO[tipo_aviso] ?? 0;
     }
 
     async getRemainingCupos(empresa_id: number, oferta_id: number) {
@@ -158,8 +160,7 @@ export class QuotaService {
         if (oferta.empresa.id !== empresa_id) throw new BadRequestException('La oferta no pertenece a esta empresa');
 
         // 2️⃣ Total cupos según tipo de aviso
-        const cuposPorTipo = { GRATIS: 10, BASICO: 25, ESTANDAR: 50, PREMIUM: 100 };
-        const totalCupos = cuposPorTipo[oferta.tipo_aviso] || 0;
+        const totalCupos = this.getTotalCupos(oferta.tipo_aviso);
 
         // 3️⃣ Contar cupos usados
         const usados = await this.quotaRepo.count({ where: { empresa_id, oferta_id } });
