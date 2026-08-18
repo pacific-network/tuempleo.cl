@@ -32,6 +32,62 @@ git reset --hard de003aa   # destructivo: confirmar antes
 
 ## Pendientes de desplegar
 
+### `feat/automatic_end` — Eliminación de cuenta y `auth_provider`
+
+| | |
+|---|---|
+| **Migración requerida** | `npm run migrate:auth-provider` (script TS, no `.sql`) |
+| **Orden** | **Antes** de subir el código |
+| **Reversible** | Sí, la columna es aditiva y con default |
+
+**Qué incluye**
+
+- `usuario.auth_provider` — distingue las cuentas con contraseña propia de las creadas
+  por OAuth. Antes no había forma de saberlo.
+- `DELETE /v1/legal/account` acepta el payload que el frontend envía (`confirmPhrase`,
+  antes `confirmation`) y no exige contraseña a las cuentas OAuth, que nunca la tuvieron.
+- `POST /v1/legal/consent` acepta camelCase (`documentType`, `documentVersion`) y `accepted`
+  pasa a ser opcional con default `true`.
+- `GET /v1/legal/consent/status` devuelve `currentVersion` y `needsUpdate`.
+- Fin del `dummyPassword`: las cuentas OAuth guardan el centinela `!oauth` en vez de un
+  cifrado de `oauth:<email>:<timestamp>`.
+- `QuotaService`: un `tipo_aviso` fuera del mapa daba cupos ilimitados; ahora cae a 0.
+
+**Por qué la migración es un script y no un `.sql`:** las cuentas OAuth ya existentes solo
+se distinguen descifrando su `password`. El script hace el `ALTER TABLE` y el backfill en
+una pasada. Admite `DRY_RUN=1` para ver el conteo sin escribir, y necesita el `JWT_SECRET`
+con el que se cifraron las contraseñas.
+
+```bash
+DRY_RUN=1 npm run migrate:auth-provider   # revisar primero
+npm run migrate:auth-provider
+```
+
+**Riesgo si no se corre:** todas las cuentas quedan como `local`. Las de Google seguirán sin
+poder eliminarse, igual que hoy. No rompe nada más.
+
+⚠️ **El frontend todavía exige contraseña.** `DeleteAccountCard.tsx:26` valida
+`password.length > 0` antes de habilitar el botón, así que el usuario OAuth sigue bloqueado
+en la UI aunque el backend ya lo acepte. Falta ese cambio para cerrar el circuito.
+
+**Documentos legales: se publica la v1.1.** En la base está la **v1.0**, cuyo texto no existe
+en el repo. `npm run seed:legal` sube a la v1.1, que ya referencia solo tuvacante.com.
+
+```bash
+# En el contenedor no hay ts-node (es devDependency y la imagen instala --production).
+# Los scripts sí se compilan a dist:
+docker exec backend-nest node dist/db/seed/seed-legal-documents.js
+```
+
+⚠️ **Al subir de 1.0 a 1.1, toda la base tiene que volver a aceptar.** Con `needsUpdate` ya
+corregido, `ConsentChecker` abre el diálogo en la siguiente sesión de cada usuario y desloguea
+a quien lo cierre sin aceptar. Conviene avisarle a soporte antes.
+
+La **v2.0** con la Ley 21.719 **no se publica**: quedó en `docs/legal-v2-borrador.md` para
+retomarla antes del 1 de diciembre de 2026.
+
+---
+
 ### `feat/automatic_end` — Cierre automático de postulaciones
 
 | | |
