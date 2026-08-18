@@ -11,7 +11,7 @@ import { createHash } from 'crypto';
 import { LegalDocument } from 'src/repository/legal/legal-document.entity';
 import { ConsentRecord } from 'src/repository/legal/consent-record.entity';
 import { AccountDeletionLog } from 'src/repository/legal/account-deletion-log.entity';
-import { Usuario } from 'src/repository/user/user.entity';
+import { Usuario, AUTH_PROVIDER_LOCAL } from 'src/repository/user/user.entity';
 import { Postulante } from 'src/repository/postulant/postulant.entity';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
@@ -114,23 +114,47 @@ export class LegalService {
     }
   }
 
+  /**
+   * Estado del consentimiento por tipo de documento.
+   *
+   * `needsUpdate` es lo que consume `ConsentChecker` en el frontend para decidir si
+   * abre el diálogo de renovación. Antes no se devolvía, así que llegaba `undefined`
+   * y el diálogo no se abría nunca: publicar una versión nueva no le pedía a nadie
+   * aceptarla y el sistema no notaba la diferencia.
+   *
+   * `version` es la última versión que el usuario aceptó (`null` si ninguna), no la
+   * vigente — esa es `currentVersion`.
+   */
   async getConsentStatus(userId: number) {
     const currentDocs = await this.docRepo.find({ where: { is_current: true } });
 
-    const status: Record<string, { accepted: boolean; version: string }> = {};
+    const status: Record<
+      string,
+      {
+        accepted: boolean;
+        version: string | null;
+        currentVersion: string;
+        needsUpdate: boolean;
+      }
+    > = {};
 
     for (const doc of currentDocs) {
-      const consent = await this.consentRepo.findOne({
+      const ultimoAceptado = await this.consentRepo.findOne({
         where: {
           usuario_id: userId,
           document_type: doc.type,
-          document_version: doc.version,
           accepted: true,
         },
+        order: { created_at: 'DESC' },
       });
+
+      const versionAceptada = ultimoAceptado?.document_version ?? null;
+
       status[doc.type] = {
-        version: doc.version,
-        accepted: !!consent,
+        accepted: versionAceptada === doc.version,
+        version: versionAceptada,
+        currentVersion: doc.version,
+        needsUpdate: versionAceptada !== doc.version,
       };
     }
 
@@ -212,10 +236,23 @@ export class LegalService {
     const user = await this.usuarioRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    // Verificar password
-    const passwordOk = this.encrypt.compare(dto.password, user.password);
-    if (!passwordOk) {
-      throw new BadRequestException('Contrasena incorrecta');
+    // Las cuentas creadas por OAuth no tienen contraseña que su dueño conozca
+    // (`password` guarda un centinela): exigirla las dejaría sin poder ejercer el
+    // derecho de supresión. Para ellas basta la frase de confirmación, que el DTO
+    // ya validó, sobre una sesión autenticada.
+    const esCuentaLocal =
+      !user.auth_provider || user.auth_provider === AUTH_PROVIDER_LOCAL;
+
+    if (esCuentaLocal) {
+      if (!dto.password) {
+        throw new BadRequestException(
+          'Debe ingresar su contrasena para eliminar la cuenta',
+        );
+      }
+      const passwordOk = this.encrypt.compare(dto.password, user.password);
+      if (!passwordOk) {
+        throw new BadRequestException('Contrasena incorrecta');
+      }
     }
 
     // Cargar relaciones
