@@ -11,8 +11,6 @@ import { InvitacionEmpleador } from 'src/repository/invitacion-empleador/invitac
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 import { Registro } from 'src/repository/register/register.entity';
-import { SmsService } from '../sms-generator/sms.service';
-import { SmsTipo } from '../sms-generator/dto/sms.dto';
 import { MailerService } from '../mailer/mailer.service';
 import { EncryptService } from 'src/shared/encrypt/encrypt.service';
 import { AceptarInvitacionDto } from './dto/invitar-empleador.dto';
@@ -33,7 +31,6 @@ export class InvitacionService {
     private readonly registroRepo: Repository<Registro>,
 
     private readonly jwtService: JwtService,
-    private readonly smsService: SmsService,
     private readonly mailerService: MailerService,
     private readonly encryptService: EncryptService,
   ) {}
@@ -110,14 +107,11 @@ export class InvitacionService {
     const frontendUrl = process.env.FRONTEND_URL || 'https://tuvacante.com';
     const linkInvitacion = `${frontendUrl}/invitacion?codigo=${codigo}`;
 
-    // Enviar SMS si se proporciona telefono
-    if (telefono) {
-      await this.smsService.sendIndividualSms({
-        number: telefono,
-        content: `${nombreAdmin} te invito a ser miembro de ${nombreEmpresa} en tuvacante.com. Tu codigo es: ${codigo}`,
-        tipo: SmsTipo.TRANSACCIONAL,
-      });
-    }
+    // El SMS de invitacion NO se manda desde aca: lo envia el frontend en
+    // `InvitarEmpleador.tsx`, con el codigo y ademas el link de registro.
+    // Hasta ahora se mandaban los dos y el invitado recibia dos mensajes
+    // distintos por el mismo codigo. Se dejo el del frontend por ser el mas
+    // completo. `canales` sigue reportando SMS porque el invitado si lo recibe.
 
     // Enviar email si se proporciona
     let emailEnviado = false;

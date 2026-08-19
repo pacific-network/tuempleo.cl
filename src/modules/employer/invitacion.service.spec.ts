@@ -88,7 +88,7 @@ describe('InvitacionService', () => {
   // 1. INVITAR
   // ════════════════════════════════════════════════════════
   describe('invitar()', () => {
-    it('debe crear invitación y enviar email + SMS', async () => {
+    it('debe crear invitación y enviar email, sin SMS (lo manda el frontend)', async () => {
       empleadorRepo.findOne.mockResolvedValue(empleadorAdmin);
       invitacionRepo.find.mockResolvedValue([]);
       invitacionRepo.existsBy.mockResolvedValue(false);
@@ -98,7 +98,7 @@ describe('InvitacionService', () => {
       expect(result.codigo).toMatch(/^\d{6}$/);
       expect(result.expiraEn).toBeInstanceOf(Date);
       expect(invitacionRepo.save).toHaveBeenCalled();
-      expect(smsService.sendIndividualSms).toHaveBeenCalled();
+      expect(smsService.sendIndividualSms).not.toHaveBeenCalled();
       expect(mailerService.sendTemplateMail).toHaveBeenCalledWith(
         expect.objectContaining({ dest_email: 'invitado@test.cl' }),
       );
@@ -115,14 +115,17 @@ describe('InvitacionService', () => {
       expect(mailerService.sendTemplateMail).toHaveBeenCalled();
     });
 
-    it('debe enviar solo SMS si no hay email', async () => {
+    it('no envia nada desde el backend si solo hay telefono', async () => {
+      // El codigo se crea igual; el SMS lo despacha el frontend.
       empleadorRepo.findOne.mockResolvedValue(empleadorAdmin);
       invitacionRepo.find.mockResolvedValue([]);
       invitacionRepo.existsBy.mockResolvedValue(false);
 
-      await service.invitar(100, '56912345678');
+      const result = await service.invitar(100, '56912345678');
 
-      expect(smsService.sendIndividualSms).toHaveBeenCalled();
+      expect(result.codigo).toMatch(/^\d{6}$/);
+      expect(invitacionRepo.save).toHaveBeenCalled();
+      expect(smsService.sendIndividualSms).not.toHaveBeenCalled();
       expect(mailerService.sendTemplateMail).not.toHaveBeenCalled();
     });
 
