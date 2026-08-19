@@ -17,6 +17,7 @@ import { Order } from "src/shared/pagination/constants";
 import { FreeStockService } from "../stock/free-stock.service";
 import { OfertaValidationService } from "./oferta-validation.service";
 import { getPolicyForTipoAviso } from "src/shared/plan-policy/plan-policy";
+import { CierrePostulacionesService } from "../cierre-postulaciones/cierre-postulaciones.service";
 
 const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> = {
   GRATIS: 0,
@@ -40,6 +41,7 @@ export class OfertaService {
     private readonly jobOfferRepository: jobOfferRepository,
     private readonly freeStockService: FreeStockService,
     private readonly ofertaValidationService: OfertaValidationService,
+    private readonly cierrePostulacionesService: CierrePostulacionesService,
   ) { }
 
   // ======================================================
@@ -397,8 +399,24 @@ export class OfertaService {
       throw new NotFoundException(`Empleador con usuario ID ${usuarioId} no encontrado`);
 
     oferta.eliminada_por = empleador;
+    // El softDelete no toca estado ni es_activa, y sin eso el cierre de
+    // postulaciones no sabría con qué motivo cerrarlas.
+    oferta.estado = 'eliminada';
+    oferta.es_activa = false;
+    oferta.fecha_cierre = oferta.fecha_cierre ?? new Date();
     await this.ofertaRepository.save(oferta);
     await this.ofertaRepository.softDelete(id);
+
+    // Retirar el aviso no puede dejar a los postulantes esperando.
+    try {
+      await this.cierrePostulacionesService.cerrarPorOferta(id);
+    } catch (error) {
+      console.error(
+        `No se pudieron cerrar las postulaciones de la oferta ${id}:`,
+        error,
+      );
+    }
+
     return { message: `Oferta con ID ${id} eliminada correctamente` };
   }
 

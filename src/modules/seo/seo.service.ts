@@ -12,7 +12,7 @@ export class SeoService {
   ) {}
 
   private get siteUrl(): string {
-    return (process.env.PUBLIC_SITE_URL || 'https://tuempleo.cl').replace(/\/$/, '');
+    return (process.env.PUBLIC_SITE_URL || 'https://tuvacante.com').replace(/\/$/, '');
   }
 
   private escapeXml(value: string): string {

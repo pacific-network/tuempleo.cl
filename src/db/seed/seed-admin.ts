@@ -2,7 +2,7 @@
  * Seed: Crear usuario administrador
  *
  * Uso:
- *   ADMIN_EMAIL=admin@tuempleo.cl ADMIN_PASSWORD=TuPassword123 npm run seed:admin
+ *   ADMIN_EMAIL=admin@tuvacante.com ADMIN_PASSWORD=TuPassword123 npm run seed:admin
  *
  * Variables requeridas en .env (o como env vars):
  *   JWT_SECRET, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME

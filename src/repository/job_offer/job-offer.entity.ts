@@ -57,6 +57,14 @@ export class Oferta {
     @Column({ type: 'datetime', nullable: true })
     fecha_cierre: Date;
 
+    /**
+     * 🔔 Momento en que se avisó al empleador que tenía candidatos avanzados
+     * sin resolver al cerrarse la oferta. Marca el inicio del periodo de
+     * gracia: pasado el plazo, el sistema cierra esas postulaciones por él.
+     */
+    @Column({ type: 'datetime', name: 'aviso_cierre_pendientes_at', nullable: true })
+    aviso_cierre_pendientes_at: Date | null;
+
     @Column({ type: 'text', nullable: true })
     data: string;
 

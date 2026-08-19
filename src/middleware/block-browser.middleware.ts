@@ -109,14 +109,14 @@ export class BlockBrowserMiddleware implements NestMiddleware {
     <div class="container">
       <img
         class="logo"
-        src="https://tuempleo.cl/assets/img/logo/tuempleo.png"
-        alt="TuEmpleo Logo"
+        src="https://tuvacante.com/assets/logo-aAOx3RvG.png"
+        alt="tuvacante.com"
       />
       <h1>🚫 Acceso Denegado</h1>
       <p>Tu acceso ha sido restringido temporalmente.</p>
       <p>
         Si crees que se trata de un error, contacta a
-        <strong>soporte@tuempleo.cl</strong>
+        <strong>soporte@tuvacante.com</strong>
       </p>
     </div>
   </body>

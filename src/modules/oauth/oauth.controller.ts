@@ -27,8 +27,6 @@ export class OauthController {
     if (!origin) return false
 
     const allowList = new Set<string>([
-      'https://tuempleo.cl',
-      'https://www.tuempleo.cl',
       'https://tuvacante.com',
       'https://www.tuvacante.com',
     ])
@@ -41,7 +39,6 @@ export class OauthController {
     envList.forEach(o => allowList.add(o))
 
     const regexes = [
-      /^https?:\/\/([a-z0-9-]+\.)*tuempleo\.cl(?::\d+)?$/i,
       /^https?:\/\/([a-z0-9-]+\.)*tuvacante\.com(?::\d+)?$/i,
       /^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i,
       /^https:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i,

@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { Registro } from '../../repository/register/register.entity'
-import { Usuario } from '../../repository/user/user.entity'
+import { Usuario, PASSWORD_SENTINEL_OAUTH } from '../../repository/user/user.entity'
 import { RegistrarUsuarioDto } from './dto/register'
 import { IniciarSesionDto } from '../oauth/dto/login'
 import { EncryptService } from 'src/shared/encrypt/encrypt.service'
@@ -40,6 +40,14 @@ export class AuthService {
   // -------------------
   // OAuth
   // -------------------
+  /** Deriva el proveedor desde el `iss` del token; sirve para saber que la cuenta no tiene clave propia. */
+  private resolveProvider(payload: any): string {
+    const iss = (payload?.iss || '').toLowerCase()
+    if (iss.includes('google')) return 'google'
+    if (iss.includes('linkedin')) return 'linkedin'
+    return 'oauth'
+  }
+
   async ensureUserFromJwt(payload: any): Promise<Usuario> {
     const email = (payload?.email || '').trim().toLowerCase()
     if (!email) throw new UnauthorizedException('Token sin email')
@@ -48,17 +56,17 @@ export class AuthService {
 
     const nombres = (payload?.given_name || payload?.name || '').trim()
     const apellidos = (payload?.family_name || '').trim()
-
-    const dummyPassword = await this.encrypt.encrypt(
-      `oauth:${email}:${Date.now()}`
-    )
+    const provider = this.resolveProvider(payload)
 
     if (!user) {
       user = this.usuarioRepo.create({
         email,
         nombres: nombres || '',
         apellidos: apellidos || '',
-        password: dummyPassword,
+        // Sin credencial propia: el centinela no descifra, así que ningún login
+        // por contraseña puede acertarle.
+        password: PASSWORD_SENTINEL_OAUTH,
+        auth_provider: provider,
         is_activo: true,
       })
       await this.usuarioRepo.save(user)
@@ -76,8 +84,12 @@ export class AuthService {
         changed = true
       }
 
+      // Cuenta preexistente sin contraseña utilizable. No se toca `auth_provider`
+      // si ya es local: esa cuenta puede definir su clave por "recuperar contraseña"
+      // y seguir entrando por ambas vías.
       if (!user.password) {
-        user.password = dummyPassword
+        user.password = PASSWORD_SENTINEL_OAUTH
+        if (!user.auth_provider) user.auth_provider = provider
         changed = true
       }
 
@@ -244,7 +256,7 @@ export class AuthService {
       { expiresIn: '1h' },
     )
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://tuempleo.cl'
+    const frontendUrl = process.env.FRONTEND_URL || 'https://tuvacante.com'
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`
 
     try {
@@ -259,7 +271,7 @@ export class AuthService {
     }
 
     return {
-      message: 'Te hemos enviado un enlace para restablecer tu contraseña. Si no lo recibes en unos minutos, revisa tu carpeta de spam o contacta a soporte@tuempleo.cl',
+      message: 'Te hemos enviado un enlace para restablecer tu contraseña. Si no lo recibes en unos minutos, revisa tu carpeta de spam o contacta a soporte@tuvacante.com',
     }
   }
 

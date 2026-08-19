@@ -48,9 +48,9 @@ export class LegalController {
 
     return this.legalService.recordConsent(
       user.sub,
-      dto.document_type,
-      dto.document_version,
-      dto.accepted,
+      dto.documentType,
+      dto.documentVersion,
+      dto.accepted ?? true,
       ip,
       userAgent,
     );

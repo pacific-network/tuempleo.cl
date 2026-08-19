@@ -10,6 +10,7 @@ import {
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { SystemConfigService } from './system-config.service';
 import { UpdateWelcomePromoDto } from './dto/update-welcome-promo.dto';
+import { UpdateCierreAutomaticoDto } from './dto/update-cierre-automatico.dto';
 import { User } from 'src/shared/decorators/user.decorator';
 
 @Controller()
@@ -36,5 +37,23 @@ export class SystemConfigController {
     @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
     setWelcomePromo(@Body() dto: UpdateWelcomePromoDto, @User() user: any) {
         return this.service.setWelcomePromo(dto, user.sub);
+    }
+
+    // Cierre automático de postulaciones: estado actual
+    @UseGuards(AdminGuard)
+    @Get('v1/admin/config/cierre-automatico')
+    getCierreAutomatico() {
+        return this.service.getCierreAutomatico();
+    }
+
+    // Cierre automático: prender/apagar, plazos y notificación por correo
+    @UseGuards(AdminGuard)
+    @Patch('v1/admin/config/cierre-automatico')
+    @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+    setCierreAutomatico(
+        @Body() dto: UpdateCierreAutomaticoDto,
+        @User() user: any,
+    ) {
+        return this.service.setCierreAutomatico(dto, user.sub);
     }
 }

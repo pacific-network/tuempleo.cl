@@ -46,6 +46,7 @@ import { SystemAlertsModule } from './modules/system-alerts/system-alerts.module
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { CuponModule } from './modules/cupon/cupon.module';
 import { MatchModule } from './modules/match/match.module';
+import { CierrePostulacionesModule } from './modules/cierre-postulaciones/cierre-postulaciones.module';
 
 
 
@@ -119,6 +120,7 @@ import { MatchModule } from './modules/match/match.module';
     SystemConfigModule,
     CuponModule,
     MatchModule,
+    CierrePostulacionesModule,
 
   ],
   providers: [

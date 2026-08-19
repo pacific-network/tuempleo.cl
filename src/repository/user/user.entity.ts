@@ -3,6 +3,21 @@ import { Exclude } from 'class-transformer';
 import { Rol } from 'src/repository/role/role.entity';
 import { Curriculum } from 'src/repository/curriculum/curriculum.entity';
 
+/**
+ * Valor que se guarda en `password` cuando la cuenta no tiene credencial propia
+ * (alta por OAuth). No es un texto cifrado válido, así que `EncryptService.compare`
+ * devuelve `false` contra cualquier entrada: la cuenta no se puede usar para login
+ * por contraseña hasta que su dueño defina una por "recuperar contraseña".
+ *
+ * Reemplaza al antiguo `dummyPassword`, que cifraba `oauth:<email>:<timestamp>` en
+ * cada login OAuth: gasto inútil y, dado que el cifrado es reversible
+ * (ver SECURITY-AUDIT.md), un dato descifrable de más en la base.
+ */
+export const PASSWORD_SENTINEL_OAUTH = '!oauth';
+
+/** Valor de `auth_provider` para cuentas con contraseña propia. */
+export const AUTH_PROVIDER_LOCAL = 'local';
+
 @Entity('usuario')
 export class Usuario {
     @PrimaryGeneratedColumn()
@@ -20,6 +35,17 @@ export class Usuario {
     @Exclude()
     @Column({ type: 'varchar', length: 255, nullable: false })
     password: string;
+
+    /**
+     * Cómo se autentica esta cuenta. `local` = tiene contraseña propia; el resto
+     * son proveedores externos, donde `password` guarda el centinela
+     * `PASSWORD_SENTINEL_OAUTH` y no hay credencial que el usuario conozca.
+     *
+     * Lo consume `LegalService.deleteAccount`, que no puede pedir contraseña a
+     * quien nunca tuvo una.
+     */
+    @Column({ type: 'varchar', length: 20, default: 'local' })
+    auth_provider: string;
 
     @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
     email: string;

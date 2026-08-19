@@ -15,6 +15,7 @@ import { OfertaStatusCron } from "./oferta-status/oferta-status.cron";
 import { OfertaValidationService } from "./oferta-validation.service";
 
 import { StockModule } from "../stock/stock.module";
+import { CierrePostulacionesModule } from "../cierre-postulaciones/cierre-postulaciones.module";
 import { CountVisitService } from "./count-visit.service";
 import { jobOfferRepository } from "src/repository/job_offer/job-offer.repository";
 
@@ -29,6 +30,7 @@ import { jobOfferRepository } from "src/repository/job_offer/job-offer.repositor
       ProcesoSeleccion,
     ]),
     StockModule,
+    CierrePostulacionesModule,
   ],
   providers: [
     OfertaService,
