@@ -322,7 +322,7 @@ export class LegalService {
       );
 
       await manager.query(
-        `DELETE FROM company_reviews WHERE reviewerUserId = ?`,
+        `DELETE FROM company_reviews WHERE reviewer_user_id = ?`,
         [userId],
       );
 
@@ -332,19 +332,19 @@ export class LegalService {
       );
 
       await manager.query(
-        `DELETE FROM count_visits WHERE visitorHash = ?`,
+        `DELETE FROM count_visits WHERE visitor_hash = ?`,
         [visitorHash],
       );
 
       // Paso 4: Si es empleador, limpiar referencias
       if (empleador) {
         await manager.query(
-          `DELETE FROM employer_plan_ledger WHERE employerId = ?`,
+          `DELETE FROM employer_plan_ledger WHERE employer_id = ?`,
           [empleador.id],
         );
 
         await manager.query(
-          `DELETE FROM offer_policy WHERE employerId = ?`,
+          `DELETE FROM offer_policy WHERE employer_id = ?`,
           [empleador.id],
         );
 
