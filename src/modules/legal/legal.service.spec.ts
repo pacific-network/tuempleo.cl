@@ -17,6 +17,7 @@ import { CONFIRM_PHRASE } from './dto/delete-account.dto';
 const repoMock = () => ({
   find: jest.fn().mockResolvedValue([]),
   findOne: jest.fn().mockResolvedValue(null),
+  count: jest.fn().mockResolvedValue(0),
   create: jest.fn((v) => v),
   save: jest.fn((v) => Promise.resolve(v)),
 });
@@ -252,13 +253,58 @@ describe('LegalService', () => {
         auth_provider: 'local',
         password: 'cifrada',
       });
-      empleadorRepo.findOne.mockResolvedValue({ id: 40 });
+      empleadorRepo.find.mockResolvedValue([{ id: 40, rol_empresa: 'miembro' }]);
       ds.query.mockResolvedValue([{ count: 3 }]);
 
       await expect(service.deleteAccount(4, dto as any)).rejects.toThrow(
         ForbiddenException,
       );
       expect(ds.transaction).not.toHaveBeenCalled();
+    });
+
+    it('bloquea al único responsable de una empresa', async () => {
+      usuarioRepo.findOne.mockResolvedValue({
+        id: 4,
+        email: 'e@b.cl',
+        auth_provider: 'local',
+        password: 'cifrada',
+      });
+      empleadorRepo.find.mockResolvedValue([
+        {
+          id: 40,
+          rol_empresa: 'admin',
+          empresa: { id: 10, nombre_fantasia: 'ACME' },
+        },
+      ]);
+      empleadorRepo.count.mockResolvedValue(1); // es el único main
+      ds.query.mockResolvedValue([{ count: 0 }]); // sin ofertas activas
+
+      await expect(service.deleteAccount(4, dto as any)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(ds.transaction).not.toHaveBeenCalled();
+    });
+
+    it('deja borrar al responsable si la empresa tiene otro main', async () => {
+      usuarioRepo.findOne.mockResolvedValue({
+        id: 4,
+        email: 'e@b.cl',
+        auth_provider: 'local',
+        password: 'cifrada',
+      });
+      empleadorRepo.find.mockResolvedValue([
+        {
+          id: 40,
+          rol_empresa: 'admin',
+          empresa: { id: 10, nombre_fantasia: 'ACME' },
+        },
+      ]);
+      empleadorRepo.count.mockResolvedValue(2); // queda otro main
+      ds.query.mockResolvedValue([{ count: 0 }]);
+
+      await service.deleteAccount(4, dto as any);
+
+      expect(ds.transaction).toHaveBeenCalled();
     });
   });
 

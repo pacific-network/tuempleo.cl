@@ -260,12 +260,15 @@ export class LegalService {
       where: { usuario: { id: userId } },
     });
 
-    const empleador = await this.empleadorRepo.findOne({
+    // Todas las membresías: una persona puede ser responsable de varias empresas
+    // y al borrar la cuenta se van todas en cascada.
+    const membresias = await this.empleadorRepo.find({
       where: { usuario: { id: userId } },
+      relations: ['empresa'],
     });
 
-    // Si es empleador, verificar que no tenga ofertas activas
-    if (empleador) {
+    // Si es empleador, verificar que no tenga ofertas activas en ninguna empresa
+    for (const empleador of membresias) {
       const activeOffers = await this.ds.query(
         `SELECT COUNT(*) as count FROM oferta
          WHERE empleador_id = ? AND es_activa = 1
@@ -276,6 +279,26 @@ export class LegalService {
       if (activeOffers[0]?.count > 0) {
         throw new ForbiddenException(
           'No puedes eliminar tu cuenta mientras tengas ofertas activas. Desactivalas primero.',
+        );
+      }
+    }
+
+    // Y que ninguna empresa quede sin responsable: la membresía se borra en
+    // cascada con el usuario, así que sin esto la empresa queda con
+    // colaboradores que no pueden invitar ni verificarla, y solo se arregla a mano.
+    for (const empleador of membresias) {
+      if (empleador.rol_empresa !== 'admin' || !empleador.empresa) continue;
+
+      const mains = await this.empleadorRepo.count({
+        where: { empresa: { id: empleador.empresa.id }, rol_empresa: 'admin' },
+      });
+      if (mains <= 1) {
+        const nombre =
+          empleador.empresa.nombre_fantasia ||
+          empleador.empresa.razon_social ||
+          `empresa ${empleador.empresa.id}`;
+        throw new ForbiddenException(
+          `Sos el único responsable de ${nombre}. Promové a otra persona antes de eliminar tu cuenta.`,
         );
       }
     }
@@ -336,8 +359,8 @@ export class LegalService {
         [visitorHash],
       );
 
-      // Paso 4: Si es empleador, limpiar referencias
-      if (empleador) {
+      // Paso 4: Si es empleador, limpiar referencias de cada membresía
+      for (const empleador of membresias) {
         await manager.query(
           `DELETE FROM employer_plan_ledger WHERE employer_id = ?`,
           [empleador.id],
