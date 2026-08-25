@@ -291,10 +291,7 @@ export class EmpleadorService {
     }
 
     async BusinessEmployer(userId: number): Promise<Empresa | null> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-        });
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             return null;
@@ -305,10 +302,9 @@ export class EmpleadorService {
 
     //update empresa by userId 
     async updateEmployerBusiness(userId: number, dto: UpdateBusinessDto): Promise<Empresa> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-        });
+        // Sobre la empresa activa: resolver por usuario editaba una empresa al
+        // azar cuando la persona administra varias.
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador || !empleador.empresa) {
             throw new NotFoundException('Empresa asociada al usuario no encontrada');
@@ -342,9 +338,8 @@ export class EmpleadorService {
     }
 
     async updateEmployerData(userId: number, dto: UpdateEmployerDto): Promise<Empleador> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-        });
+        // `data` es de la membresía (el cargo cambia entre empresas), no de la persona.
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException('Empleador no encontrado');
@@ -365,10 +360,7 @@ export class EmpleadorService {
     }
 
     async getEstadisticas(userId: number) {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-        });
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
@@ -553,11 +545,8 @@ export class EmpleadorService {
         usuario.rut = dto.rut;
         await this.usuarioRepository.save(usuario);
 
-        // Actualizar data del empleador
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa', 'usuario'],
-        });
+        // Actualizar data de la membresía activa
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException('Empleador no encontrado');

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Usuario } from 'src/repository/user/user.entity';
 import { Repository } from 'typeorm';
 import { Transaction, PaymentGateway } from 'src/repository/transaction/transaction.entity';
 import { crearPreferenciaPago, avisos, MpItem } from './const/tipo_avisos.preferences';
@@ -150,10 +151,25 @@ export class MercadoPagoService {
 
             const userId = Number(tx.sessionId);
 
-            const empleador = await this.empleadorRepository.findOne({
-                where: { usuario: { id: userId } },
-                relations: ['empresa'],
+            // El stock se acredita a la empresa activa al momento de la compra.
+            // Resolver solo por usuario podía acreditarlo a otra de sus empresas
+            // cuando administra varias, y esto es dinero: no se adivina.
+            const comprador = await this.empleadorRepository.manager.findOne(Usuario, {
+                where: { id: userId },
             });
+
+            const empleador = comprador?.id_empresa
+                ? await this.empleadorRepository.findOne({
+                    where: {
+                        usuario: { id: userId },
+                        empresa: { id: comprador.id_empresa },
+                    },
+                    relations: ['empresa'],
+                })
+                : await this.empleadorRepository.findOne({
+                    where: { usuario: { id: userId } },
+                    relations: ['empresa'],
+                });
 
             if (!empleador?.empresa?.id) {
                 console.warn(`⚠️ Usuario ${userId} no tiene empresa asociada. Stock NO actualizado.`);
