@@ -40,15 +40,37 @@ export class InvitacionService {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
+  /**
+   * Membresía en la empresa activa (`usuario.id_empresa`). Con una sola
+   * membresía se devuelve esa, para no exigir selección previa a quien tiene
+   * una empresa nada más.
+   */
+  private async getMembresiaActiva(userId: number): Promise<Empleador | null> {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!usuario) return null;
+
+    if (usuario.id_empresa) {
+      return this.empleadorRepo.findOne({
+        where: { usuario: { id: userId }, empresa: { id: usuario.id_empresa } },
+        relations: ['usuario', 'empresa'],
+      });
+    }
+
+    const membresias = await this.empleadorRepo.find({
+      where: { usuario: { id: userId } },
+      relations: ['usuario', 'empresa'],
+      take: 2,
+    });
+    return membresias.length === 1 ? membresias[0] : null;
+  }
+
   // ======================================================
   // INVITAR MIEMBRO
   // ======================================================
   async invitar(userId: number, telefono?: string, email?: string) {
-    // Verificar que el empleador es admin
-    const empleador = await this.empleadorRepo.findOne({
-      where: { usuario: { id: userId } },
-      relations: ['usuario', 'empresa'],
-    });
+    // Se invita a la empresa activa: con la persona en varias empresas, resolver
+    // solo por usuario mandaría la invitación a una empresa arbitraria.
+    const empleador = await this.getMembresiaActiva(userId);
 
     if (!empleador) {
       throw new NotFoundException('Empleador no encontrado');

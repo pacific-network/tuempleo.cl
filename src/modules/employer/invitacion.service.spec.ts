@@ -88,6 +88,13 @@ describe('InvitacionService', () => {
   // 1. INVITAR
   // ════════════════════════════════════════════════════════
   describe('invitar()', () => {
+    // Se invita a la empresa activa: `invitar` resuelve la membresía por
+    // `usuario.id_empresa` para no elegir una empresa al azar cuando la
+    // persona está en varias.
+    beforeEach(() => {
+      usuarioRepo.findOne.mockResolvedValue({ id: 100, id_empresa: empresa.id });
+    });
+
     it('debe crear invitación y enviar email, sin SMS (lo manda el frontend)', async () => {
       empleadorRepo.findOne.mockResolvedValue(empleadorAdmin);
       invitacionRepo.find.mockResolvedValue([]);

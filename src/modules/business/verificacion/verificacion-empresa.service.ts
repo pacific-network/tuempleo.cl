@@ -39,11 +39,14 @@ export class VerificacionEmpresaService {
     const empresa = await this.empresaRepo.findOne({ where: { id: empresaId } });
     if (!empresa) throw new NotFoundException('Empresa no encontrada');
 
+    // Se busca la membresía de ESTA empresa. Resolver por usuario y comparar
+    // después devolvía una membresía arbitraria cuando la persona está en
+    // varias empresas, y rechazaba a quien sí pertenecía.
     const empleador = await this.empleadorRepo.findOne({
-      where: { usuario: { id: userId } },
+      where: { usuario: { id: userId }, empresa: { id: empresaId } },
       relations: ['empresa'],
     });
-    if (!empleador || empleador.empresa?.id !== empresaId) {
+    if (!empleador) {
       throw new ForbiddenException('No perteneces a esta empresa');
     }
     if (empleador.rol_empresa !== 'admin') {
