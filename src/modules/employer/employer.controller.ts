@@ -11,6 +11,7 @@ import { UpdateBusinessDto } from '../business/dto/update-business.dto';
 import { UpdateEmployerDto } from './dto/update-employer.dto';
 import { InvitarEmpleadorDto, ValidarCodigoDto, AceptarInvitacionDto } from './dto/invitar-empleador.dto';
 import { OnboardingMiembroDto } from './dto/onboarding-miembro.dto';
+import { EmpresaActivaDto, CambiarRolDto } from './dto/membresia.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { PageDto } from 'src/shared/pagination/page.dto';
 
@@ -46,6 +47,55 @@ export class EmpleadorController {
       rut,
       userId ? parseInt(userId, 10) : undefined,
     );
+  }
+
+  // ======================================================
+  // MULTI-EMPRESA
+  // Van antes de @Get(':userId'), que si no las captura como parámetro.
+  // ======================================================
+
+  /** Empresas donde la persona tiene membresía, con su rol en cada una. */
+  @Get('mis-empresas')
+  @UseGuards(AuthGuard('jwt'))
+  async misEmpresas(@Req() req) {
+    const userId = req.user?.sub || req.user?.userId;
+    return this.empleadorService.checkEmpleadorExists(userId);
+  }
+
+  /** Cambia la empresa sobre la que opera el resto de la API. */
+  @Patch('empresa-activa')
+  @UseGuards(AuthGuard('jwt'))
+  async cambiarEmpresaActiva(@Req() req, @Body() dto: EmpresaActivaDto) {
+    const userId = req.user?.sub || req.user?.userId;
+    const membresia = await this.empleadorService.setEmpresaActiva(
+      userId,
+      dto.empresaId,
+    );
+    return {
+      empresaId: membresia.empresa?.id,
+      rol: membresia.rol_empresa,
+    };
+  }
+
+  /** Promueve a main o degrada a colaborador. Solo un main de esa empresa. */
+  @Patch('membresia/:id/rol')
+  @UseGuards(AuthGuard('jwt'))
+  async cambiarRolMembresia(
+    @Req() req,
+    @Param('id', ParseIntPipe) empleadorId: number,
+    @Body() dto: CambiarRolDto,
+  ) {
+    const userId = req.user?.sub || req.user?.userId;
+    const membresia = await this.empleadorService.cambiarRolMembresia(
+      userId,
+      empleadorId,
+      dto.rol,
+    );
+    return {
+      id: membresia.id,
+      empresaId: membresia.empresa?.id,
+      rol: membresia.rol_empresa,
+    };
   }
 
   @Get(':userId')
