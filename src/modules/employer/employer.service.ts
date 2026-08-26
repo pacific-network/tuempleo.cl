@@ -104,34 +104,34 @@ export class EmpleadorService {
     }
 
     /**
-     * Cuántos main (`admin`) tiene la empresa.
+     * Cuántos empleadores tiene la empresa.
      */
-    async contarMains(empresaId: number): Promise<number> {
+    async contarEmpleadores(empresaId: number): Promise<number> {
         return this.empleadorRepository.count({
-            where: { empresa: { id: empresaId }, rol_empresa: 'admin' },
+            where: { empresa: { id: empresaId }, rol_empresa: 'empleador' },
         });
     }
 
     /**
-     * Invariante del modelo: una empresa nunca se queda sin main.
+     * Invariante del modelo: una empresa nunca se queda sin empleador.
      *
-     * Se llama antes de degradar un main, de quitarle la membresía o de borrar
-     * su cuenta. Sin esto la empresa queda con colaboradores que no pueden
-     * invitar a nadie ni verificar la empresa, y solo se arregla a mano.
+     * Se llama antes de degradar a un empleador, de quitarle la membresía o de
+     * borrar su cuenta. Sin esto la empresa queda solo con colaboradores, que no
+     * pueden invitar a nadie ni verificarla, y solo se arregla a mano.
      */
-    async assertNoEsUltimoMain(empleador: Empleador): Promise<void> {
-        if (empleador.rol_empresa !== 'admin') return;
+    async assertNoEsUltimoEmpleador(empleador: Empleador): Promise<void> {
+        if (empleador.rol_empresa !== 'empleador') return;
 
         const empresaId = empleador.empresa?.id;
         if (!empresaId) return;
 
-        const mains = await this.contarMains(empresaId);
-        if (mains <= 1) {
+        const empleadores = await this.contarEmpleadores(empresaId);
+        if (empleadores <= 1) {
             const nombre = empleador.empresa?.nombre_fantasia
                 || empleador.empresa?.razon_social
                 || `empresa ${empresaId}`;
             throw new ConflictException(
-                `Sos el único responsable de ${nombre}. Promové a otra persona antes de dejar de serlo.`,
+                `Sos el único empleador de ${nombre}. Promové a un colaborador antes de dejar de serlo.`,
             );
         }
     }
@@ -139,7 +139,7 @@ export class EmpleadorService {
     async checkEmpleadorExists(userId: number): Promise<{
         exists: boolean;
         empleador?: { id: number; empresaId: number };
-        membresias: { id: number; empresaId: number; rol: 'admin' | 'miembro'; nombre: string }[];
+        membresias: { id: number; empresaId: number; rol: 'empleador' | 'colaborador'; nombre: string }[];
     }> {
         const membresias = await this.getMembresias(userId);
         const activo = await this.getEmpleadorActivo(userId);
@@ -213,11 +213,11 @@ export class EmpleadorService {
             throw new NotAcceptableException('Empresa no encontrada');
         }
 
-        // 4. Crear la membresía. Quien crea la empresa queda como main de ella.
+        // 4. Crear la membresía. Quien crea la empresa queda como empleador de ella.
         const empleador = this.empleadorRepository.create({
             usuario,
             empresa,
-            rol_empresa: 'admin',
+            rol_empresa: 'empleador',
             data: createEmployerDto.data,
         });
 
@@ -226,16 +226,16 @@ export class EmpleadorService {
     }
 
     /**
-     * Cambia el rol de una membresía. Solo un main de esa misma empresa puede
-     * hacerlo, y no puede dejarla sin ningún main.
+     * Cambia el rol de una membresía. Solo un empleador de esa misma empresa
+     * puede hacerlo, y no puede dejarla sin ningún empleador.
      *
      * Cubre los tres casos de una sola vez: promover a un colaborador, degradar
-     * a un main y transferir el rol (promover al otro, después degradarse).
+     * a un empleador y transferir el rol (promover al otro, después degradarse).
      */
     async cambiarRolMembresia(
         actorUserId: number,
         empleadorId: number,
-        rol: 'admin' | 'miembro',
+        rol: 'empleador' | 'colaborador',
     ): Promise<Empleador> {
         const objetivo = await this.empleadorRepository.findOne({
             where: { id: empleadorId },
@@ -251,17 +251,17 @@ export class EmpleadorService {
                 empresa: { id: objetivo.empresa.id },
             },
         });
-        if (!actor || actor.rol_empresa !== 'admin') {
+        if (!actor || actor.rol_empresa !== 'empleador') {
             throw new ConflictException(
-                'Solo un responsable de esta empresa puede cambiar roles',
+                'Solo un empleador de esta empresa puede cambiar roles',
             );
         }
 
         if (objetivo.rol_empresa === rol) return objetivo;
 
-        // Degradar a un main solo se permite si queda otro.
-        if (rol === 'miembro') {
-            await this.assertNoEsUltimoMain(objetivo);
+        // Degradar a un empleador solo se permite si queda otro.
+        if (rol === 'colaborador') {
+            await this.assertNoEsUltimoEmpleador(objetivo);
         }
 
         objetivo.rol_empresa = rol;

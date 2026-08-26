@@ -283,22 +283,22 @@ export class LegalService {
       }
     }
 
-    // Y que ninguna empresa quede sin responsable: la membresía se borra en
+    // Y que ninguna empresa quede sin empleador: la membresía se borra en
     // cascada con el usuario, así que sin esto la empresa queda con
     // colaboradores que no pueden invitar ni verificarla, y solo se arregla a mano.
     for (const empleador of membresias) {
-      if (empleador.rol_empresa !== 'admin' || !empleador.empresa) continue;
+      if (empleador.rol_empresa !== 'empleador' || !empleador.empresa) continue;
 
-      const mains = await this.empleadorRepo.count({
-        where: { empresa: { id: empleador.empresa.id }, rol_empresa: 'admin' },
+      const empleadores = await this.empleadorRepo.count({
+        where: { empresa: { id: empleador.empresa.id }, rol_empresa: 'empleador' },
       });
-      if (mains <= 1) {
+      if (empleadores <= 1) {
         const nombre =
           empleador.empresa.nombre_fantasia ||
           empleador.empresa.razon_social ||
           `empresa ${empleador.empresa.id}`;
         throw new ForbiddenException(
-          `Sos el único responsable de ${nombre}. Promové a otra persona antes de eliminar tu cuenta.`,
+          `Sos el único empleador de ${nombre}. Promové a un colaborador antes de eliminar tu cuenta.`,
         );
       }
     }

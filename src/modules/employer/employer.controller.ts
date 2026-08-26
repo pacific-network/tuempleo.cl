@@ -5,7 +5,7 @@ import { Empleador } from 'src/repository/employer/employer.entity';
 import { CreateEmployerDto } from '../employer/dto/create-employer.dto';
 import { EmpleadorBasicInfoDto } from './dto/basic-info.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
+import { EmpleadorEmpresaGuard } from '../auth/guards/empleador-empresa.guard';
 import { Empresa } from 'src/repository/business/business.entity';
 import { UpdateBusinessDto } from '../business/dto/update-business.dto';
 import { UpdateEmployerDto } from './dto/update-employer.dto';
@@ -77,7 +77,7 @@ export class EmpleadorController {
     };
   }
 
-  /** Promueve a main o degrada a colaborador. Solo un main de esa empresa. */
+  /** Promueve a empleador o degrada a colaborador. Solo un empleador de esa empresa. */
   @Patch('membresia/:id/rol')
   @UseGuards(AuthGuard('jwt'))
   async cambiarRolMembresia(
@@ -121,7 +121,7 @@ export class EmpleadorController {
 
 
   @Patch('empresa')
-  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  @UseGuards(AuthGuard('jwt'), EmpleadorEmpresaGuard)
   async updateEmpresa(
     @Body() dto: UpdateBusinessDto,
     @Req() req: any,
@@ -172,9 +172,9 @@ export class EmpleadorController {
   // INVITACIONES
   // ======================================================
 
-  /** Admin invita miembro por SMS/Email */
+  /** Un empleador invita a un colaborador por SMS/Email */
   @Post('invitar')
-  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  @UseGuards(AuthGuard('jwt'), EmpleadorEmpresaGuard)
   async invitarMiembro(
     @Req() req: any,
     @Body() dto: InvitarEmpleadorDto,

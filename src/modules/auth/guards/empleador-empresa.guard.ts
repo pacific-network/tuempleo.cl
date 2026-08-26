@@ -10,15 +10,15 @@ import { Empleador } from 'src/repository/employer/employer.entity';
 import { Usuario } from 'src/repository/user/user.entity';
 
 /**
- * Exige ser main (`admin`) **de la empresa activa**.
+ * Exige ser **empleador** de la empresa activa, no solo colaborador.
  *
  * Con una persona en varias empresas, mirar cualquier membresía no alcanza:
- * quien es main en la empresa A y colaborador en la B pasaría el guard y
+ * quien es empleador en la empresa A y colaborador en la B pasaría el guard y
  * operaría sobre B con permisos que ahí no tiene. Por eso se resuelve contra
  * `usuario.id_empresa`, que es la empresa sobre la que se está actuando.
  */
 @Injectable()
-export class EmployerAdminGuard implements CanActivate {
+export class EmpleadorEmpresaGuard implements CanActivate {
     constructor(
         @InjectRepository(Empleador)
         private readonly empleadorRepo: Repository<Empleador>,
@@ -48,8 +48,8 @@ export class EmployerAdminGuard implements CanActivate {
 
         if (!empleador) return false;
 
-        if (empleador.rol_empresa !== 'admin') {
-            throw new ForbiddenException('Solo el administrador puede realizar esta accion');
+        if (empleador.rol_empresa !== 'empleador') {
+            throw new ForbiddenException('Solo un empleador de la empresa puede realizar esta accion');
         }
 
         return true;

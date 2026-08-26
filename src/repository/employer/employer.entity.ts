@@ -39,10 +39,10 @@ export class Empleador {
 
   @Column({
     type: 'enum',
-    enum: ['admin', 'miembro'],
-    default: 'admin',
+    enum: ['empleador', 'colaborador'],
+    default: 'empleador',
   })
-  rol_empresa: 'admin' | 'miembro';
+  rol_empresa: 'empleador' | 'colaborador';
 
   @Column({ type: 'json', nullable: false })
   data: Record<string, any>;

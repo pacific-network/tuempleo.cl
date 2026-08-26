@@ -22,11 +22,11 @@ const mockRepo = () => ({
 const ACME = { id: 10, nombre_fantasia: 'ACME', razon_social: 'ACME SpA' };
 const GLOBEX = { id: 20, nombre_fantasia: 'Globex', razon_social: 'Globex SpA' };
 
-// Paulo es main en ACME y colaborador en Globex. Es el caso que rompía el
+// Paulo es empleador en ACME y colaborador en Globex. Es el caso que rompía el
 // modelo anterior y el que hay que sostener en todos los tests de abajo.
 const PAULO = 100;
-const mainEnAcme = { id: 1, rol_empresa: 'admin', empresa: ACME, usuario: { id: PAULO } };
-const colaboradorEnGlobex = { id: 2, rol_empresa: 'miembro', empresa: GLOBEX, usuario: { id: PAULO } };
+const empleadorEnAcme = { id: 1, rol_empresa: 'empleador', empresa: ACME, usuario: { id: PAULO } };
+const colaboradorEnGlobex = { id: 2, rol_empresa: 'colaborador', empresa: GLOBEX, usuario: { id: PAULO } };
 
 describe('EmpleadorService · multi-empresa', () => {
   let service: EmpleadorService;
@@ -73,22 +73,22 @@ describe('EmpleadorService · multi-empresa', () => {
 
     it('cae a la primera membresía y la fija cuando no hay empresa activa', async () => {
       usuarioRepo.findOne.mockResolvedValue({ id: PAULO, id_empresa: null });
-      empleadorRepo.find.mockResolvedValue([mainEnAcme, colaboradorEnGlobex]);
+      empleadorRepo.find.mockResolvedValue([empleadorEnAcme, colaboradorEnGlobex]);
 
       const activo = await service.getEmpleadorActivo(PAULO);
 
-      expect(activo).toBe(mainEnAcme);
+      expect(activo).toBe(empleadorEnAcme);
       expect(usuarioRepo.update).toHaveBeenCalledWith(PAULO, { id_empresa: ACME.id });
     });
 
     it('cae a la primera si la empresa activa ya no tiene membresía', async () => {
       usuarioRepo.findOne.mockResolvedValue({ id: PAULO, id_empresa: 999 });
       empleadorRepo.findOne.mockResolvedValue(null);
-      empleadorRepo.find.mockResolvedValue([mainEnAcme]);
+      empleadorRepo.find.mockResolvedValue([empleadorEnAcme]);
 
       const activo = await service.getEmpleadorActivo(PAULO);
 
-      expect(activo).toBe(mainEnAcme);
+      expect(activo).toBe(empleadorEnAcme);
     });
   });
 
@@ -123,7 +123,7 @@ describe('EmpleadorService · multi-empresa', () => {
         GLOBEX.id,
       );
 
-      expect(creado).toEqual(expect.objectContaining({ rol_empresa: 'admin' }));
+      expect(creado).toEqual(expect.objectContaining({ rol_empresa: 'empleador' }));
       // La guarda mira el par (usuario, empresa): antes rechazaba por usuario solo.
       expect(empleadorRepo.findOne).toHaveBeenCalledWith({
         where: { usuario: { id: PAULO }, empresa: { id: GLOBEX.id } },
@@ -131,7 +131,7 @@ describe('EmpleadorService · multi-empresa', () => {
     });
 
     it('rechaza una segunda membresía en la misma empresa', async () => {
-      empleadorRepo.findOne.mockResolvedValue(mainEnAcme);
+      empleadorRepo.findOne.mockResolvedValue(empleadorEnAcme);
 
       await expect(
         service.createEmployerWithCompany(
@@ -143,26 +143,26 @@ describe('EmpleadorService · multi-empresa', () => {
   });
 
   // ─── Invariante: una empresa nunca sin main ─────────────
-  describe('assertNoEsUltimoMain', () => {
-    it('bloquea al único main de la empresa', async () => {
+  describe('assertNoEsUltimoEmpleador', () => {
+    it('bloquea al único empleador de la empresa', async () => {
       empleadorRepo.count.mockResolvedValue(1);
 
-      await expect(service.assertNoEsUltimoMain(mainEnAcme as any)).rejects.toThrow(
+      await expect(service.assertNoEsUltimoEmpleador(empleadorEnAcme as any)).rejects.toThrow(
         ConflictException,
       );
     });
 
-    it('deja pasar cuando queda otro main', async () => {
+    it('deja pasar cuando queda otro empleador', async () => {
       empleadorRepo.count.mockResolvedValue(2);
 
       await expect(
-        service.assertNoEsUltimoMain(mainEnAcme as any),
+        service.assertNoEsUltimoEmpleador(empleadorEnAcme as any),
       ).resolves.toBeUndefined();
     });
 
     it('no aplica a un colaborador', async () => {
       await expect(
-        service.assertNoEsUltimoMain(colaboradorEnGlobex as any),
+        service.assertNoEsUltimoEmpleador(colaboradorEnGlobex as any),
       ).resolves.toBeUndefined();
       expect(empleadorRepo.count).not.toHaveBeenCalled();
     });
@@ -171,51 +171,51 @@ describe('EmpleadorService · multi-empresa', () => {
   // ─── Aislamiento entre empresas ─────────────────────────
   describe('cambiarRolMembresia', () => {
     it('no deja cambiar roles en una empresa donde se es colaborador', async () => {
-      // El objetivo vive en Globex; Paulo es main en ACME pero solo colaborador
+      // El objetivo vive en Globex; Paulo es empleador en ACME pero solo colaborador
       // en Globex. Sin validar el rol EN esa empresa, sería escalada de privilegios.
-      const otroEnGlobex = { id: 3, rol_empresa: 'miembro', empresa: GLOBEX, usuario: { id: 300 } };
+      const otroEnGlobex = { id: 3, rol_empresa: 'colaborador', empresa: GLOBEX, usuario: { id: 300 } };
       empleadorRepo.findOne
         .mockResolvedValueOnce(otroEnGlobex)       // objetivo
         .mockResolvedValueOnce(colaboradorEnGlobex); // actor en esa empresa
 
       await expect(
-        service.cambiarRolMembresia(PAULO, otroEnGlobex.id, 'admin'),
+        service.cambiarRolMembresia(PAULO, otroEnGlobex.id, 'empleador'),
       ).rejects.toThrow(ConflictException);
       expect(empleadorRepo.save).not.toHaveBeenCalled();
     });
 
     it('no deja cambiar roles a quien no pertenece a la empresa', async () => {
-      const otroEnGlobex = { id: 3, rol_empresa: 'miembro', empresa: GLOBEX, usuario: { id: 300 } };
+      const otroEnGlobex = { id: 3, rol_empresa: 'colaborador', empresa: GLOBEX, usuario: { id: 300 } };
       empleadorRepo.findOne
         .mockResolvedValueOnce(otroEnGlobex)
         .mockResolvedValueOnce(null); // sin membresía en Globex
 
       await expect(
-        service.cambiarRolMembresia(999, otroEnGlobex.id, 'admin'),
+        service.cambiarRolMembresia(999, otroEnGlobex.id, 'empleador'),
       ).rejects.toThrow(ConflictException);
     });
 
-    it('promueve a un colaborador si el actor es main de esa empresa', async () => {
-      const otroEnAcme = { id: 4, rol_empresa: 'miembro', empresa: ACME, usuario: { id: 400 } };
+    it('promueve a un colaborador si el actor es empleador de esa empresa', async () => {
+      const otroEnAcme = { id: 4, rol_empresa: 'colaborador', empresa: ACME, usuario: { id: 400 } };
       empleadorRepo.findOne
         .mockResolvedValueOnce(otroEnAcme)
-        .mockResolvedValueOnce(mainEnAcme);
+        .mockResolvedValueOnce(empleadorEnAcme);
 
-      await service.cambiarRolMembresia(PAULO, otroEnAcme.id, 'admin');
+      await service.cambiarRolMembresia(PAULO, otroEnAcme.id, 'empleador');
 
       expect(empleadorRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ rol_empresa: 'admin', modificado_por: PAULO }),
+        expect.objectContaining({ rol_empresa: 'empleador', modificado_por: PAULO }),
       );
     });
 
-    it('no deja degradar al último main', async () => {
+    it('no deja degradar al último empleador', async () => {
       empleadorRepo.findOne
-        .mockResolvedValueOnce(mainEnAcme)  // objetivo
-        .mockResolvedValueOnce(mainEnAcme); // actor: él mismo
+        .mockResolvedValueOnce(empleadorEnAcme)  // objetivo
+        .mockResolvedValueOnce(empleadorEnAcme); // actor: él mismo
       empleadorRepo.count.mockResolvedValue(1);
 
       await expect(
-        service.cambiarRolMembresia(PAULO, mainEnAcme.id, 'miembro'),
+        service.cambiarRolMembresia(PAULO, empleadorEnAcme.id, 'colaborador'),
       ).rejects.toThrow(ConflictException);
       expect(empleadorRepo.save).not.toHaveBeenCalled();
     });

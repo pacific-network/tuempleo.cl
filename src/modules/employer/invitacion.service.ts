@@ -76,8 +76,8 @@ export class InvitacionService {
       throw new NotFoundException('Empleador no encontrado');
     }
 
-    if (empleador.rol_empresa !== 'admin') {
-      throw new ForbiddenException('Solo el administrador puede invitar miembros');
+    if (empleador.rol_empresa !== 'empleador') {
+      throw new ForbiddenException('Solo un empleador de la empresa puede invitar colaboradores');
     }
 
     if (!telefono && !email) {
@@ -243,7 +243,7 @@ export class InvitacionService {
     const empleador = this.empleadorRepo.create({
       usuario,
       empresa: invitacion.empresa,
-      rol_empresa: 'miembro',
+      rol_empresa: 'colaborador',
       data: {},
     });
     await this.empleadorRepo.save(empleador);

@@ -6,7 +6,7 @@ export class EmpresaActivaDto {
 }
 
 export class CambiarRolDto {
-  /** `admin` es el responsable main de la empresa; `miembro`, un colaborador. */
-  @IsIn(['admin', 'miembro'])
-  rol: 'admin' | 'miembro';
+  /** `empleador` maneja la empresa e invita; `colaborador` solo pertenece. */
+  @IsIn(['empleador', 'colaborador'])
+  rol: 'empleador' | 'colaborador';
 }

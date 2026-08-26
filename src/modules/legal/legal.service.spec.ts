@@ -253,7 +253,7 @@ describe('LegalService', () => {
         auth_provider: 'local',
         password: 'cifrada',
       });
-      empleadorRepo.find.mockResolvedValue([{ id: 40, rol_empresa: 'miembro' }]);
+      empleadorRepo.find.mockResolvedValue([{ id: 40, rol_empresa: 'colaborador' }]);
       ds.query.mockResolvedValue([{ count: 3 }]);
 
       await expect(service.deleteAccount(4, dto as any)).rejects.toThrow(
@@ -262,7 +262,7 @@ describe('LegalService', () => {
       expect(ds.transaction).not.toHaveBeenCalled();
     });
 
-    it('bloquea al único responsable de una empresa', async () => {
+    it('bloquea al único empleador de una empresa', async () => {
       usuarioRepo.findOne.mockResolvedValue({
         id: 4,
         email: 'e@b.cl',
@@ -272,11 +272,11 @@ describe('LegalService', () => {
       empleadorRepo.find.mockResolvedValue([
         {
           id: 40,
-          rol_empresa: 'admin',
+          rol_empresa: 'empleador',
           empresa: { id: 10, nombre_fantasia: 'ACME' },
         },
       ]);
-      empleadorRepo.count.mockResolvedValue(1); // es el único main
+      empleadorRepo.count.mockResolvedValue(1); // es el único empleador
       ds.query.mockResolvedValue([{ count: 0 }]); // sin ofertas activas
 
       await expect(service.deleteAccount(4, dto as any)).rejects.toThrow(
@@ -285,7 +285,7 @@ describe('LegalService', () => {
       expect(ds.transaction).not.toHaveBeenCalled();
     });
 
-    it('deja borrar al responsable si la empresa tiene otro main', async () => {
+    it('deja borrar si la empresa tiene otro empleador', async () => {
       usuarioRepo.findOne.mockResolvedValue({
         id: 4,
         email: 'e@b.cl',
@@ -295,11 +295,11 @@ describe('LegalService', () => {
       empleadorRepo.find.mockResolvedValue([
         {
           id: 40,
-          rol_empresa: 'admin',
+          rol_empresa: 'empleador',
           empresa: { id: 10, nombre_fantasia: 'ACME' },
         },
       ]);
-      empleadorRepo.count.mockResolvedValue(2); // queda otro main
+      empleadorRepo.count.mockResolvedValue(2); // queda otro empleador
       ds.query.mockResolvedValue([{ count: 0 }]);
 
       await service.deleteAccount(4, dto as any);

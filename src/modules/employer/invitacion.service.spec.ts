@@ -24,14 +24,14 @@ const empresa = { id: 10, nombre_fantasia: 'TestCorp', razon_social: 'TestCorp S
 
 const empleadorAdmin = {
   id: 1,
-  rol_empresa: 'admin',
+  rol_empresa: 'empleador',
   empresa,
   usuario: { id: 100, nombres: 'Paulo', email: 'admin@test.cl' },
 };
 
 const empleadorMiembro = {
   id: 2,
-  rol_empresa: 'miembro',
+  rol_empresa: 'colaborador',
   empresa,
   usuario: { id: 200, nombres: 'Juan', email: 'juan@test.cl' },
 };
@@ -229,7 +229,7 @@ describe('InvitacionService', () => {
 
       // Empleador creado como miembro
       expect(empleadorRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ rol_empresa: 'miembro' }),
+        expect.objectContaining({ rol_empresa: 'colaborador' }),
       );
       expect(empleadorRepo.save).toHaveBeenCalled();
 
