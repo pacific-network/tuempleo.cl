@@ -46,6 +46,122 @@ Consecuencia práctica: **para agregar o cambiar una columna basta con editar la
 Lo que synchronize *no* hace es transformar datos existentes; cuando un cambio necesite
 rellenar filas viejas, hay que escribir un script puntual, correrlo una vez y borrarlo.
 
+Hay un segundo caso, más raro, que apareció con multi-empresa: **synchronize tampoco puede
+soltar un índice del que depende una foreign key.** No es una decisión de estilo, es que
+MySQL lo rechaza. Ver el release de multi-empresa más abajo.
+
+---
+
+## Release multi-empresa — ⏳ pendiente de desplegar
+
+**Rama:** `feat/multi_tenant` · **Base:** `dev` en `b6a1864`
+
+Una persona puede pertenecer a varias empresas, con un rol distinto en cada una. Detalle
+funcional en `docs/multi-empresa-frontend.md`.
+
+### ⚠️ Este release NO arranca sin correr SQL antes
+
+Es la excepción a "synchronize hace todo". Si se despliega sin esto, **el contenedor no
+levanta**: TypeORM reintenta nueve veces y muere con
+
+```
+ER_DROP_INDEX_FK (1553): Cannot drop index 'REL_...': needed in a foreign key constraint
+```
+
+Dos motivos distintos, los dos reales:
+
+1. **Los roles cambian de valor** (`admin` → `empleador`, `miembro` → `colaborador`).
+   Synchronize ajusta el tipo del ENUM pero no mueve los datos: si lo toca primero, las filas
+   con `'admin'` quedan en **cadena vacía, sin avisar**. Por eso este paso va antes que el
+   arranque.
+2. **El `@OneToOne` sobre `usuario_id` pasó a `@ManyToOne`.** Ese OneToOne había dejado un
+   índice único, y `usuario_id` tiene una FK. InnoDB exige que toda columna con FK tenga
+   algún índice; como ese es el único, MySQL no deja soltarlo. Synchronize hace el `DROP`
+   directo y choca. La salida es crear antes el índice definitivo: `usuario_id` es su prefijo
+   izquierdo, así que sostiene la FK y recién entonces el viejo se puede soltar.
+
+### El SQL, con la app apagada
+
+Está en `src/db/migrations/2026-08-25_multi_empresa.sql`. Es el mismo para local y para
+producción.
+
+```sql
+-- 1 · Roles: ensanchar el ENUM y mover los datos.
+ALTER TABLE empleador
+  MODIFY COLUMN rol_empresa
+  ENUM('admin', 'miembro', 'empleador', 'colaborador')
+  NOT NULL DEFAULT 'empleador';
+
+UPDATE empleador SET rol_empresa = 'empleador'   WHERE rol_empresa = 'admin';
+UPDATE empleador SET rol_empresa = 'colaborador' WHERE rol_empresa = 'miembro';
+
+-- 2 · Índices: crear el nuevo antes de soltar el viejo.
+ALTER TABLE empleador
+  ADD UNIQUE INDEX uq_empleador_usuario_empresa (usuario_id, empresa_id);
+
+ALTER TABLE empleador DROP INDEX `REL_a5baa661d6204614616a094688`;
+```
+
+**El nombre `REL_...` es generado por TypeORM y cambia entre instalaciones.** El de arriba es
+el de la base local. En producción hay que sacarlo primero:
+
+```sql
+SHOW INDEX FROM empleador WHERE Key_name LIKE 'REL_%';
+```
+
+Y reemplazarlo en la última línea. Si el usuario de la base no puede leer
+`information_schema`, `SHOW INDEX` igual funciona.
+
+### Verificación, antes de levantar la app
+
+```sql
+SELECT rol_empresa, COUNT(*) AS filas FROM empleador GROUP BY rol_empresa;
+SHOW INDEX FROM empleador;
+```
+
+Tiene que quedar: roles solo como `empleador` / `colaborador`, **sin filas vacías ni valores
+viejos**; el índice `uq_empleador_usuario_empresa` presente; y **ningún `REL_`**.
+
+Recién ahí levantar. Synchronize hace el resto solo: agrega `usuario.data` y estrecha el ENUM
+a los dos valores finales. Los dos son aditivos y sin riesgo.
+
+### Errores esperables
+
+| Error | Qué pasó | Qué hacer |
+|---|---|---|
+| `Duplicate key name 'uq_empleador_usuario_empresa'` | Ya se creó en un intento anterior | Saltear esa línea, seguir con el `DROP` |
+| `check that column/key exists` en el `DROP` | El nombre `REL_` de esa base es otro | Sacarlo de `SHOW INDEX` y reemplazarlo |
+| `Data truncated for column 'rol_empresa'` | Se arrancó la app antes de correr el paso 1 | Ver rollback: las filas quedaron vacías |
+
+### Rollback
+
+**El código viejo no funciona con este esquema**, a diferencia del release anterior: el
+`@OneToOne` de `empleador` choca con el índice compuesto. Volver atrás exige revertir las dos
+cosas.
+
+```sql
+-- Solo si hay que volver al código anterior.
+ALTER TABLE empleador ADD UNIQUE INDEX `REL_a5baa661d6204614616a094688` (usuario_id);
+ALTER TABLE empleador DROP INDEX uq_empleador_usuario_empresa;
+
+UPDATE empleador SET rol_empresa = 'admin'   WHERE rol_empresa = 'empleador';
+UPDATE empleador SET rol_empresa = 'miembro' WHERE rol_empresa = 'colaborador';
+```
+
+⚠️ **El primer `ALTER` falla si alguien ya tiene más de una empresa**, que es justamente lo
+que este release habilita. En ese caso hay que decidir con qué membresía se queda cada
+persona antes de poder volver — y por eso conviene esperar a que el flujo esté probado antes
+de dejar que la gente cree su segunda empresa.
+
+**Si las filas quedaron en cadena vacía** por haber arrancado antes de tiempo: no hay forma
+de saber cuál era `admin` y cuál `miembro`. Con pocos registros se corrige a mano; si no,
+hace falta un respaldo previo. Vale sacarlo antes de empezar:
+
+```sql
+CREATE TABLE empleador_backup_pre_multiempresa AS
+SELECT id, usuario_id, empresa_id, rol_empresa FROM empleador;
+```
+
 ---
 
 ## Release del 2026-08-18 — ✅ desplegado
