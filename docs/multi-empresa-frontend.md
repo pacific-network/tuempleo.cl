@@ -148,6 +148,42 @@ pasan a ser los de la otra empresa.
 Solo acepta empresas donde la persona tiene membresía; si no, responde 404 *«No tienes acceso
 a esta empresa»*.
 
+### `GET /v1/empleador/miembros`
+
+Los miembros de la empresa activa. Es lo que alimenta la pantalla de miembros.
+
+```json
+{
+  "empresa": { "id": 77, "nombre": "Initech" },
+  "miRol": "empleador",
+  "miembros": [
+    {
+      "id": 88, "usuarioId": 42,
+      "nombres": "Paulo", "apellidos": "Ramírez", "email": "p@initech.cl",
+      "rol": "empleador", "cargo": "Gerente", "esYo": true,
+      "acciones": { "promover": false, "renunciar": true }
+    },
+    {
+      "id": 91, "usuarioId": 55,
+      "nombres": "Luis", "apellidos": "Díaz", "email": "luis@initech.cl",
+      "rol": "colaborador", "cargo": "Reclutador", "esYo": false,
+      "acciones": { "promover": true, "renunciar": false }
+    }
+  ]
+}
+```
+
+**`acciones` viene resuelto por el backend: la UI solo pinta lo que llega.** No hace falta
+reimplementar las reglas de la sección 4 en el frontend — si cambian, cambian en un solo
+lado. `promover` y `renunciar` apuntan los dos a
+`PATCH /v1/empleador/membresia/:id/rol`, con `rol: "empleador"` y `rol: "colaborador"`
+respectivamente.
+
+Lo puede llamar cualquier miembro: un colaborador ve a sus colegas, con todas las acciones
+en `false`.
+
+Sin empresa activa devuelve `{ empresa: null, miRol: null, miembros: [] }` en vez de fallar.
+
 ### `PATCH /v1/empleador/membresia/:id/rol`
 
 ```json
@@ -217,7 +253,8 @@ inventar copy propio, porque nombran la empresa concreta.
    lista de las que ya se agregaron.
 3. **"Agregar otra empresa" en el panel**, disponible siempre. Es el mismo
    `POST /v1/empleador/empresas`.
-4. **Pantalla de miembros** con las acciones de la sección 4.
+4. **Pantalla de miembros**, con `GET /v1/empleador/miembros`. Los botones salen de
+   `acciones`, no de reimplementar las reglas.
 5. **Actualizar cualquier comparación** contra `'admin'` / `'miembro'`.
 
 ---

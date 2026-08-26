@@ -158,6 +158,78 @@ describe('EmpleadorService · multi-empresa', () => {
     });
   });
 
+  // ─── Miembros de la empresa ─────────────────────────────
+  describe('listarMiembros', () => {
+    const otroEmpleador = {
+      id: 5, rol_empresa: 'empleador', empresa: ACME, data: { cargo: 'Socio' },
+      usuario: { id: 500, nombres: 'Ana', apellidos: 'Soto', email: 'ana@acme.cl' },
+    };
+    const unColaborador = {
+      id: 6, rol_empresa: 'colaborador', empresa: ACME, data: { cargo: 'Reclutador' },
+      usuario: { id: 600, nombres: 'Luis', apellidos: 'Diaz', email: 'luis@acme.cl' },
+    };
+    const yoEmpleador = {
+      ...empleadorEnAcme, data: { cargo: 'Gerente' },
+      usuario: { id: PAULO, nombres: 'Paulo', apellidos: 'Ramirez', email: 'p@acme.cl' },
+    };
+
+    const prepararActivo = (propia: any, miembros: any[]) => {
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, id_empresa: ACME.id });
+      empleadorRepo.findOne.mockResolvedValue(propia);
+      empleadorRepo.find.mockResolvedValue(miembros);
+    };
+
+    it('un empleador puede promover a los colaboradores', async () => {
+      prepararActivo(yoEmpleador, [yoEmpleador, otroEmpleador, unColaborador]);
+
+      const { miembros, miRol } = await service.listarMiembros(PAULO);
+
+      expect(miRol).toBe('empleador');
+      const colaborador = miembros.find((m) => m.id === unColaborador.id)!;
+      expect(colaborador.acciones.promover).toBe(true);
+      expect(colaborador.cargo).toBe('Reclutador');
+    });
+
+    it('nadie puede promover ni degradar a otro empleador', async () => {
+      prepararActivo(yoEmpleador, [yoEmpleador, otroEmpleador]);
+
+      const { miembros } = await service.listarMiembros(PAULO);
+
+      const par = miembros.find((m) => m.id === otroEmpleador.id)!;
+      expect(par.acciones).toEqual({ promover: false, renunciar: false });
+    });
+
+    it('puedo renunciar solo si queda otro empleador', async () => {
+      prepararActivo(yoEmpleador, [yoEmpleador, otroEmpleador]);
+      const conOtro = await service.listarMiembros(PAULO);
+      expect(conOtro.miembros.find((m) => m.esYo)!.acciones.renunciar).toBe(true);
+
+      prepararActivo(yoEmpleador, [yoEmpleador, unColaborador]);
+      const soloYo = await service.listarMiembros(PAULO);
+      expect(soloYo.miembros.find((m) => m.esYo)!.acciones.renunciar).toBe(false);
+    });
+
+    it('un colaborador ve a sus colegas pero sin ninguna acción', async () => {
+      const yoColaborador = { ...unColaborador, usuario: { id: PAULO, nombres: 'Luis', apellidos: 'D', email: 'l@a.cl' } };
+      prepararActivo(yoColaborador, [yoEmpleador, yoColaborador]);
+
+      const { miRol, miembros } = await service.listarMiembros(PAULO);
+
+      expect(miRol).toBe('colaborador');
+      expect(miembros).toHaveLength(2);
+      expect(miembros.every((m) => !m.acciones.promover && !m.acciones.renunciar)).toBe(true);
+    });
+
+    it('sin empresa activa devuelve vacío en vez de fallar', async () => {
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, id_empresa: null });
+      empleadorRepo.find.mockResolvedValue([]);
+
+      const res = await service.listarMiembros(PAULO);
+
+      expect(res).toEqual({ empresa: null, miRol: null, miembros: [] });
+    });
+  });
+
   // ─── Onboarding en dos pasos ────────────────────────────
   describe('onboarding: primero el responsable, después las empresas', () => {
     const RESPONSABLE = {

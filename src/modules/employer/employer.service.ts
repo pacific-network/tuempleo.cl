@@ -161,6 +161,82 @@ export class EmpleadorService {
     }
 
     /**
+     * Miembros de la empresa activa: empleadores y colaboradores.
+     *
+     * Devuelve, además del rol, qué se puede hacer sobre cada uno. Las reglas
+     * ("el poder se da, no se quita") viven en un solo lado y el frontend solo
+     * pinta lo que llega, en vez de reimplementarlas y desincronizarse.
+     *
+     * Lo puede consultar cualquier miembro: un colaborador ve a sus colegas,
+     * pero le llegan todas las acciones en false.
+     */
+    async listarMiembros(userId: number): Promise<{
+        empresa: { id: number; nombre: string } | null;
+        miRol: 'empleador' | 'colaborador' | null;
+        miembros: {
+            id: number;
+            usuarioId: number;
+            nombres: string;
+            apellidos: string;
+            email: string;
+            rol: 'empleador' | 'colaborador';
+            cargo: string | null;
+            esYo: boolean;
+            acciones: { promover: boolean; renunciar: boolean };
+        }[];
+    }> {
+        const propia = await this.getEmpleadorActivo(userId);
+        if (!propia?.empresa) {
+            return { empresa: null, miRol: null, miembros: [] };
+        }
+
+        const empresaId = propia.empresa.id;
+        const miembros = await this.empleadorRepository.find({
+            where: { empresa: { id: empresaId } },
+            relations: ['usuario'],
+            order: { rol_empresa: 'ASC', id: 'ASC' },
+        });
+
+        const soyEmpleador = propia.rol_empresa === 'empleador';
+        const cuantosEmpleadores = miembros.filter(
+            (m) => m.rol_empresa === 'empleador',
+        ).length;
+
+        return {
+            empresa: {
+                id: empresaId,
+                nombre:
+                    propia.empresa.nombre_fantasia ||
+                    propia.empresa.razon_social ||
+                    '',
+            },
+            miRol: propia.rol_empresa,
+            miembros: miembros.map((m) => {
+                const esYo = m.id === propia.id;
+                return {
+                    id: m.id,
+                    usuarioId: m.usuario?.id,
+                    nombres: m.usuario?.nombres ?? '',
+                    apellidos: m.usuario?.apellidos ?? '',
+                    email: m.usuario?.email ?? '',
+                    rol: m.rol_empresa,
+                    cargo: (m.data as any)?.cargo ?? null,
+                    esYo,
+                    acciones: {
+                        // Dar acceso es libre entre empleadores.
+                        promover: soyEmpleador && m.rol_empresa === 'colaborador',
+                        // Quitárselo, solo uno a sí mismo, y si queda otro.
+                        renunciar:
+                            esYo &&
+                            m.rol_empresa === 'empleador' &&
+                            cuantosEmpleadores > 1,
+                    },
+                };
+            }),
+        };
+    }
+
+    /**
      * Todas las membresías de la persona, una por empresa.
      */
     async getMembresias(userId: number): Promise<Empleador[]> {

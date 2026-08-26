@@ -74,6 +74,17 @@ export class EmpleadorController {
     return this.empleadorService.agregarEmpresa(userId, dto);
   }
 
+  /**
+   * Miembros de la empresa activa, con lo que se puede hacer sobre cada uno.
+   * Lo consume la pantalla de miembros; las reglas de rol vienen resueltas.
+   */
+  @Get('miembros')
+  @UseGuards(AuthGuard('jwt'))
+  async miembros(@Req() req) {
+    const userId = req.user?.sub || req.user?.userId;
+    return this.empleadorService.listarMiembros(userId);
+  }
+
   /** Empresas donde la persona tiene membresía, con su rol en cada una. */
   @Get('mis-empresas')
   @UseGuards(AuthGuard('jwt'))
