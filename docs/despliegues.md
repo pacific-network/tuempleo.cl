@@ -83,8 +83,25 @@ Dos motivos distintos, los dos reales:
 ### Cómo se aplica, con la app apagada
 
 ```bash
-DRY_RUN=1 npm run migrate:multi-empresa   # reporta qué haría, no escribe
-npm run migrate:multi-empresa             # aplica
+# 0 · Confirmar contra qué base se va a correr. Ojo con el .env activo.
+grep -E '^DB_(HOST|NAME)=' .env
+
+# 1 · Simulacro. Solo lee: seguro incluso contra producción.
+DRY_RUN=1 npm run migrate:multi-empresa
+
+# 2 · Aplicar. Con la app apagada.
+npm run migrate:multi-empresa
+
+# 3 · Levantar. synchronize hace el resto solo.
+npm run start:dev        # local
+npm run start:prod       # servidor
+```
+
+En producción, sobre el contenedor:
+
+```bash
+docker exec -it <contenedor> sh -c "DRY_RUN=1 npm run migrate:multi-empresa"
+docker exec -it <contenedor> sh -c "npm run migrate:multi-empresa"
 ```
 
 Es idempotente y **descubre solo el nombre del índice viejo**, que TypeORM generó y cambia
