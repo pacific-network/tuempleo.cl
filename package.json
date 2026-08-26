@@ -24,7 +24,8 @@
     "migrate:cascade-empresa": "ts-node -r tsconfig-paths/register src/db/migrate/add-cascade-empresa.ts",
     "migrate:entrevista-tables": "ts-node -r tsconfig-paths/register src/db/migrate/add-entrevista-verificacion-tables.ts",
     "migrate:educacion-annos": "ts-node -r tsconfig-paths/register src/db/migrate/rename-educacion-annos.ts",
-    "migrate:auth-provider": "ts-node -r tsconfig-paths/register src/db/migrate/add-auth-provider.ts"
+    "migrate:auth-provider": "ts-node -r tsconfig-paths/register src/db/migrate/add-auth-provider.ts",
+    "migrate:multi-empresa": "ts-node -r tsconfig-paths/register src/db/migrate/multi-empresa.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

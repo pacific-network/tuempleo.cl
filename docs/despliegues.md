@@ -80,10 +80,25 @@ Dos motivos distintos, los dos reales:
    directo y choca. La salida es crear antes el índice definitivo: `usuario_id` es su prefijo
    izquierdo, así que sostiene la FK y recién entonces el viejo se puede soltar.
 
-### El SQL, con la app apagada
+### Cómo se aplica, con la app apagada
 
-Está en `src/db/migrations/2026-08-25_multi_empresa.sql`. Es el mismo para local y para
-producción.
+```bash
+DRY_RUN=1 npm run migrate:multi-empresa   # reporta qué haría, no escribe
+npm run migrate:multi-empresa             # aplica
+```
+
+Es idempotente y **descubre solo el nombre del índice viejo**, que TypeORM generó y cambia
+entre instalaciones — por eso el mismo comando sirve en local y en producción sin editar
+nada. Además saca un respaldo de `empleador` antes de tocar cualquier cosa.
+
+Correr siempre el `DRY_RUN` primero: muestra cuántas filas se van a migrar y qué índices hay
+hoy, sin escribir nada. Es seguro incluso contra producción.
+
+<details>
+<summary>El SQL equivalente, por si se prefiere pegarlo a mano</summary>
+
+También está en `src/db/migrations/2026-08-25_multi_empresa.sql`. Acá el nombre del índice
+`REL_...` hay que confirmarlo y reemplazarlo a mano; el script de arriba se ahorra ese paso.
 
 ```sql
 -- 1 · Roles: ensanchar el ENUM y mover los datos.
@@ -102,17 +117,15 @@ ALTER TABLE empleador
 ALTER TABLE empleador DROP INDEX `REL_a5baa661d6204614616a094688`;
 ```
 
-**El nombre `REL_...` es generado por TypeORM y cambia entre instalaciones.** El de arriba es
-el de la base local. En producción hay que sacarlo primero:
+El nombre `REL_...` de arriba es el de la base local. En otra instalación se saca con
+`SHOW INDEX FROM empleador WHERE Key_name LIKE 'REL_%';` — que funciona aunque el usuario de
+la base no tenga permiso sobre `information_schema`, como pasa en producción.
 
-```sql
-SHOW INDEX FROM empleador WHERE Key_name LIKE 'REL_%';
-```
-
-Y reemplazarlo en la última línea. Si el usuario de la base no puede leer
-`information_schema`, `SHOW INDEX` igual funciona.
+</details>
 
 ### Verificación, antes de levantar la app
+
+El script imprime las dos tablas al terminar. A mano sería:
 
 ```sql
 SELECT rol_empresa, COUNT(*) AS filas FROM empleador GROUP BY rol_empresa;
@@ -154,13 +167,21 @@ persona antes de poder volver — y por eso conviene esperar a que el flujo est�
 de dejar que la gente cree su segunda empresa.
 
 **Si las filas quedaron en cadena vacía** por haber arrancado antes de tiempo: no hay forma
-de saber cuál era `admin` y cuál `miembro`. Con pocos registros se corrige a mano; si no,
-hace falta un respaldo previo. Vale sacarlo antes de empezar:
+de saber cuál era `admin` y cuál `miembro` mirando la tabla. Para eso está el respaldo que el
+script saca como primer paso:
 
 ```sql
-CREATE TABLE empleador_backup_pre_multiempresa AS
-SELECT id, usuario_id, empresa_id, rol_empresa FROM empleador;
+UPDATE empleador e
+  JOIN empleador_backup_pre_multiempresa b ON b.id = e.id
+   SET e.rol_empresa = CASE b.rol_empresa
+         WHEN 'admin'   THEN 'empleador'
+         WHEN 'miembro' THEN 'colaborador'
+         ELSE b.rol_empresa
+       END
+ WHERE e.rol_empresa = '';
 ```
+
+El respaldo se puede borrar cuando el release lleve un tiempo estable.
 
 ---
 
