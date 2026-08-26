@@ -226,11 +226,25 @@ export class EmpleadorService {
     }
 
     /**
-     * Cambia el rol de una membresía. Solo un empleador de esa misma empresa
-     * puede hacerlo, y no puede dejarla sin ningún empleador.
+     * Cambia el rol de una membresía, bajo una sola regla:
+     * **el poder se puede dar, no se puede quitar.**
      *
-     * Cubre los tres casos de una sola vez: promover a un colaborador, degradar
-     * a un empleador y transferir el rol (promover al otro, después degradarse).
+     * - Promover un colaborador a empleador: cualquier empleador de la empresa.
+     * - Dejar de ser empleador: solo sobre la propia membresía, y solo si queda
+     *   otro empleador.
+     *
+     * Nadie degrada a un par. La razón es que el sistema no sabe —ni tiene cómo
+     * saber— quién es la autoridad dentro de una empresa: quien completó el
+     * registro pudo ser el dueño, un supervisor o un tercero, y tratar ese
+     * accidente como jerarquía sería inventarse un dato que no tenemos. Al no
+     * distinguir quién creó la empresa, la regla vale igual en los tres casos.
+     *
+     * El costo, asumido: si alguien se va en malos términos y no renuncia,
+     * conserva el acceso hasta que soporte lo saque a mano. Es preferible a que
+     * cualquiera pueda expulsar por sorpresa a quien administra la empresa.
+     *
+     * Transferir es promover al otro y después renunciar: dos pasos, sin
+     * operación especial.
      */
     async cambiarRolMembresia(
         actorUserId: number,
@@ -259,8 +273,13 @@ export class EmpleadorService {
 
         if (objetivo.rol_empresa === rol) return objetivo;
 
-        // Degradar a un empleador solo se permite si queda otro.
         if (rol === 'colaborador') {
+            // Solo se renuncia; a un par no se lo baja.
+            if (actor.id !== objetivo.id) {
+                throw new ConflictException(
+                    'Un empleador no puede quitarle el rol a otro. Solo esa persona puede dejarlo.',
+                );
+            }
             await this.assertNoEsUltimoEmpleador(objetivo);
         }
 

@@ -77,7 +77,10 @@ export class EmpleadorController {
     };
   }
 
-  /** Promueve a empleador o degrada a colaborador. Solo un empleador de esa empresa. */
+  /**
+   * Promover a un colaborador (cualquier empleador de la empresa) o renunciar
+   * al rol (solo sobre la propia membresía). El poder se da, no se quita.
+   */
   @Patch('membresia/:id/rol')
   @UseGuards(AuthGuard('jwt'))
   async cambiarRolMembresia(

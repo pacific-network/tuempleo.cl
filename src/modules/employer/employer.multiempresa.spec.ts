@@ -268,7 +268,36 @@ describe('EmpleadorService · multi-empresa', () => {
       );
     });
 
-    it('no deja degradar al último empleador', async () => {
+    it('no deja que un empleador le quite el rol a otro', async () => {
+      // El poder se da, no se quita: un par no baja a un par, aunque los dos
+      // sean empleadores de la misma empresa.
+      const otroEmpleador = { id: 5, rol_empresa: 'empleador', empresa: ACME, usuario: { id: 500 } };
+      empleadorRepo.findOne
+        .mockResolvedValueOnce(otroEmpleador)   // objetivo
+        .mockResolvedValueOnce(empleadorEnAcme); // actor: otro empleador de ACME
+
+      await expect(
+        service.cambiarRolMembresia(PAULO, otroEmpleador.id, 'colaborador'),
+      ).rejects.toThrow(ConflictException);
+      expect(empleadorRepo.save).not.toHaveBeenCalled();
+      // Ni siquiera llega a mirar cuántos empleadores quedan: no es el caso.
+      expect(empleadorRepo.count).not.toHaveBeenCalled();
+    });
+
+    it('deja renunciar sobre la propia membresía si queda otro empleador', async () => {
+      empleadorRepo.findOne
+        .mockResolvedValueOnce(empleadorEnAcme)  // objetivo: él mismo
+        .mockResolvedValueOnce(empleadorEnAcme); // actor: él mismo
+      empleadorRepo.count.mockResolvedValue(2);
+
+      await service.cambiarRolMembresia(PAULO, empleadorEnAcme.id, 'colaborador');
+
+      expect(empleadorRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ rol_empresa: 'colaborador' }),
+      );
+    });
+
+    it('no deja renunciar al último empleador', async () => {
       empleadorRepo.findOne
         .mockResolvedValueOnce(empleadorEnAcme)  // objetivo
         .mockResolvedValueOnce(empleadorEnAcme); // actor: él mismo
