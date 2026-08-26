@@ -15,6 +15,7 @@ import { WebpayService } from './webpay.service'
 import { Request, Response } from 'express'
 import { WEBPAY_CONFIG } from './config/webpay.config'
 import { AuthGuard } from '@nestjs/passport'
+import { MiembroDeEmpresaGuard } from '../auth/guards/miembro-empresa.guard';
 import { CreatePendingTransactionDto } from './dto/create-pending-transaction.dto'
 
 @Controller('v1/webpay')
@@ -25,7 +26,9 @@ export class WebpayController {
     // 1️⃣ Crear transacción Webpay (PENDING + CREATE)
     // ==============================================================
     @Post('/create-pending')
-    @UseGuards(AuthGuard('jwt'))
+    // MiembroDeEmpresaGuard: el `empresaId` viene del body, así que sin esto se
+    // podía cargar una compra a nombre de una empresa ajena.
+    @UseGuards(AuthGuard('jwt'), MiembroDeEmpresaGuard)
     async createPendingTransaction(
         @Body() body: CreatePendingTransactionDto,
         @Req() req: Request,
