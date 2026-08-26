@@ -10,6 +10,16 @@ import { Postulacion } from 'src/repository/applications/applications.entity';
 import { StockService } from '../stock/stock.service';
 
 // ─── Helpers ──────────────────────────────────────────────
+// `manager` simula la transacción de `agregarEmpresa`: le va poniendo id a lo
+// que se guarda, para poder afirmar sobre el resultado.
+const txManager = {
+  create: jest.fn((_entity, dto) => ({ ...dto })),
+  save: jest.fn((entity: any) => {
+    if (!entity.id) entity.id = entity.rut ? 77 : 88;
+    return Promise.resolve(entity);
+  }),
+};
+
 const mockRepo = () => ({
   find: jest.fn(),
   findOne: jest.fn(),
@@ -17,10 +27,14 @@ const mockRepo = () => ({
   update: jest.fn(),
   create: jest.fn((dto) => dto),
   save: jest.fn((entity) => Promise.resolve({ id: 1, ...entity })),
+  manager: {
+    transaction: jest.fn((cb: any) => cb(txManager)),
+  },
 });
 
 const ACME = { id: 10, nombre_fantasia: 'ACME', razon_social: 'ACME SpA' };
 const GLOBEX = { id: 20, nombre_fantasia: 'Globex', razon_social: 'Globex SpA' };
+const INITECH_EXISTENTE = { id: 40, rut: '76000000-0', nombre_fantasia: 'Initech' };
 
 // Paulo es empleador en ACME y colaborador en Globex. Es el caso que rompía el
 // modelo anterior y el que hay que sostener en todos los tests de abajo.
@@ -52,6 +66,8 @@ describe('EmpleadorService · multi-empresa', () => {
     }).compile();
 
     service = module.get<EmpleadorService>(EmpleadorService);
+    txManager.create.mockClear();
+    txManager.save.mockClear();
   });
 
   // ─── Empresa activa ─────────────────────────────────────
@@ -139,6 +155,117 @@ describe('EmpleadorService · multi-empresa', () => {
           ACME.id,
         ),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ─── Onboarding en dos pasos ────────────────────────────
+  describe('onboarding: primero el responsable, después las empresas', () => {
+    const RESPONSABLE = {
+      nombres: 'Paulo',
+      apellidos: 'Ramírez',
+      rut: '11111111-1',
+      data: {
+        pais: 'Chile',
+        region: 'Metropolitana',
+        comuna: 'Providencia',
+        direccion: 'Av. Siempre Viva 1',
+        telefono: '+56988440465',
+      },
+    } as any;
+
+    const EMPRESA_DTO = {
+      business: {
+        rut: '76000000-0',
+        razon_social: 'Initech SpA',
+        nombre_fantasia: 'Initech',
+        data: {},
+      },
+      cargo: 'Gerente',
+    } as any;
+
+    it('el paso 1 guarda al responsable sin crear ninguna membresía', async () => {
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, rut: null, data: null });
+      empleadorRepo.count.mockResolvedValue(0);
+
+      const res = await service.guardarResponsable(PAULO, RESPONSABLE);
+
+      expect(res).toEqual({ userId: PAULO, empresas: 0 });
+      expect(usuarioRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ rut: '11111111-1', data: RESPONSABLE.data }),
+      );
+      // Estado nuevo: responsable completo, cero empresas.
+      expect(empleadorRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('el paso 1 rechaza el RUT de otra persona', async () => {
+      usuarioRepo.findOne
+        .mockResolvedValueOnce({ id: PAULO, rut: null, data: null }) // el que edita
+        .mockResolvedValueOnce({ id: 999, rut: '11111111-1' });      // ya lo tiene otro
+
+      await expect(service.guardarResponsable(PAULO, RESPONSABLE)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('el paso 2 exige tener el responsable completo', async () => {
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, rut: null, data: null });
+
+      await expect(service.agregarEmpresa(PAULO, EMPRESA_DTO)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('el paso 2 rechaza una empresa con un RUT ya registrado', async () => {
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, rut: '11111111-1', data: {} });
+      empresaRepo.findOne.mockResolvedValue(INITECH_EXISTENTE);
+
+      await expect(service.agregarEmpresa(PAULO, EMPRESA_DTO)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(empleadorRepo.manager.transaction).not.toHaveBeenCalled();
+    });
+
+    it('la primera empresa queda activa y guarda el cargo en la membresía', async () => {
+      usuarioRepo.findOne.mockResolvedValue({
+        id: PAULO, rut: '11111111-1', data: {}, id_empresa: null,
+      });
+      empresaRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.agregarEmpresa(PAULO, EMPRESA_DTO);
+
+      expect(res.activa).toBe(true);
+      expect(usuarioRepo.update).toHaveBeenCalledWith(PAULO, { id_empresa: res.empresaId });
+      expect(txManager.create).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ rol_empresa: 'empleador', data: { cargo: 'Gerente' } }),
+      );
+    });
+
+    it('la segunda empresa no le roba el foco a la primera', async () => {
+      usuarioRepo.findOne.mockResolvedValue({
+        id: PAULO, rut: '11111111-1', data: {}, id_empresa: ACME.id,
+      });
+      empresaRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.agregarEmpresa(PAULO, EMPRESA_DTO);
+
+      expect(res.activa).toBe(false);
+      expect(usuarioRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('cada empresa es su propia transacción, no una sola de tres partes', async () => {
+      usuarioRepo.findOne.mockResolvedValue({
+        id: PAULO, rut: '11111111-1', data: {}, id_empresa: ACME.id,
+      });
+      empresaRepo.findOne.mockResolvedValue(null);
+
+      await service.agregarEmpresa(PAULO, EMPRESA_DTO);
+      await service.agregarEmpresa(PAULO, EMPRESA_DTO);
+      await service.agregarEmpresa(PAULO, EMPRESA_DTO);
+
+      // Tres llamadas independientes: si la tercera fallara, las dos primeras
+      // ya estarían confirmadas.
+      expect(empleadorRepo.manager.transaction).toHaveBeenCalledTimes(3);
     });
   });
 

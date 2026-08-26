@@ -11,6 +11,7 @@ import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
 import { UpdateBusinessDto } from "../business/dto/update-business.dto";
 import { UpdateEmployerDto } from "./dto/update-employer.dto";
 import { OnboardingMiembroDto } from "./dto/onboarding-miembro.dto";
+import { GuardarResponsableDto, AgregarEmpresaDto } from "./dto/onboarding-responsable.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
@@ -45,6 +46,118 @@ export class EmpleadorService {
         if (!usuario) return { exists: false, disponible: true };
         const esPropio = excludeUserId !== undefined && usuario.id === excludeUserId;
         return { exists: true, disponible: esPropio };
+    }
+
+    // ======================================================
+    // ONBOARDING EN DOS PASOS
+    // ======================================================
+
+    /**
+     * Paso 1 — el responsable, sin empresa.
+     *
+     * Se guarda en `usuario` y no en una membresía porque el formulario lo pide
+     * antes de que exista ninguna empresa. Deja a la persona en un estado que
+     * antes no existía: responsable completo, cero empresas.
+     */
+    async guardarResponsable(
+        userId: number,
+        dto: GuardarResponsableDto,
+    ): Promise<{ userId: number; empresas: number }> {
+        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+        // El RUT propio no es conflicto; el de otra persona sí.
+        if (usuario.rut !== dto.rut) {
+            const { disponible } = await this.checkRutUsuarioExists(dto.rut, userId);
+            if (!disponible) {
+                throw new ConflictException('El RUT ya está registrado por otro usuario');
+            }
+        }
+
+        usuario.nombres = dto.nombres;
+        usuario.apellidos = dto.apellidos;
+        usuario.rut = dto.rut;
+        usuario.data = { ...(usuario.data ?? {}), ...dto.data };
+        await this.usuarioRepository.save(usuario);
+
+        const empresas = await this.empleadorRepository.count({
+            where: { usuario: { id: userId } },
+        });
+
+        return { userId, empresas };
+    }
+
+    /**
+     * Paso 2 — agrega UNA empresa. Se puede llamar tantas veces como empresas
+     * tenga la persona, desde el onboarding o después desde el panel.
+     *
+     * Cada llamada es su propia transacción, a propósito: agregar tres empresas
+     * son tres operaciones independientes, no una sola de tres partes. Si la
+     * tercera falla, las dos primeras quedan bien y se reintenta solo esa —
+     * que es lo que hacía falta para que "agregar más" no repita el problema
+     * de la empresa huérfana.
+     */
+    async agregarEmpresa(
+        userId: number,
+        dto: AgregarEmpresaDto,
+    ): Promise<{ empresaId: number; empleadorId: number; activa: boolean }> {
+        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+        if (!usuario.rut || !usuario.data) {
+            throw new ConflictException(
+                'Completá primero tus datos de responsable',
+            );
+        }
+
+        const yaExiste = await this.empresaRepository.findOne({
+            where: { rut: dto.business.rut },
+        });
+        if (yaExiste) {
+            // El RUT de empresa es único a propósito: dos filas para la misma
+            // empresa parten cupos, ofertas y pagos entre las copias.
+            throw new ConflictException(
+                'Ya existe una empresa registrada con ese RUT',
+            );
+        }
+
+        const creado = await this.empleadorRepository.manager.transaction(
+            async (manager) => {
+                const empresa = manager.create(Empresa, {
+                    rut: dto.business.rut,
+                    razon_social: dto.business.razon_social,
+                    nombre_fantasia: dto.business.nombre_fantasia,
+                    data: dto.business.data as any,
+                    modificado_por: userId,
+                });
+                await manager.save(empresa);
+
+                const membresia = manager.create(Empleador, {
+                    usuario,
+                    empresa,
+                    rol_empresa: 'empleador' as const,
+                    data: { cargo: dto.cargo },
+                    modificado_por: userId,
+                });
+                await manager.save(membresia);
+
+                return { empresa, membresia };
+            },
+        );
+
+        // La primera empresa queda activa; las siguientes no roban el foco.
+        const esLaPrimera = !usuario.id_empresa;
+        if (esLaPrimera) {
+            await this.usuarioRepository.update(userId, {
+                id_empresa: creado.empresa.id,
+            });
+        }
+
+        return {
+            empresaId: creado.empresa.id,
+            empleadorId: creado.membresia.id,
+            activa: esLaPrimera,
+        };
     }
 
     /**
