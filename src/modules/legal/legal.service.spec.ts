@@ -262,7 +262,25 @@ describe('LegalService', () => {
       expect(ds.transaction).not.toHaveBeenCalled();
     });
 
-    it('bloquea al único empleador de una empresa', async () => {
+    it('deja borrar al único miembro y da de baja la empresa', async () => {
+      // Sin colaboradores no hay a quién promover: pedirlo sería un callejón
+      // sin salida que impide ejercer el derecho de supresión.
+      usuarioRepo.findOne.mockResolvedValue({
+        id: 4, email: 'e@b.cl', auth_provider: 'local', password: 'cifrada',
+      });
+      empleadorRepo.find.mockResolvedValue([
+        { id: 40, rol_empresa: 'empleador', empresa: { id: 10, nombre_fantasia: 'ACME' } },
+      ]);
+      // 1 empleador, 1 miembro en total.
+      empleadorRepo.count.mockResolvedValue(1);
+      ds.query.mockResolvedValue([{ count: 0 }]);
+
+      await service.deleteAccount(4, dto as any);
+
+      expect(ds.transaction).toHaveBeenCalled();
+    });
+
+    it('bloquea al único empleador cuando hay colaboradores', async () => {
       usuarioRepo.findOne.mockResolvedValue({
         id: 4,
         email: 'e@b.cl',
@@ -276,7 +294,9 @@ describe('LegalService', () => {
           empresa: { id: 10, nombre_fantasia: 'ACME' },
         },
       ]);
-      empleadorRepo.count.mockResolvedValue(1); // es el único empleador
+      empleadorRepo.count
+        .mockResolvedValueOnce(1)  // empleadores: solo él
+        .mockResolvedValueOnce(2); // miembros: hay un colaborador
       ds.query.mockResolvedValue([{ count: 0 }]); // sin ofertas activas
 
       await expect(service.deleteAccount(4, dto as any)).rejects.toThrow(

@@ -41,6 +41,19 @@ export class Empresa {
     @Column({ type: 'varchar', length: 20, nullable: true })
     telefono_verificado: string | null;
 
+    /**
+     * Baja lógica. Se usa cuando el único miembro de la empresa elimina su
+     * cuenta: la empresa no puede quedar viva sin nadie a cargo, pero tampoco
+     * se puede borrar — hay ofertas, transacciones y cupos apuntándole, y el
+     * DELETE duro falla por FK (además de que los datos contables no se
+     * eliminan a pedido).
+     */
+    @Column({ type: 'boolean', default: true })
+    es_activa: boolean;
+
+    @Column({ type: 'datetime', nullable: true })
+    fecha_baja: Date | null;
+
     // Dato no visibles
     @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
     fecha_creacion: Date;

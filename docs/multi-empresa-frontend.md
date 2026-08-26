@@ -228,7 +228,7 @@ inventar copy propio, porque nombran la empresa concreta.
 | Cambiar a una empresa ajena | 404 | No tienes acceso a esta empresa |
 | Intentar degradar a un par | 409 | Un empleador no puede quitarle el rol a otro. Solo esa persona puede dejarlo. |
 | Renunciar siendo el último | 409 | Sos el único empleador de *X*. Promové a un colaborador antes de dejar de serlo. |
-| Borrar la cuenta siendo el último | 403 | Sos el único empleador de *X*. Promové a un colaborador antes de eliminar tu cuenta. |
+| Borrar la cuenta siendo el último, con colaboradores | 403 | Sos el único empleador de *X*. Promové a un colaborador antes de eliminar tu cuenta. |
 | No es empleador de la empresa | 403 | Solo un empleador de la empresa puede realizar esta accion |
 
 ---
@@ -266,8 +266,14 @@ Para no construir contra algo que no existe:
 - **Invitar a alguien que ya tiene cuenta.** `POST /v1/empleador/invitacion/aceptar` sigue
   rechazando emails ya registrados: solo sirve para altas nuevas. Sumar a alguien que ya usa
   la plataforma necesita un camino que todavía no está.
-- **Eliminar una empresa.** No hay endpoint. Si alguien es el único empleador de una empresa
-  sin colaboradores, hoy no puede eliminar su cuenta ni dejar la empresa.
-- **Aislamiento de lecturas.** Hay endpoints que reciben `empresaId` por parámetro
-  (`/v1/seleccion/empresa/:empresaId` y otros) y no validan pertenencia. Están en revisión;
-  **no construir pantallas nuevas apoyadas en ellos** hasta que se cierren.
+- **Eliminar una empresa por decisión propia.** No hay endpoint. Lo único que existe es la
+  baja automática: si el único miembro de una empresa elimina su cuenta, la empresa se da de
+  baja con ella (`es_activa = false`) — no se bloquea el borrado, porque no habría a quién
+  promover. Con colaboradores adentro sí se bloquea y se pide promover a alguien.
+- **`/v1/quota/*` y `/v1/publication/*` no tienen autenticación.** Reciben `empresaId` o
+  `employerId` del cliente y no verifican nada — ahí se reservan cupos y se publican ofertas.
+  Agregarles JWT es un cambio de contrato que hay que coordinar: si el frontend hoy los llama
+  sin token, se rompen. **Pendiente de coordinar antes de tocarlos.**
+  Los de `/v1/seleccion/empresa/:empresaId` y `POST /v1/webpay/create-pending` ya quedaron
+  cerrados con `MiembroDeEmpresaGuard`: si el `empresaId` no es de una empresa tuya,
+  responden 403 *«No tienes acceso a esta empresa»*.

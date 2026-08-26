@@ -283,24 +283,43 @@ export class LegalService {
       }
     }
 
-    // Y que ninguna empresa quede sin empleador: la membresía se borra en
+    // Y que ninguna empresa quede viva sin empleador: la membresía se borra en
     // cascada con el usuario, así que sin esto la empresa queda con
     // colaboradores que no pueden invitar ni verificarla, y solo se arregla a mano.
+    //
+    // Hay dos casos y no dan lo mismo. Si queda alguien más en la empresa, se
+    // bloquea y se pide promover a esa persona. Pero si es el único miembro no
+    // hay a quién promover: pedirlo sería un callejón sin salida que impide
+    // ejercer el derecho de supresión, así que la empresa se da de baja con la
+    // cuenta.
+    const empresasABajar: number[] = [];
+
     for (const empleador of membresias) {
       if (empleador.rol_empresa !== 'empleador' || !empleador.empresa) continue;
 
+      const empresaId = empleador.empresa.id;
+      const nombre =
+        empleador.empresa.nombre_fantasia ||
+        empleador.empresa.razon_social ||
+        `empresa ${empresaId}`;
+
       const empleadores = await this.empleadorRepo.count({
-        where: { empresa: { id: empleador.empresa.id }, rol_empresa: 'empleador' },
+        where: { empresa: { id: empresaId }, rol_empresa: 'empleador' },
       });
-      if (empleadores <= 1) {
-        const nombre =
-          empleador.empresa.nombre_fantasia ||
-          empleador.empresa.razon_social ||
-          `empresa ${empleador.empresa.id}`;
+      if (empleadores > 1) continue; // queda otro a cargo, nada que hacer
+
+      const miembros = await this.empleadorRepo.count({
+        where: { empresa: { id: empresaId } },
+      });
+
+      if (miembros > 1) {
         throw new ForbiddenException(
           `Sos el único empleador de ${nombre}. Promové a un colaborador antes de eliminar tu cuenta.`,
         );
       }
+
+      // Único miembro: la empresa se va con él.
+      empresasABajar.push(empresaId);
     }
 
     // Recopilar archivos a eliminar post-transaccion
@@ -381,6 +400,16 @@ export class LegalService {
         await manager.query(
           `DELETE FROM invitacion_empleador WHERE invitado_por = ?`,
           [empleador.id],
+        );
+      }
+
+      // Paso 4b: dar de baja las empresas donde era el único miembro.
+      // Baja lógica y no DELETE: hay ofertas, transacciones y cupos apuntando
+      // a la empresa, y los datos contables no se eliminan a pedido.
+      for (const empresaId of empresasABajar) {
+        await manager.query(
+          `UPDATE empresa SET es_activa = 0, fecha_baja = NOW() WHERE id = ?`,
+          [empresaId],
         );
       }
 
