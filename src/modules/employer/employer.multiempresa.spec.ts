@@ -142,7 +142,67 @@ describe('EmpleadorService · multi-empresa', () => {
     });
   });
 
-  // ─── Invariante: una empresa nunca sin main ─────────────
+  // ─────────────────────────────────────────────────────────
+  // El requerimiento, textual:
+  //   «yo como dueño de empresa puedo estar en todas, pero no me puedes
+  //    limitar a una empresa solo mi rut»
+  //
+  // Es la razón de ser de todo lo demás en este archivo, así que se prueba
+  // con su propio enunciado y no como efecto colateral de otro test.
+  // ─────────────────────────────────────────────────────────
+  describe('un mismo RUT no queda limitado a una empresa', () => {
+    const RUT_DUENO = '11111111-1';
+    const INITECH = { id: 30, nombre_fantasia: 'Initech', razon_social: 'Initech SpA' };
+
+    it('la misma persona puede registrar tres empresas', async () => {
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, rut: RUT_DUENO });
+      empleadorRepo.findOne.mockResolvedValue(null); // sin membresía previa en cada una
+
+      for (const empresa of [ACME, GLOBEX, INITECH]) {
+        empresaRepo.findOne.mockResolvedValue(empresa);
+
+        const creado = await service.createEmployerWithCompany(
+          { userId: PAULO, rut: RUT_DUENO, empresaId: empresa.id, data: {} } as any,
+          empresa.id,
+        );
+
+        expect(creado).toEqual(
+          expect.objectContaining({ empresa, rol_empresa: 'empleador' }),
+        );
+      }
+
+      expect(empleadorRepo.save).toHaveBeenCalledTimes(3);
+    });
+
+    it('el RUT propio nunca bloquea la siguiente empresa', async () => {
+      // `usuario.rut` es UNIQUE, pero eso significa "una persona, una cuenta",
+      // no "una persona, una empresa". La validación excluye al propio dueño.
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, rut: RUT_DUENO });
+
+      const propio = await service.checkRutUsuarioExists(RUT_DUENO, PAULO);
+      expect(propio).toEqual({ exists: true, disponible: true });
+
+      // Y sigue protegiendo lo que debe: el RUT de otra persona no se puede usar.
+      const ajeno = await service.checkRutUsuarioExists(RUT_DUENO, 999);
+      expect(ajeno).toEqual({ exists: true, disponible: false });
+    });
+
+    it('devuelve todas sus empresas, cada una con su rol', async () => {
+      empleadorRepo.find.mockResolvedValue([empleadorEnAcme, colaboradorEnGlobex]);
+      usuarioRepo.findOne.mockResolvedValue({ id: PAULO, id_empresa: ACME.id });
+      empleadorRepo.findOne.mockResolvedValue(empleadorEnAcme);
+
+      const { exists, membresias } = await service.checkEmpleadorExists(PAULO);
+
+      expect(exists).toBe(true);
+      expect(membresias).toEqual([
+        { id: 1, empresaId: ACME.id, rol: 'empleador', nombre: 'ACME' },
+        { id: 2, empresaId: GLOBEX.id, rol: 'colaborador', nombre: 'Globex' },
+      ]);
+    });
+  });
+
+  // ─── Invariante: una empresa nunca sin empleador ─────────
   describe('assertNoEsUltimoEmpleador', () => {
     it('bloquea al único empleador de la empresa', async () => {
       empleadorRepo.count.mockResolvedValue(1);
