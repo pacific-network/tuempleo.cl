@@ -24,8 +24,8 @@ igual que antes y el backend sabe de qué empresa se trata.
 
 | Antes | Ahora | Qué puede hacer |
 |---|---|---|
-| `admin` | **`empleador`** | Maneja la empresa: publicar, invitar colaboradores, verificar la empresa |
-| `miembro` | **`colaborador`** | Pertenece a la empresa, no la administra |
+| `admin` | **`empleador`** | Administra la empresa: invitar colaboradores, verificarla, cambiar roles |
+| `miembro` | **`colaborador`** | Pertenece a la empresa. **También publica y edita ofertas** |
 
 `admin` se sacó porque colisionaba con `usuario.isAdmin`, que es el administrador **del
 sitio** — otra cosa completamente distinta.
@@ -200,10 +200,17 @@ Una sola idea: **el poder se puede dar, no se puede quitar.**
 
 | Acción | Quién puede |
 |---|---|
+| **Crear, editar, cerrar y eliminar ofertas** | **Cualquier miembro**: empleadores y colaboradores |
 | Invitar y remover colaboradores | Cualquier `empleador` de esa empresa |
 | Promover un colaborador a `empleador` | Cualquier `empleador` de esa empresa |
 | Dejar de ser `empleador` | **Solo esa misma persona**, sobre su propia membresía |
 | Dejar la empresa sin ningún `empleador` | Nadie |
+
+El rol **no limita el trabajo con las ofertas**: si te invitaron a la empresa, publicás y
+editás igual que quien la creó. Lo que distingue al `empleador` es administrar la empresa
+misma — a quién sumar, a quién promover, verificarla. Y el permiso sobre una oferta es de la
+empresa dueña del aviso, no de quien lo creó: no hace falta ser el autor para editarlo, ni
+cambiar de empresa activa para tocar el aviso de otra de tus empresas.
 
 En la pantalla de miembros eso significa:
 
