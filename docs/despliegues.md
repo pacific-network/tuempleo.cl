@@ -140,6 +140,26 @@ la base no tenga permiso sobre `information_schema`, como pasa en producción.
 
 </details>
 
+### ✅ Aplicado y verificado en local — 27 de agosto
+
+El script corrió sin novedades y una segunda corrida en seco confirma que quedó estable:
+
+```
+ENUM ya aceptaba los valores nuevos
+No quedaban roles con los valores viejos
+Índice uq_empleador_usuario_empresa ya existía
+No quedaba ningún índice único sobre usuario_id
+
+Roles:    empleador 21 · colaborador 2
+Índices:  PRIMARY · uq_empleador_usuario_empresa (usuario_id, empresa_id) · FK empresa_id
+```
+
+Después la app levantó y synchronize agregó lo aditivo —`usuario.data`,
+`postulacion.match_score` y `match_desglose`— sin intervención. También se corrió
+`npm run migrate:match-score`: no quedan postulaciones sin score.
+
+**En producción sigue pendiente**, y hay que correrlo igual antes de levantar.
+
 ### Verificación, antes de levantar la app
 
 El script imprime las dos tablas al terminar. A mano sería:

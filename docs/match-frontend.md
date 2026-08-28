@@ -115,7 +115,9 @@ Los pesos —área 30, experiencia 25, modalidad 15, ubicación 15, educación 1
 
 ## 7. Pendiente en el backend
 
-- **Correr el backfill** (`npm run migrate:match-score`) para que las postulaciones ya
-  existentes tengan score. Hasta entonces llegan en `null`.
 - **`POST /v1/ofertas` no tiene guard**, así que hoy se puede crear una oferta sin token.
   Está en la lista de endpoints a cerrar junto con `quota` y `publication`.
+
+El backfill ya se corrió en local: no quedan postulaciones sin score. En producción hay que
+correrlo después del despliegue (`npm run migrate:match-score`), o las postulaciones
+anteriores llegan en `null`.
