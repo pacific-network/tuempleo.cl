@@ -6,8 +6,10 @@ Bitácora de qué hay desplegado, desde qué commit, y cómo volver atrás sin r
 desplegar, cerrar la entrada con el resultado. Si algo se revierte, dejarlo escrito —
 un rollback sin registro es el que falla la próxima vez.
 
-> **Recordatorio de infraestructura:** el CI despliega al **mergear un PR a `dev`**, no al
-> pushear. **No corre migraciones**: el SQL se ejecuta siempre a mano.
+> **Recordatorio de infraestructura:** el despliegue se hace **a mano en el servidor, con
+> PM2**. El workflow `deploy-dev.yml` existe y se dispara al mergear un PR a `dev`, pero es
+> de Docker y no es el camino que se usa — conviene desactivarlo para que no levante un
+> contenedor peleando por el puerto 3000. **Las migraciones nunca son automáticas.**
 
 ---
 
@@ -159,6 +161,27 @@ Después la app levantó y synchronize agregó lo aditivo —`usuario.data`,
 `npm run migrate:match-score`: no quedan postulaciones sin score.
 
 **En producción sigue pendiente**, y hay que correrlo igual antes de levantar.
+
+### ✅ Migración aplicada en producción — 30 de agosto
+
+Corrida con la app abajo. Salida:
+
+```
+Respaldo creado: empleador_backup_pre_multiempresa
+ENUM ensanchado a los cuatro valores
+Roles migrados: 4 a empleador, 0 a colaborador
+Índice uq_empleador_usuario_empresa creado
+Índice único viejo soltado: REL_a5baa661d6204614616a094688
+```
+
+Una segunda corrida confirmó que es idempotente: todo «ya existía», sin cambios.
+
+Producción quedó con **4 membresías, todas `empleador`, ningún colaborador** — nadie usó
+todavía el flujo de invitación, así que el modelo entra sin roles ambiguos que interpretar.
+
+**Pendiente de cerrar esta entrada:** confirmar que la app levantó y correr
+`npm run migrate:match-score`, que necesita la columna que synchronize crea en el primer
+arranque.
 
 ### Verificación, antes de levantar la app
 
