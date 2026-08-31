@@ -1,16 +1,18 @@
-import { Body, Controller, Post, Get, Param, ParseIntPipe, NotFoundException, Patch, UseGuards, Req, Query } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, ParseIntPipe, NotFoundException, Patch, Put, UseGuards, Req, Query } from '@nestjs/common';
 import { EmpleadorService } from './employer.service';
 import { InvitacionService } from './invitacion.service';
 import { Empleador } from 'src/repository/employer/employer.entity';
 import { CreateEmployerDto } from '../employer/dto/create-employer.dto';
 import { EmpleadorBasicInfoDto } from './dto/basic-info.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
+import { EmpleadorEmpresaGuard } from '../auth/guards/empleador-empresa.guard';
 import { Empresa } from 'src/repository/business/business.entity';
 import { UpdateBusinessDto } from '../business/dto/update-business.dto';
 import { UpdateEmployerDto } from './dto/update-employer.dto';
 import { InvitarEmpleadorDto, ValidarCodigoDto, AceptarInvitacionDto } from './dto/invitar-empleador.dto';
 import { OnboardingMiembroDto } from './dto/onboarding-miembro.dto';
+import { EmpresaActivaDto, CambiarRolDto } from './dto/membresia.dto';
+import { GuardarResponsableDto, AgregarEmpresaDto } from './dto/onboarding-responsable.dto';
 import { PageOptionsDto } from 'src/shared/pagination/page-options.dto';
 import { PageDto } from 'src/shared/pagination/page.dto';
 
@@ -48,6 +50,88 @@ export class EmpleadorController {
     );
   }
 
+  // ======================================================
+  // MULTI-EMPRESA
+  // Van antes de @Get(':userId'), que si no las captura como parámetro.
+  // ======================================================
+
+  /** Paso 1 del onboarding: quién es el responsable. Todavía sin empresa. */
+  @Put('responsable')
+  @UseGuards(AuthGuard('jwt'))
+  async guardarResponsable(@Req() req, @Body() dto: GuardarResponsableDto) {
+    const userId = req.user?.sub || req.user?.userId;
+    return this.empleadorService.guardarResponsable(userId, dto);
+  }
+
+  /**
+   * Paso 2: agrega una empresa. Se llama una vez por empresa — desde el
+   * onboarding o después desde el panel. Cada llamada es independiente.
+   */
+  @Post('empresas')
+  @UseGuards(AuthGuard('jwt'))
+  async agregarEmpresa(@Req() req, @Body() dto: AgregarEmpresaDto) {
+    const userId = req.user?.sub || req.user?.userId;
+    return this.empleadorService.agregarEmpresa(userId, dto);
+  }
+
+  /**
+   * Miembros de la empresa activa, con lo que se puede hacer sobre cada uno.
+   * Lo consume la pantalla de miembros; las reglas de rol vienen resueltas.
+   */
+  @Get('miembros')
+  @UseGuards(AuthGuard('jwt'))
+  async miembros(@Req() req) {
+    const userId = req.user?.sub || req.user?.userId;
+    return this.empleadorService.listarMiembros(userId);
+  }
+
+  /** Empresas donde la persona tiene membresía, con su rol en cada una. */
+  @Get('mis-empresas')
+  @UseGuards(AuthGuard('jwt'))
+  async misEmpresas(@Req() req) {
+    const userId = req.user?.sub || req.user?.userId;
+    return this.empleadorService.checkEmpleadorExists(userId);
+  }
+
+  /** Cambia la empresa sobre la que opera el resto de la API. */
+  @Patch('empresa-activa')
+  @UseGuards(AuthGuard('jwt'))
+  async cambiarEmpresaActiva(@Req() req, @Body() dto: EmpresaActivaDto) {
+    const userId = req.user?.sub || req.user?.userId;
+    const membresia = await this.empleadorService.setEmpresaActiva(
+      userId,
+      dto.empresaId,
+    );
+    return {
+      empresaId: membresia.empresa?.id,
+      rol: membresia.rol_empresa,
+    };
+  }
+
+  /**
+   * Promover a un colaborador (cualquier empleador de la empresa) o renunciar
+   * al rol (solo sobre la propia membresía). El poder se da, no se quita.
+   */
+  @Patch('membresia/:id/rol')
+  @UseGuards(AuthGuard('jwt'))
+  async cambiarRolMembresia(
+    @Req() req,
+    @Param('id', ParseIntPipe) empleadorId: number,
+    @Body() dto: CambiarRolDto,
+  ) {
+    const userId = req.user?.sub || req.user?.userId;
+    const membresia = await this.empleadorService.cambiarRolMembresia(
+      userId,
+      empleadorId,
+      dto.rol,
+    );
+    return {
+      id: membresia.id,
+      empresaId: membresia.empresa?.id,
+      rol: membresia.rol_empresa,
+    };
+  }
+
   @Get(':userId')
   async getEmployerByUserId(@Param('userId') userId: number): Promise<Empleador | null> {
     return this.empleadorService.findEmployerByUserId(userId);
@@ -71,7 +155,7 @@ export class EmpleadorController {
 
 
   @Patch('empresa')
-  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  @UseGuards(AuthGuard('jwt'), EmpleadorEmpresaGuard)
   async updateEmpresa(
     @Body() dto: UpdateBusinessDto,
     @Req() req: any,
@@ -122,9 +206,9 @@ export class EmpleadorController {
   // INVITACIONES
   // ======================================================
 
-  /** Admin invita miembro por SMS/Email */
+  /** Un empleador invita a un colaborador por SMS/Email */
   @Post('invitar')
-  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  @UseGuards(AuthGuard('jwt'), EmpleadorEmpresaGuard)
   async invitarMiembro(
     @Req() req: any,
     @Body() dto: InvitarEmpleadorDto,

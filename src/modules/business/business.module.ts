@@ -9,7 +9,7 @@ import { PromocionModule } from '../promocion/promocion.module';
 import { SmsModule } from '../sms-generator/sms.module';
 import { VerificacionEmpresaController } from './verificacion/verificacion-empresa.controller';
 import { VerificacionEmpresaService } from './verificacion/verificacion-empresa.service';
-import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
+import { EmpleadorEmpresaGuard } from '../auth/guards/empleador-empresa.guard';
 
 @Module({
     imports: [
@@ -18,7 +18,7 @@ import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
         SmsModule,
     ],
     controllers: [EmpresaController, VerificacionEmpresaController],
-    providers: [EmpresaService, VerificacionEmpresaService, EmployerAdminGuard],
+    providers: [EmpresaService, VerificacionEmpresaService, EmpleadorEmpresaGuard],
     exports: [EmpresaService],
 })
 

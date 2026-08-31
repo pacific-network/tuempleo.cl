@@ -1,6 +1,7 @@
 import { Body, Controller, Post, Param, ParseIntPipe, Req, UseGuards, Patch, Get, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ProcesoSeleccionService } from './hiring_process.service';
 import { AuthGuard } from '@nestjs/passport'; // corregido: importar desde '@nestjs/passport'
+import { MiembroDeEmpresaGuard } from '../auth/guards/miembro-empresa.guard';
 import { AuthGuard as CandidatoAuthGuard } from '../auth/guards/auth.guards';
 import { CrearEntrevistaDto } from './dto/crear-entrevista.dto';
 import { ActualizarEntrevistaDto, CambiarEstadoEntrevistaDto } from './dto/actualizar-entrevista.dto';
@@ -66,7 +67,9 @@ export class ProcesoSeleccionController {
         return this.seleccionService.listarProcesosDelPostulante(userId);
     }
 
-    @UseGuards(AuthGuard('jwt'))
+    // El guard es lo que faltaba: tenía JWT pero no usaba el userId, así que
+    // servía las postulaciones de cualquier empresa cambiando el número.
+    @UseGuards(AuthGuard('jwt'), MiembroDeEmpresaGuard)
     @Get('empresa/:empresaId')
     async listarPorEmpresa(@Param('empresaId') empresaId: number) {
         return this.seleccionService.listarPostulacionesPorEmpresa(Number(empresaId));
@@ -120,7 +123,7 @@ export class ProcesoSeleccionController {
     }
 
     // Empleador: entrevistas agendadas por su empresa.
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), MiembroDeEmpresaGuard)
     @Get('entrevistas/empresa/:empresaId')
     async entrevistasPorEmpresa(@Param('empresaId', ParseIntPipe) empresaId: number) {
         return this.seleccionService.listarEntrevistasPorEmpresa(empresaId);

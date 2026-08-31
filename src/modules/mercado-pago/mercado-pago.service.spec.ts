@@ -33,6 +33,9 @@ const mockRepo = () => ({
   findOne: jest.fn(),
   create: jest.fn((dto) => ({ id: 'uuid-1', ...dto })),
   save: jest.fn((entity) => Promise.resolve(entity)),
+  // El servicio lee `usuario.id_empresa` por el manager para saber a qué
+  // empresa acreditar el stock cuando la persona administra varias.
+  manager: { findOne: jest.fn().mockResolvedValue(null) },
 });
 
 // ─── Test Suite ───────────────────────────────────────────
@@ -136,6 +139,7 @@ describe('MercadoPagoService', () => {
       });
 
       txRepo.findOne.mockResolvedValue(tx);
+      empleadorRepo.manager.findOne.mockResolvedValue({ id: 42, id_empresa: 10 });
       empleadorRepo.findOne.mockResolvedValue({
         empresa: { id: 10 },
       });

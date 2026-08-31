@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
-import { EmployerAdminGuard } from '../../auth/guards/employer-admin.guard';
+import { EmpleadorEmpresaGuard } from '../../auth/guards/empleador-empresa.guard';
 import { VerificacionEmpresaService } from './verificacion-empresa.service';
 import { SolicitarVerificacionDto, ConfirmarVerificacionDto } from './dto/verificacion.dto';
 
@@ -21,7 +21,7 @@ export class VerificacionEmpresaController {
   constructor(private readonly verificacionService: VerificacionEmpresaService) {}
 
   // Admin de la empresa solicita el código de verificación por SMS.
-  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  @UseGuards(AuthGuard('jwt'), EmpleadorEmpresaGuard)
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post(':id/verificacion/solicitar')
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
@@ -35,7 +35,7 @@ export class VerificacionEmpresaController {
   }
 
   // Admin confirma el código → la empresa queda verificada.
-  @UseGuards(AuthGuard('jwt'), EmployerAdminGuard)
+  @UseGuards(AuthGuard('jwt'), EmpleadorEmpresaGuard)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post(':id/verificacion/confirmar')
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))

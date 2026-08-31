@@ -34,26 +34,29 @@ export class VerificacionEmpresaService {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-  // El usuario autenticado debe ser admin de ESA empresa.
-  private async validarAdminDeEmpresa(empresaId: number, userId: number): Promise<Empresa> {
+  // El usuario autenticado debe ser empleador de ESA empresa, no colaborador.
+  private async validarEmpleadorDeEmpresa(empresaId: number, userId: number): Promise<Empresa> {
     const empresa = await this.empresaRepo.findOne({ where: { id: empresaId } });
     if (!empresa) throw new NotFoundException('Empresa no encontrada');
 
+    // Se busca la membresía de ESTA empresa. Resolver por usuario y comparar
+    // después devolvía una membresía arbitraria cuando la persona está en
+    // varias empresas, y rechazaba a quien sí pertenecía.
     const empleador = await this.empleadorRepo.findOne({
-      where: { usuario: { id: userId } },
+      where: { usuario: { id: userId }, empresa: { id: empresaId } },
       relations: ['empresa'],
     });
-    if (!empleador || empleador.empresa?.id !== empresaId) {
+    if (!empleador) {
       throw new ForbiddenException('No perteneces a esta empresa');
     }
-    if (empleador.rol_empresa !== 'admin') {
-      throw new ForbiddenException('Solo el administrador puede verificar la empresa');
+    if (empleador.rol_empresa !== 'empleador') {
+      throw new ForbiddenException('Solo un empleador de la empresa puede verificarla');
     }
     return empresa;
   }
 
   async solicitar(empresaId: number, telefono: string, userId: number) {
-    const empresa = await this.validarAdminDeEmpresa(empresaId, userId);
+    const empresa = await this.validarEmpleadorDeEmpresa(empresaId, userId);
 
     if (empresa.verificada) {
       throw new BadRequestException('La empresa ya está verificada');
@@ -94,7 +97,7 @@ export class VerificacionEmpresaService {
   }
 
   async confirmar(empresaId: number, codigo: string, userId: number) {
-    await this.validarAdminDeEmpresa(empresaId, userId);
+    await this.validarEmpleadorDeEmpresa(empresaId, userId);
 
     const verificacion = await this.verificacionRepo.findOne({
       where: { empresa: { id: empresaId }, estado: 'pendiente' },

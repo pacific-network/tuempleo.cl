@@ -73,12 +73,49 @@ describe('PostulacionService', () => {
 
       const res = await service.crearPostulacion(dto);
 
-      expect(postulacionRepo.create).toHaveBeenCalledWith({
-        postulante,
-        oferta,
-        estado: 'enviada',
-      });
+      expect(postulacionRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ postulante, oferta, estado: 'enviada' }),
+      );
       expect(res.id).toBe(100);
+    });
+
+    it('congela el match con la oferta al postular', async () => {
+      // Perfil y oferta que calzan en área y modalidad: el score tiene que
+      // guardarse en la postulación, no calcularse después.
+      const postulante = {
+        id: 1,
+        data: {
+          preferencias: { categoria_empleo: 'Ventas', modalidad: 'remoto' },
+          experiencias: [{ cargo: 'Ejecutivo de Ventas', anios: 4 }],
+        },
+      };
+      const oferta = {
+        id: 2,
+        data: JSON.stringify({ area_trabajo: 'Ventas', modalidad: 'remoto' }),
+      };
+      postulanteRepo.findOne.mockResolvedValue(postulante);
+      ofertaRepo.findOne.mockResolvedValue(oferta);
+      postulacionRepo.findOne.mockResolvedValue(null);
+
+      await service.crearPostulacion(dto);
+
+      const guardado = postulacionRepo.create.mock.calls[0][0];
+      expect(guardado.matchScore).toBeGreaterThan(0);
+      expect(guardado.matchDesglose).toEqual(
+        expect.objectContaining({ area: expect.any(Number) }),
+      );
+    });
+
+    it('guarda el `data` del DTO en vez de descartarlo', async () => {
+      postulanteRepo.findOne.mockResolvedValue({ id: 1 });
+      ofertaRepo.findOne.mockResolvedValue({ id: 2 });
+      postulacionRepo.findOne.mockResolvedValue(null);
+
+      await service.crearPostulacion({ ...dto, data: { respuesta_1: 'sí' } } as any);
+
+      expect(postulacionRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { respuesta_1: 'sí' } }),
+      );
     });
   });
 

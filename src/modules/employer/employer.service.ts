@@ -11,6 +11,7 @@ import { EmpleadorBasicInfoDto } from "./dto/basic-info.dto";
 import { UpdateBusinessDto } from "../business/dto/update-business.dto";
 import { UpdateEmployerDto } from "./dto/update-employer.dto";
 import { OnboardingMiembroDto } from "./dto/onboarding-miembro.dto";
+import { GuardarResponsableDto, AgregarEmpresaDto } from "./dto/onboarding-responsable.dto";
 import { PageDto } from "src/shared/pagination/page.dto";
 import { PageOptionsDto } from "src/shared/pagination/page-options.dto";
 import { PageMetaDto } from "src/shared/pagination/page-meta.dto";
@@ -47,15 +48,306 @@ export class EmpleadorService {
         return { exists: true, disponible: esPropio };
     }
 
-    async checkEmpleadorExists(userId: number): Promise<{ exists: boolean; empleador?: { id: number; empresaId: number } }> {
-        const empleador = await this.empleadorRepository.findOne({
+    // ======================================================
+    // ONBOARDING EN DOS PASOS
+    // ======================================================
+
+    /**
+     * Paso 1 — el responsable, sin empresa.
+     *
+     * Se guarda en `usuario` y no en una membresía porque el formulario lo pide
+     * antes de que exista ninguna empresa. Deja a la persona en un estado que
+     * antes no existía: responsable completo, cero empresas.
+     */
+    async guardarResponsable(
+        userId: number,
+        dto: GuardarResponsableDto,
+    ): Promise<{ userId: number; empresas: number }> {
+        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+        // El RUT propio no es conflicto; el de otra persona sí.
+        if (usuario.rut !== dto.rut) {
+            const { disponible } = await this.checkRutUsuarioExists(dto.rut, userId);
+            if (!disponible) {
+                throw new ConflictException('El RUT ya está registrado por otro usuario');
+            }
+        }
+
+        usuario.nombres = dto.nombres;
+        usuario.apellidos = dto.apellidos;
+        usuario.rut = dto.rut;
+        usuario.data = { ...(usuario.data ?? {}), ...dto.data };
+        await this.usuarioRepository.save(usuario);
+
+        const empresas = await this.empleadorRepository.count({
+            where: { usuario: { id: userId } },
+        });
+
+        return { userId, empresas };
+    }
+
+    /**
+     * Paso 2 — agrega UNA empresa. Se puede llamar tantas veces como empresas
+     * tenga la persona, desde el onboarding o después desde el panel.
+     *
+     * Cada llamada es su propia transacción, a propósito: agregar tres empresas
+     * son tres operaciones independientes, no una sola de tres partes. Si la
+     * tercera falla, las dos primeras quedan bien y se reintenta solo esa —
+     * que es lo que hacía falta para que "agregar más" no repita el problema
+     * de la empresa huérfana.
+     */
+    async agregarEmpresa(
+        userId: number,
+        dto: AgregarEmpresaDto,
+    ): Promise<{ empresaId: number; empleadorId: number; activa: boolean }> {
+        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+        if (!usuario.rut || !usuario.data) {
+            throw new ConflictException(
+                'Completá primero tus datos de responsable',
+            );
+        }
+
+        const yaExiste = await this.empresaRepository.findOne({
+            where: { rut: dto.business.rut },
+        });
+        if (yaExiste) {
+            // El RUT de empresa es único a propósito: dos filas para la misma
+            // empresa parten cupos, ofertas y pagos entre las copias.
+            throw new ConflictException(
+                'Ya existe una empresa registrada con ese RUT',
+            );
+        }
+
+        const creado = await this.empleadorRepository.manager.transaction(
+            async (manager) => {
+                const empresa = manager.create(Empresa, {
+                    rut: dto.business.rut,
+                    razon_social: dto.business.razon_social,
+                    nombre_fantasia: dto.business.nombre_fantasia,
+                    data: dto.business.data as any,
+                    modificado_por: userId,
+                });
+                await manager.save(empresa);
+
+                const membresia = manager.create(Empleador, {
+                    usuario,
+                    empresa,
+                    rol_empresa: 'empleador' as const,
+                    data: { cargo: dto.cargo },
+                    modificado_por: userId,
+                });
+                await manager.save(membresia);
+
+                return { empresa, membresia };
+            },
+        );
+
+        // La primera empresa queda activa; las siguientes no roban el foco.
+        const esLaPrimera = !usuario.id_empresa;
+        if (esLaPrimera) {
+            await this.usuarioRepository.update(userId, {
+                id_empresa: creado.empresa.id,
+            });
+        }
+
+        return {
+            empresaId: creado.empresa.id,
+            empleadorId: creado.membresia.id,
+            activa: esLaPrimera,
+        };
+    }
+
+    /**
+     * Miembros de la empresa activa: empleadores y colaboradores.
+     *
+     * Devuelve, además del rol, qué se puede hacer sobre cada uno. Las reglas
+     * ("el poder se da, no se quita") viven en un solo lado y el frontend solo
+     * pinta lo que llega, en vez de reimplementarlas y desincronizarse.
+     *
+     * Lo puede consultar cualquier miembro: un colaborador ve a sus colegas,
+     * pero le llegan todas las acciones en false.
+     */
+    async listarMiembros(userId: number): Promise<{
+        empresa: { id: number; nombre: string } | null;
+        miRol: 'empleador' | 'colaborador' | null;
+        miembros: {
+            id: number;
+            usuarioId: number;
+            nombres: string;
+            apellidos: string;
+            email: string;
+            rol: 'empleador' | 'colaborador';
+            cargo: string | null;
+            esYo: boolean;
+            acciones: { promover: boolean; renunciar: boolean };
+        }[];
+    }> {
+        const propia = await this.getEmpleadorActivo(userId);
+        if (!propia?.empresa) {
+            return { empresa: null, miRol: null, miembros: [] };
+        }
+
+        const empresaId = propia.empresa.id;
+        const miembros = await this.empleadorRepository.find({
+            where: { empresa: { id: empresaId } },
+            relations: ['usuario'],
+            order: { rol_empresa: 'ASC', id: 'ASC' },
+        });
+
+        const soyEmpleador = propia.rol_empresa === 'empleador';
+        const cuantosEmpleadores = miembros.filter(
+            (m) => m.rol_empresa === 'empleador',
+        ).length;
+
+        return {
+            empresa: {
+                id: empresaId,
+                nombre:
+                    propia.empresa.nombre_fantasia ||
+                    propia.empresa.razon_social ||
+                    '',
+            },
+            miRol: propia.rol_empresa,
+            miembros: miembros.map((m) => {
+                const esYo = m.id === propia.id;
+                return {
+                    id: m.id,
+                    usuarioId: m.usuario?.id,
+                    nombres: m.usuario?.nombres ?? '',
+                    apellidos: m.usuario?.apellidos ?? '',
+                    email: m.usuario?.email ?? '',
+                    rol: m.rol_empresa,
+                    cargo: (m.data as any)?.cargo ?? null,
+                    esYo,
+                    acciones: {
+                        // Dar acceso es libre entre empleadores.
+                        promover: soyEmpleador && m.rol_empresa === 'colaborador',
+                        // Quitárselo, solo uno a sí mismo, y si queda otro.
+                        renunciar:
+                            esYo &&
+                            m.rol_empresa === 'empleador' &&
+                            cuantosEmpleadores > 1,
+                    },
+                };
+            }),
+        };
+    }
+
+    /**
+     * Todas las membresías de la persona, una por empresa.
+     */
+    async getMembresias(userId: number): Promise<Empleador[]> {
+        return this.empleadorRepository.find({
             where: { usuario: { id: userId } },
             relations: ['empresa'],
+            order: { id: 'ASC' },
         });
-        if (!empleador) return { exists: false };
+    }
+
+    /**
+     * Membresía activa de la persona: la que apunta a `usuario.id_empresa`.
+     *
+     * `id_empresa` es la empresa seleccionada, no la única. Si está vacío o
+     * apunta a una empresa donde ya no hay membresía (por ejemplo porque la
+     * dejó), cae a la primera membresía y la fija como activa, para que el
+     * resto del backend nunca tenga que resolver la ambigüedad.
+     */
+    async getEmpleadorActivo(userId: number): Promise<Empleador | null> {
+        const usuario = await this.usuarioRepository.findOne({ where: { id: userId } });
+        if (!usuario) return null;
+
+        if (usuario.id_empresa) {
+            const activo = await this.empleadorRepository.findOne({
+                where: { usuario: { id: userId }, empresa: { id: usuario.id_empresa } },
+                relations: ['empresa', 'usuario'],
+            });
+            if (activo) return activo;
+        }
+
+        const membresias = await this.getMembresias(userId);
+        if (!membresias.length) return null;
+
+        const primera = membresias[0];
+        await this.usuarioRepository.update(userId, { id_empresa: primera.empresa.id });
+        return primera;
+    }
+
+    /**
+     * Cambia la empresa activa. Solo a una donde la persona tenga membresía:
+     * sin esta validación, `id_empresa` sería una forma de operar sobre
+     * cualquier empresa pasando su id.
+     */
+    async setEmpresaActiva(userId: number, empresaId: number): Promise<Empleador> {
+        const membresia = await this.empleadorRepository.findOne({
+            where: { usuario: { id: userId }, empresa: { id: empresaId } },
+            relations: ['empresa'],
+        });
+        if (!membresia) {
+            throw new NotFoundException('No tienes acceso a esta empresa');
+        }
+        await this.usuarioRepository.update(userId, { id_empresa: empresaId });
+        return membresia;
+    }
+
+    /**
+     * Cuántos empleadores tiene la empresa.
+     */
+    async contarEmpleadores(empresaId: number): Promise<number> {
+        return this.empleadorRepository.count({
+            where: { empresa: { id: empresaId }, rol_empresa: 'empleador' },
+        });
+    }
+
+    /**
+     * Invariante del modelo: una empresa nunca se queda sin empleador.
+     *
+     * Se llama antes de degradar a un empleador, de quitarle la membresía o de
+     * borrar su cuenta. Sin esto la empresa queda solo con colaboradores, que no
+     * pueden invitar a nadie ni verificarla, y solo se arregla a mano.
+     */
+    async assertNoEsUltimoEmpleador(empleador: Empleador): Promise<void> {
+        if (empleador.rol_empresa !== 'empleador') return;
+
+        const empresaId = empleador.empresa?.id;
+        if (!empresaId) return;
+
+        const empleadores = await this.contarEmpleadores(empresaId);
+        if (empleadores <= 1) {
+            const nombre = empleador.empresa?.nombre_fantasia
+                || empleador.empresa?.razon_social
+                || `empresa ${empresaId}`;
+            throw new ConflictException(
+                `Sos el único empleador de ${nombre}. Promové a un colaborador antes de dejar de serlo.`,
+            );
+        }
+    }
+
+    async checkEmpleadorExists(userId: number): Promise<{
+        exists: boolean;
+        empleador?: { id: number; empresaId: number };
+        membresias: { id: number; empresaId: number; rol: 'empleador' | 'colaborador'; nombre: string }[];
+    }> {
+        const membresias = await this.getMembresias(userId);
+        const activo = await this.getEmpleadorActivo(userId);
+
+        const lista = membresias.map((m) => ({
+            id: m.id,
+            empresaId: m.empresa?.id,
+            rol: m.rol_empresa,
+            nombre: m.empresa?.nombre_fantasia || m.empresa?.razon_social || '',
+        }));
+
+        if (!activo) return { exists: false, membresias: lista };
+
+        // `empleador` sigue devolviendo la membresía activa en singular para no
+        // romper a los consumidores previos a multi-empresa.
         return {
             exists: true,
-            empleador: { id: empleador.id, empresaId: empleador.empresa?.id },
+            empleador: { id: activo.id, empresaId: activo.empresa?.id },
+            membresias: lista,
         };
     }
 
@@ -63,12 +355,17 @@ export class EmpleadorService {
         createEmployerDto: CreateEmployerDto,
         empresaId: number,
     ): Promise<Empleador> {
-        // 0. Verificar que no exista empleador para este usuario
+        // 0. Verificar que no exista membresía de este usuario EN ESTA EMPRESA.
+        //    Antes se rechazaba cualquier empleador previo, lo que impedía que
+        //    una persona fuera responsable de más de una empresa.
         const existente = await this.empleadorRepository.findOne({
-            where: { usuario: { id: createEmployerDto.userId } },
+            where: {
+                usuario: { id: createEmployerDto.userId },
+                empresa: { id: empresaId },
+            },
         });
         if (existente) {
-            throw new ConflictException('Este usuario ya tiene un perfil de empleador');
+            throw new ConflictException('Ya tienes un perfil de empleador en esta empresa');
         }
 
         // 1. Buscar usuario por id
@@ -105,10 +402,11 @@ export class EmpleadorService {
             throw new NotAcceptableException('Empresa no encontrada');
         }
 
-        // 4. Crear empleador relacionado al usuario y empresa
+        // 4. Crear la membresía. Quien crea la empresa queda como empleador de ella.
         const empleador = this.empleadorRepository.create({
             usuario,
             empresa,
+            rol_empresa: 'empleador',
             data: createEmployerDto.data,
         });
 
@@ -116,19 +414,79 @@ export class EmpleadorService {
         return await this.empleadorRepository.save(empleador);
     }
 
-    async findEmployerByUserId(userId: number): Promise<Empleador | null> {
-        return this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
+    /**
+     * Cambia el rol de una membresía, bajo una sola regla:
+     * **el poder se puede dar, no se puede quitar.**
+     *
+     * - Promover un colaborador a empleador: cualquier empleador de la empresa.
+     * - Dejar de ser empleador: solo sobre la propia membresía, y solo si queda
+     *   otro empleador.
+     *
+     * Nadie degrada a un par. La razón es que el sistema no sabe —ni tiene cómo
+     * saber— quién es la autoridad dentro de una empresa: quien completó el
+     * registro pudo ser el dueño, un supervisor o un tercero, y tratar ese
+     * accidente como jerarquía sería inventarse un dato que no tenemos. Al no
+     * distinguir quién creó la empresa, la regla vale igual en los tres casos.
+     *
+     * El costo, asumido: si alguien se va en malos términos y no renuncia,
+     * conserva el acceso hasta que soporte lo saque a mano. Es preferible a que
+     * cualquiera pueda expulsar por sorpresa a quien administra la empresa.
+     *
+     * Transferir es promover al otro y después renunciar: dos pasos, sin
+     * operación especial.
+     */
+    async cambiarRolMembresia(
+        actorUserId: number,
+        empleadorId: number,
+        rol: 'empleador' | 'colaborador',
+    ): Promise<Empleador> {
+        const objetivo = await this.empleadorRepository.findOne({
+            where: { id: empleadorId },
             relations: ['empresa', 'usuario'],
         });
+        if (!objetivo) {
+            throw new NotFoundException('Membresía no encontrada');
+        }
+
+        const actor = await this.empleadorRepository.findOne({
+            where: {
+                usuario: { id: actorUserId },
+                empresa: { id: objetivo.empresa.id },
+            },
+        });
+        if (!actor || actor.rol_empresa !== 'empleador') {
+            throw new ConflictException(
+                'Solo un empleador de esta empresa puede cambiar roles',
+            );
+        }
+
+        if (objetivo.rol_empresa === rol) return objetivo;
+
+        if (rol === 'colaborador') {
+            // Solo se renuncia; a un par no se lo baja.
+            if (actor.id !== objetivo.id) {
+                throw new ConflictException(
+                    'Un empleador no puede quitarle el rol a otro. Solo esa persona puede dejarlo.',
+                );
+            }
+            await this.assertNoEsUltimoEmpleador(objetivo);
+        }
+
+        objetivo.rol_empresa = rol;
+        objetivo.modificado_por = actorUserId;
+        return this.empleadorRepository.save(objetivo);
+    }
+
+    /**
+     * Membresía activa de la persona. Antes de multi-empresa devolvía la única
+     * que podía existir; ahora resuelve por la empresa seleccionada.
+     */
+    async findEmployerByUserId(userId: number): Promise<Empleador | null> {
+        return this.getEmpleadorActivo(userId);
     }
 
     async findBasicInfo(userId: number): Promise<EmpleadorBasicInfoDto> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-            // ¡NO pongas select si quieres acceder a relaciones!
-        });
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
@@ -141,10 +499,7 @@ export class EmpleadorService {
     }
 
     async BusinessEmployer(userId: number): Promise<Empresa | null> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-        });
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             return null;
@@ -155,10 +510,9 @@ export class EmpleadorService {
 
     //update empresa by userId 
     async updateEmployerBusiness(userId: number, dto: UpdateBusinessDto): Promise<Empresa> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-        });
+        // Sobre la empresa activa: resolver por usuario editaba una empresa al
+        // azar cuando la persona administra varias.
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador || !empleador.empresa) {
             throw new NotFoundException('Empresa asociada al usuario no encontrada');
@@ -192,9 +546,8 @@ export class EmpleadorService {
     }
 
     async updateEmployerData(userId: number, dto: UpdateEmployerDto): Promise<Empleador> {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-        });
+        // `data` es de la membresía (el cargo cambia entre empresas), no de la persona.
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException('Empleador no encontrado');
@@ -215,10 +568,7 @@ export class EmpleadorService {
     }
 
     async getEstadisticas(userId: number) {
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa'],
-        });
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException(`Empleador con usuario ID ${userId} no encontrado`);
@@ -403,11 +753,8 @@ export class EmpleadorService {
         usuario.rut = dto.rut;
         await this.usuarioRepository.save(usuario);
 
-        // Actualizar data del empleador
-        const empleador = await this.empleadorRepository.findOne({
-            where: { usuario: { id: userId } },
-            relations: ['empresa', 'usuario'],
-        });
+        // Actualizar data de la membresía activa
+        const empleador = await this.getEmpleadorActivo(userId);
 
         if (!empleador) {
             throw new NotFoundException('Empleador no encontrado');

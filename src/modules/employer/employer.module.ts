@@ -19,7 +19,7 @@ import { StockModule } from '../stock/stock.module';
 import { SmsModule } from '../sms-generator/sms.module';
 import { MailerModule } from '../mailer/mailer.module';
 import { EncryptModule } from 'src/shared/encrypt/encrypt.module';
-import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
+import { EmpleadorEmpresaGuard } from '../auth/guards/empleador-empresa.guard';
 
 
 @Module({
@@ -42,7 +42,7 @@ import { EmployerAdminGuard } from '../auth/guards/employer-admin.guard';
     EncryptModule,
   ],
   controllers: [EmpleadorController],
-  providers: [EmpleadorService, InvitacionService, EmployerAdminGuard],
+  providers: [EmpleadorService, InvitacionService, EmpleadorEmpresaGuard],
   exports: [EmpleadorService],
 
 })

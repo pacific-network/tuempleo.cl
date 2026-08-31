@@ -24,14 +24,14 @@ const empresa = { id: 10, nombre_fantasia: 'TestCorp', razon_social: 'TestCorp S
 
 const empleadorAdmin = {
   id: 1,
-  rol_empresa: 'admin',
+  rol_empresa: 'empleador',
   empresa,
   usuario: { id: 100, nombres: 'Paulo', email: 'admin@test.cl' },
 };
 
 const empleadorMiembro = {
   id: 2,
-  rol_empresa: 'miembro',
+  rol_empresa: 'colaborador',
   empresa,
   usuario: { id: 200, nombres: 'Juan', email: 'juan@test.cl' },
 };
@@ -88,6 +88,13 @@ describe('InvitacionService', () => {
   // 1. INVITAR
   // ════════════════════════════════════════════════════════
   describe('invitar()', () => {
+    // Se invita a la empresa activa: `invitar` resuelve la membresía por
+    // `usuario.id_empresa` para no elegir una empresa al azar cuando la
+    // persona está en varias.
+    beforeEach(() => {
+      usuarioRepo.findOne.mockResolvedValue({ id: 100, id_empresa: empresa.id });
+    });
+
     it('debe crear invitación y enviar email, sin SMS (lo manda el frontend)', async () => {
       empleadorRepo.findOne.mockResolvedValue(empleadorAdmin);
       invitacionRepo.find.mockResolvedValue([]);
@@ -222,7 +229,7 @@ describe('InvitacionService', () => {
 
       // Empleador creado como miembro
       expect(empleadorRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ rol_empresa: 'miembro' }),
+        expect.objectContaining({ rol_empresa: 'colaborador' }),
       );
       expect(empleadorRepo.save).toHaveBeenCalled();
 

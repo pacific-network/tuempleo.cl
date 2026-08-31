@@ -6,6 +6,7 @@ import { CreatePostulacionDto } from './dto/create-postulacion.dto';
 import { Postulante } from '../../repository/postulant/postulant.entity';
 import { Oferta } from '../../repository/job_offer/job-offer.entity';
 import { EstadoPostulacion } from './enum/states.enum';
+import { scoreOfertaPostulante, parseOfertaData } from '../match/match.scoring';
 
 @Injectable()
 export class PostulacionService {
@@ -32,10 +33,23 @@ export class PostulacionService {
     });
     if (existe) throw new ConflictException('Ya estás inscrito en esta oferta');
 
+    // Match congelado al momento de postular: el candidato puede editar su
+    // perfil después, y lo que importa es qué tan coherente era la
+    // postulación cuando se hizo. Ver match.scoring.ts.
+    const { score, desglose } = scoreOfertaPostulante(
+      parseOfertaData(oferta),
+      postulante.data,
+    );
+
     const postulacion = this.postulacionRepository.create({
       postulante,
       oferta,
       estado: 'enviada',
+      // `data` llegaba en el DTO y se descartaba en silencio: si el frontend
+      // manda respuestas de screening, ahora se guardan.
+      data: dto.data ?? {},
+      matchScore: score,
+      matchDesglose: desglose,
     });
     return this.postulacionRepository.save(postulacion);
   }
@@ -64,10 +78,13 @@ export class PostulacionService {
     const oferta = await this.ofertaRepository.findOne({ where: { id: ofertaId } });
     if (!oferta) throw new NotFoundException(`Oferta con ID ${ofertaId} no encontrada`);
 
+    // Rankeadas por match: es lo que hace que el empleador vea primero a los
+    // candidatos coherentes con la oferta. Las anteriores a `match_score`
+    // tienen NULL y MySQL las deja al final.
     const postulaciones = await this.postulacionRepository.find({
       where: { oferta: { id: ofertaId } },
       relations: ['postulante', 'postulante.usuario'],
-      order: { fechaPostulacion: 'DESC' },
+      order: { matchScore: 'DESC', fechaPostulacion: 'DESC' },
     });
 
     // 🟦 CAMBIO → Si no hay postulaciones, devolver []
@@ -151,7 +168,10 @@ export class PostulacionService {
         unicas.push(p); // nos quedamos con la más reciente de ese postulante
       }
     }
-    return unicas;
+
+    // El ranking se aplica después del dedup, para no alterar cuál
+    // postulación de cada postulante se conserva.
+    return unicas.sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1));
   }
 
   // ─────────────────────────────────────────────────────────

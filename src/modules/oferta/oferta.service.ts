@@ -28,6 +28,36 @@ const priorityMap: Record<'GRATIS' | 'BASICO' | 'ESTANDAR' | 'PREMIUM', number> 
 
 @Injectable()
 export class OfertaService {
+
+  /**
+   * El permiso sobre una oferta es de la empresa, no de la persona.
+   *
+   * Antes se exigia ser quien la creo, y eso dejaba a un socio o a un
+   * colaborador sin poder tocar el aviso de un colega — una restriccion que
+   * el sistema no tiene por que imponer puertas adentro. Lo que si tiene que
+   * sostener es el limite entre empresas: `eliminarOferta` no comprobaba nada
+   * y cualquier empleador podia borrar el aviso de cualquier empresa.
+   *
+   * No mira el rol: empleadores y colaboradores pueden lo mismo con las
+   * ofertas de su empresa.
+   */
+  private async assertMiembroDeLaOferta(userId: number, oferta: Oferta, accion: string) {
+    const empresaId = oferta.empresa?.id ?? null;
+    if (!empresaId) {
+      throw new NotFoundException('La oferta no tiene empresa asociada');
+    }
+
+    const membresia = await this.empleadorRepository.findOne({
+      where: { usuario: { id: userId }, empresa: { id: empresaId } },
+      relations: ['usuario', 'empresa'],
+    });
+
+    if (!membresia) {
+      throw new ForbiddenException(`No tienes permisos para ${accion}`);
+    }
+
+    return membresia;
+  }
   constructor(
     @InjectRepository(Oferta)
     private readonly ofertaRepository: Repository<Oferta>,
@@ -391,12 +421,14 @@ export class OfertaService {
     if (!oferta)
       throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
 
-    const empleador = await this.empleadorRepository.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['usuario'],
-    });
-    if (!empleador)
-      throw new NotFoundException(`Empleador con usuario ID ${usuarioId} no encontrado`);
+    // Acá faltaba la comprobación entera: a diferencia de modificar, cerrar y
+    // reactivar, eliminar no verificaba nada, así que cualquier empleador podía
+    // borrar el aviso de cualquier empresa. El límite es la empresa dueña.
+    const empleador = await this.assertMiembroDeLaOferta(
+      usuarioId,
+      oferta,
+      'eliminar esta oferta',
+    );
 
     oferta.eliminada_por = empleador;
     // El softDelete no toca estado ni es_activa, y sin eso el cierre de
@@ -447,20 +479,17 @@ export class OfertaService {
   async actualizarOferta(id: number, data: UpdateOfertaDto, userId: number): Promise<Oferta> {
     const oferta = await this.ofertaRepository.findOne({
       where: { id },
-      relations: ['empleador'],
+      relations: ['empleador', 'empresa'],
     });
     if (!oferta)
       throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
 
-    const empleador = await this.empleadorRepository.findOne({
-      where: { usuario: { id: userId } },
-      relations: ['usuario'],
-    });
-    if (!empleador)
-      throw new NotFoundException(`Empleador con usuario_id ${userId} no encontrado`);
-
-    if (oferta.empleador.id !== empleador.id)
-      throw new ForbiddenException(`No tienes permisos para modificar esta oferta`);
+    // Cualquier miembro de la empresa duena del aviso, sin mirar el rol.
+    const empleador = await this.assertMiembroDeLaOferta(
+      userId,
+      oferta,
+      'modificar esta oferta',
+    );
 
     if (data.titulo !== undefined) oferta.titulo = data.titulo;
 
@@ -511,20 +540,17 @@ export class OfertaService {
   async cerrarOferta(id: number, userId: number): Promise<Oferta> {
     const oferta = await this.ofertaRepository.findOne({
       where: { id },
-      relations: ['empleador'],
+      relations: ['empleador', 'empresa'],
     });
     if (!oferta)
       throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
 
-    const empleador = await this.empleadorRepository.findOne({
-      where: { usuario: { id: userId } },
-      relations: ['usuario'],
-    });
-    if (!empleador)
-      throw new NotFoundException(`Empleador con usuario_id ${userId} no encontrado`);
-
-    if (oferta.empleador.id !== empleador.id)
-      throw new ForbiddenException('No tienes permisos para cerrar esta oferta');
+    // Cualquier miembro de la empresa duena del aviso, sin mirar el rol.
+    const empleador = await this.assertMiembroDeLaOferta(
+      userId,
+      oferta,
+      'cerrar esta oferta',
+    );
 
     if (!oferta.es_activa)
       throw new BadRequestException('La oferta ya se encuentra cerrada');
@@ -595,15 +621,12 @@ export class OfertaService {
     if (!oferta)
       throw new NotFoundException(`Oferta con ID ${id} no encontrada`);
 
-    const empleador = await this.empleadorRepository.findOne({
-      where: { usuario: { id: userId } },
-      relations: ['usuario'],
-    });
-    if (!empleador)
-      throw new NotFoundException(`Empleador con usuario_id ${userId} no encontrado`);
-
-    if (oferta.empleador.id !== empleador.id)
-      throw new ForbiddenException('No tienes permisos para reactivar esta oferta');
+    // Cualquier miembro de la empresa duena del aviso, sin mirar el rol.
+    const empleador = await this.assertMiembroDeLaOferta(
+      userId,
+      oferta,
+      'reactivar esta oferta',
+    );
 
     if (oferta.es_activa)
       throw new BadRequestException('La oferta ya se encuentra activa');

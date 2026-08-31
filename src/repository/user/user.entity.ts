@@ -73,7 +73,18 @@ export class Usuario {
     rol: Rol;
 
     @Column({ type: 'int', nullable: true })
-    id_empresa: number | null; // ID de la empresa asociada, si aplica
+    id_empresa: number | null; // Empresa activa: sobre cuál de sus empresas está operando
+
+    /**
+     * Datos del responsable como persona: domicilio, teléfono y redes.
+     *
+     * Van acá y no en `empleador.data` porque no cambian entre empresas y
+     * porque el formulario los pide ANTES de que exista ninguna: el paso 1 del
+     * onboarding no puede escribir en una membresía que todavía no hay.
+     * Lo que sí es de cada membresía es el cargo.
+     */
+    @Column({ type: 'json', nullable: true })
+    data: Record<string, any> | null;
 
     @Column({ type: 'varchar', length: 500, nullable: true })
     perfil_foto: string | null; // URL de la foto de perfil

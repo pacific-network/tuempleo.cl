@@ -71,4 +71,22 @@ export class Postulacion {
   // sola vez, aunque el cron vuelva a pasar por la misma postulación.
   @Column({ type: 'datetime', name: 'cierre_notificado_at', nullable: true })
   cierreNotificadoAt: Date | null;
+
+  /**
+   * Match con la oferta, congelado al momento de postular.
+   *
+   * Se guarda en vez de calcularse al vuelo por dos razones. Una es el
+   * histórico: el candidato puede editar su perfil después, y el dato que
+   * importa es qué tan coherente era su postulación cuando la hizo, no ahora.
+   * La otra es que un score persistido se puede ordenar y filtrar en SQL, y
+   * habilita medir postulaciones útiles por aviso.
+   *
+   * `null` en las postulaciones anteriores a esta columna.
+   */
+  @Column({ type: 'int', name: 'match_score', nullable: true })
+  matchScore: number | null;
+
+  /** Puntaje por dimensión — área, experiencia, modalidad, ubicación, etc. */
+  @Column({ type: 'json', name: 'match_desglose', nullable: true })
+  matchDesglose: Record<string, number> | null;
 }
